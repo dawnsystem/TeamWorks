@@ -6,7 +6,8 @@ import {
   updateTask,
   deleteTask,
   toggleTask,
-  getTasksByLabel
+  getTasksByLabel,
+  reorderTasks
 } from '../controllers/taskController';
 import { authMiddleware } from '../middleware/auth';
 
@@ -19,6 +20,7 @@ router.get('/', getTasks);
 router.get('/by-label/:labelId', getTasksByLabel);
 router.get('/:id', getTask);
 router.post('/', createTask);
+router.post('/reorder', reorderTasks);
 router.patch('/:id', updateTask);
 router.delete('/:id', deleteTask);
 router.post('/:id/toggle', toggleTask);

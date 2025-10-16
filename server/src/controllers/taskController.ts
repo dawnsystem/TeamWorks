@@ -369,3 +369,46 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
   }
 };
 
+export const reorderTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const { taskUpdates } = req.body;
+
+    if (!Array.isArray(taskUpdates)) {
+      return res.status(400).json({ error: 'taskUpdates debe ser un array' });
+    }
+
+    // Verificar que todas las tareas pertenecen al usuario
+    const taskIds = taskUpdates.map((t: any) => t.id);
+    const tasks = await prisma.task.findMany({
+      where: {
+        id: { in: taskIds },
+        project: { userId: req.userId }
+      }
+    });
+
+    if (tasks.length !== taskIds.length) {
+      return res.status(403).json({ error: 'Acceso denegado a una o más tareas' });
+    }
+
+    // Actualizar todas las tareas en una transacción
+    await prisma.$transaction(
+      taskUpdates.map((update: any) =>
+        prisma.task.update({
+          where: { id: update.id },
+          data: {
+            orden: update.orden,
+            ...(update.projectId && { projectId: update.projectId }),
+            ...(update.sectionId !== undefined && { sectionId: update.sectionId }),
+            ...(update.parentTaskId !== undefined && { parentTaskId: update.parentTaskId })
+          }
+        })
+      )
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error en reorderTasks:', error);
+    res.status(500).json({ error: 'Error al reordenar tareas' });
+  }
+};
+

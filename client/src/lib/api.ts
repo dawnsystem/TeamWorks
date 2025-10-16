@@ -92,6 +92,14 @@ export const tasksAPI = {
   delete: (id: string) => api.delete(`/tasks/${id}`),
   
   toggle: (id: string) => api.post<Task>(`/tasks/${id}/toggle`),
+  
+  reorder: (taskUpdates: Array<{
+    id: string;
+    orden: number;
+    projectId?: string;
+    sectionId?: string | null;
+    parentTaskId?: string | null;
+  }>) => api.post('/tasks/reorder', { taskUpdates }),
 };
 
 // Labels
