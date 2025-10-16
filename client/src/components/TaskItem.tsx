@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import type { Task } from '@/types';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
-import { useTaskEditorStore } from '@/store/useStore';
+import { useTaskEditorStore, useTaskDetailStore } from '@/store/useStore';
 import { useState } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
@@ -18,6 +18,7 @@ interface TaskItemProps {
 export default function TaskItem({ task }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
+  const openDetail = useTaskDetailStore((state) => state.openDetail);
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
 
@@ -290,7 +291,7 @@ export default function TaskItem({ task }: TaskItemProps) {
             )}
           </button>
 
-          <div className="flex-1" onClick={() => openEditor({ taskId: task.id })}>
+          <div className="flex-1" onClick={() => openDetail(task.id)}>
             <h3
               className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${
                 task.completada ? 'line-through' : ''

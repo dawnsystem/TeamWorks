@@ -5,6 +5,7 @@ import ProjectView from '@/components/ProjectView';
 import TodayView from '@/components/TodayView';
 import WeekView from '@/components/WeekView';
 import TaskEditor from '@/components/TaskEditor';
+import TaskDetailView from '@/components/TaskDetailView';
 import AIAssistant from '@/components/AIAssistant';
 import { useUIStore } from '@/store/useStore';
 
@@ -32,6 +33,9 @@ export default function Dashboard() {
 
       {/* Task Editor Modal */}
       <TaskEditor />
+
+      {/* Task Detail View */}
+      <TaskDetailView />
 
       {/* AI Assistant */}
       <AIAssistant />
