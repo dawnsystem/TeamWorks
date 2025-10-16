@@ -7,11 +7,23 @@ import {
   FolderPlus, 
   ChevronRight,
   Tag,
-  X
+  X,
+  Edit,
+  Copy,
+  Trash2,
+  FolderOpen,
+  BarChart3,
+  Archive,
+  Link2,
+  ListPlus
 } from 'lucide-react';
 import { useUIStore } from '@/store/useStore';
 import { projectsAPI, labelsAPI } from '@/lib/api';
 import { useState } from 'react';
+import { useContextMenu } from '@/hooks/useContextMenu';
+import ContextMenu from './ContextMenu';
+import type { ContextMenuItem } from '@/types/contextMenu';
+import toast from 'react-hot-toast';
 
 export default function Sidebar() {
   const location = useLocation();
@@ -21,8 +33,15 @@ export default function Sidebar() {
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
+  const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [editProjectName, setEditProjectName] = useState('');
+  const [editProjectColor, setEditProjectColor] = useState('');
 
   const queryClient = useQueryClient();
+  const projectContextMenu = useContextMenu();
+  const labelContextMenu = useContextMenu();
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],
@@ -44,6 +63,34 @@ export default function Sidebar() {
     },
   });
 
+  const updateProjectMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: { nombre: string; color: string } }) => 
+      projectsAPI.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setEditingProject(null);
+      toast.success('Proyecto actualizado');
+    },
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (id: string) => projectsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Proyecto eliminado');
+    },
+  });
+
+  const deleteLabelMutation = useMutation({
+    mutationFn: (id: string) => labelsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Etiqueta eliminada');
+    },
+  });
+
   if (!sidebarOpen) return null;
 
   const navItems = [
@@ -51,6 +98,90 @@ export default function Sidebar() {
     { icon: Calendar, label: 'Hoy', path: '/today', color: 'text-green-600' },
     { icon: CalendarDays, label: 'Próximos 7 días', path: '/week', color: 'text-purple-600' },
   ];
+
+  const getProjectContextMenuItems = (projectId: string): ContextMenuItem[] => {
+    const project = projects?.find(p => p.id === projectId);
+    if (!project) return [];
+
+    return [
+      {
+        id: 'open',
+        label: 'Abrir proyecto',
+        icon: FolderOpen,
+        onClick: () => window.location.href = `/project/${projectId}`,
+      },
+      {
+        id: 'edit',
+        label: 'Editar nombre y color',
+        icon: Edit,
+        onClick: () => {
+          setEditingProject(projectId);
+          setEditProjectName(project.nombre);
+          setEditProjectColor(project.color);
+        },
+        separator: true,
+      },
+      {
+        id: 'copy',
+        label: 'Duplicar proyecto',
+        icon: Copy,
+        onClick: () => {
+          createProjectMutation.mutate({
+            nombre: `${project.nombre} (copia)`,
+            color: project.color,
+          });
+        },
+      },
+      {
+        id: 'link',
+        label: 'Copiar enlace',
+        icon: Link2,
+        onClick: () => {
+          navigator.clipboard.writeText(`${window.location.origin}/project/${projectId}`);
+          toast.success('Enlace copiado');
+        },
+        separator: true,
+      },
+      {
+        id: 'delete',
+        label: 'Eliminar proyecto',
+        icon: Trash2,
+        onClick: () => deleteProjectMutation.mutate(projectId),
+        danger: true,
+        requireConfirm: true,
+        disabled: project.nombre === 'Inbox',
+      },
+    ];
+  };
+
+  const getLabelContextMenuItems = (labelId: string): ContextMenuItem[] => {
+    const label = labels?.find(l => l.id === labelId);
+    if (!label) return [];
+
+    return [
+      {
+        id: 'filter',
+        label: 'Ver tareas con esta etiqueta',
+        icon: Tag,
+        onClick: () => toast.info('Función próximamente'),
+      },
+      {
+        id: 'edit',
+        label: 'Editar etiqueta',
+        icon: Edit,
+        onClick: () => toast.info('Función próximamente'),
+        separator: true,
+      },
+      {
+        id: 'delete',
+        label: 'Eliminar etiqueta',
+        icon: Trash2,
+        onClick: () => deleteLabelMutation.mutate(labelId),
+        danger: true,
+        requireConfirm: true,
+      },
+    ];
+  };
 
   return (
     <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
@@ -103,6 +234,10 @@ export default function Sidebar() {
                       ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
                       : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
+                  onContextMenu={(e) => {
+                    setSelectedProjectId(project.id);
+                    projectContextMenu.show(e);
+                  }}
                 >
                   <div
                     className="w-3 h-3 rounded-full"
@@ -148,6 +283,10 @@ export default function Sidebar() {
                   <button
                     key={label.id}
                     className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full"
+                    onContextMenu={(e) => {
+                      setSelectedLabelId(label.id);
+                      labelContextMenu.show(e);
+                    }}
                   >
                     <Tag className="w-4 h-4" style={{ color: label.color }} />
                     <span className="text-sm">{label.nombre}</span>
@@ -163,6 +302,107 @@ export default function Sidebar() {
           </div>
         )}
       </nav>
+
+      {/* Context Menus */}
+      {projectContextMenu.isVisible && selectedProjectId && (
+        <ContextMenu
+          items={getProjectContextMenuItems(selectedProjectId)}
+          position={projectContextMenu.position}
+          onClose={projectContextMenu.hide}
+        />
+      )}
+
+      {labelContextMenu.isVisible && selectedLabelId && (
+        <ContextMenu
+          items={getLabelContextMenuItems(selectedLabelId)}
+          position={labelContextMenu.position}
+          onClose={labelContextMenu.hide}
+        />
+      )}
+
+      {/* Modal Editar Proyecto */}
+      {editingProject && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setEditingProject(null)}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Editar Proyecto</h3>
+              <button
+                onClick={() => setEditingProject(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (editProjectName.trim()) {
+                  updateProjectMutation.mutate({
+                    id: editingProject,
+                    data: {
+                      nombre: editProjectName.trim(),
+                      color: editProjectColor,
+                    },
+                  });
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nombre
+                </label>
+                <input
+                  type="text"
+                  value={editProjectName}
+                  onChange={(e) => setEditProjectName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Color
+                </label>
+                <div className="flex gap-2">
+                  {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'].map(
+                    (color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setEditProjectColor(color)}
+                        className={`w-8 h-8 rounded-full transition-transform ${
+                          editProjectColor === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingProject(null)}
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={!editProjectName.trim() || updateProjectMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+                  {updateProjectMutation.isPending ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Nuevo Proyecto */}
       {showNewProjectModal && (

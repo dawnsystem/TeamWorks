@@ -1,12 +1,15 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Circle, CheckCircle2, Calendar, Tag, ChevronRight } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Circle, CheckCircle2, Calendar, Tag, ChevronRight, Edit, Copy, Trash2, Flag, FolderInput, ListPlus, Link2, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import type { Task } from '@/types';
-import { tasksAPI } from '@/lib/api';
+import type { ContextMenuItem } from '@/types/contextMenu';
+import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import { useTaskEditorStore } from '@/store/useStore';
 import { useState } from 'react';
+import { useContextMenu } from '@/hooks/useContextMenu';
+import ContextMenu from './ContextMenu';
 
 interface TaskItemProps {
   task: Task;
@@ -16,6 +19,17 @@ export default function TaskItem({ task }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const [subTasksOpen, setSubTasksOpen] = useState(false);
+  const contextMenu = useContextMenu();
+
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => projectsAPI.getAll().then(res => res.data),
+  });
+
+  const { data: labels } = useQuery({
+    queryKey: ['labels'],
+    queryFn: () => labelsAPI.getAll().then(res => res.data),
+  });
 
   const toggleMutation = useMutation({
     mutationFn: () => tasksAPI.toggle(task.id),
@@ -26,6 +40,63 @@ export default function TaskItem({ task }: TaskItemProps) {
     },
     onError: () => {
       toast.error('Error al actualizar tarea');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => tasksAPI.delete(task.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Tarea eliminada');
+    },
+    onError: () => {
+      toast.error('Error al eliminar tarea');
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => tasksAPI.create({
+      titulo: `${task.titulo} (copia)`,
+      descripcion: task.descripcion || undefined,
+      prioridad: task.prioridad,
+      fechaVencimiento: task.fechaVencimiento || undefined,
+      projectId: task.projectId,
+      sectionId: task.sectionId || undefined,
+      labelIds: task.labels?.map(l => l.labelId) || [],
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Tarea duplicada');
+    },
+    onError: () => {
+      toast.error('Error al duplicar tarea');
+    },
+  });
+
+  const updatePriorityMutation = useMutation({
+    mutationFn: (prioridad: 1 | 2 | 3 | 4) => tasksAPI.update(task.id, { prioridad }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Prioridad actualizada');
+    },
+  });
+
+  const updateDateMutation = useMutation({
+    mutationFn: (fechaVencimiento: string | null) => tasksAPI.update(task.id, { fechaVencimiento }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Fecha actualizada');
+    },
+  });
+
+  const moveToProjectMutation = useMutation({
+    mutationFn: (projectId: string) => tasksAPI.update(task.id, { projectId, sectionId: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Tarea movida');
     },
   });
 
@@ -45,6 +116,155 @@ export default function TaskItem({ task }: TaskItemProps) {
 
   const isOverdue = task.fechaVencimiento && new Date(task.fechaVencimiento) < new Date() && !task.completada;
 
+  const getToday = () => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return today.toISOString();
+  };
+
+  const getTomorrow = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(23, 59, 59, 999);
+    return tomorrow.toISOString();
+  };
+
+  const getNextWeek = () => {
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    nextWeek.setHours(23, 59, 59, 999);
+    return nextWeek.toISOString();
+  };
+
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      id: 'edit',
+      label: 'Editar tarea',
+      icon: Edit,
+      onClick: () => openEditor({ taskId: task.id }),
+    },
+    {
+      id: 'toggle',
+      label: task.completada ? 'Marcar como pendiente' : 'Completar',
+      icon: task.completada ? Circle : CheckCircle2,
+      onClick: () => toggleMutation.mutate(),
+    },
+    {
+      id: 'duplicate',
+      label: 'Duplicar tarea',
+      icon: Copy,
+      onClick: () => duplicateMutation.mutate(),
+      separator: true,
+    },
+    {
+      id: 'priority',
+      label: 'Cambiar prioridad',
+      icon: Flag,
+      submenu: [
+        {
+          id: 'p1',
+          label: 'P1 - Alta',
+          onClick: () => updatePriorityMutation.mutate(1),
+        },
+        {
+          id: 'p2',
+          label: 'P2 - Media',
+          onClick: () => updatePriorityMutation.mutate(2),
+        },
+        {
+          id: 'p3',
+          label: 'P3 - Baja',
+          onClick: () => updatePriorityMutation.mutate(3),
+        },
+        {
+          id: 'p4',
+          label: 'P4 - Sin prioridad',
+          onClick: () => updatePriorityMutation.mutate(4),
+        },
+      ],
+    },
+    {
+      id: 'date',
+      label: 'Cambiar fecha',
+      icon: Calendar,
+      submenu: [
+        {
+          id: 'today',
+          label: 'Hoy',
+          onClick: () => updateDateMutation.mutate(getToday()),
+        },
+        {
+          id: 'tomorrow',
+          label: 'Mañana',
+          onClick: () => updateDateMutation.mutate(getTomorrow()),
+        },
+        {
+          id: 'next-week',
+          label: 'Próximos 7 días',
+          onClick: () => updateDateMutation.mutate(getNextWeek()),
+        },
+        {
+          id: 'no-date',
+          label: 'Sin fecha',
+          onClick: () => updateDateMutation.mutate(null),
+        },
+      ],
+    },
+    {
+      id: 'move',
+      label: 'Mover a proyecto',
+      icon: FolderInput,
+      submenu: projects?.map(project => ({
+        id: project.id,
+        label: project.nombre,
+        onClick: () => moveToProjectMutation.mutate(project.id),
+        disabled: project.id === task.projectId,
+      })) || [],
+    },
+    {
+      id: 'labels',
+      label: 'Añadir etiqueta',
+      icon: Tag,
+      submenu: labels?.map(label => ({
+        id: label.id,
+        label: label.nombre,
+        onClick: () => {
+          const currentLabels = task.labels?.map(l => l.labelId) || [];
+          tasksAPI.update(task.id, { labelIds: [...currentLabels, label.id] }).then(() => {
+            queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            toast.success('Etiqueta añadida');
+          });
+        },
+        disabled: task.labels?.some(l => l.labelId === label.id),
+      })) || [],
+      separator: true,
+    },
+    {
+      id: 'subtask',
+      label: 'Crear subtarea',
+      icon: ListPlus,
+      onClick: () => openEditor({ projectId: task.projectId, parentTaskId: task.id }),
+    },
+    {
+      id: 'copy-link',
+      label: 'Copiar enlace',
+      icon: Link2,
+      onClick: () => {
+        navigator.clipboard.writeText(`${window.location.origin}/task/${task.id}`);
+        toast.success('Enlace copiado');
+      },
+      separator: true,
+    },
+    {
+      id: 'delete',
+      label: 'Eliminar',
+      icon: Trash2,
+      onClick: () => deleteMutation.mutate(),
+      danger: true,
+      requireConfirm: true,
+    },
+  ];
+
   return (
     <div className="group">
       <div
@@ -53,6 +273,7 @@ export default function TaskItem({ task }: TaskItemProps) {
         } rounded-lg p-4 hover:shadow-md transition cursor-pointer ${
           task.completada ? 'opacity-60' : ''
         }`}
+        onContextMenu={contextMenu.show}
       >
         <div className="flex items-start gap-3">
           <button
@@ -152,6 +373,14 @@ export default function TaskItem({ task }: TaskItemProps) {
             <TaskItem key={subTask.id} task={subTask} />
           ))}
         </div>
+      )}
+
+      {contextMenu.isVisible && (
+        <ContextMenu
+          items={contextMenuItems}
+          position={contextMenu.position}
+          onClose={contextMenu.hide}
+        />
       )}
     </div>
   );
