@@ -4,12 +4,12 @@ import TopBar from '@/components/TopBar';
 import ProjectView from '@/components/ProjectView';
 import TodayView from '@/components/TodayView';
 import WeekView from '@/components/WeekView';
+import LabelView from '@/components/LabelView';
 import TaskEditor from '@/components/TaskEditor';
+import TaskDetailView from '@/components/TaskDetailView';
 import AIAssistant from '@/components/AIAssistant';
-import { useUIStore } from '@/store/useStore';
 
 export default function Dashboard() {
-  const sidebarOpen = useUIStore((state) => state.sidebarOpen);
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -26,12 +26,16 @@ export default function Dashboard() {
             <Route path="/today" element={<TodayView />} />
             <Route path="/week" element={<WeekView />} />
             <Route path="/project/:id" element={<ProjectView />} />
+            <Route path="/label/:id" element={<LabelView />} />
           </Routes>
         </main>
       </div>
 
       {/* Task Editor Modal */}
       <TaskEditor />
+
+      {/* Task Detail View */}
+      <TaskDetailView />
 
       {/* AI Assistant */}
       <AIAssistant />
