@@ -6,6 +6,8 @@ import projectRoutes from './routes/projectRoutes';
 import taskRoutes from './routes/taskRoutes';
 import labelRoutes from './routes/labelRoutes';
 import aiRoutes from './routes/aiRoutes';
+import commentRoutes from './routes/commentRoutes';
+import reminderRoutes from './routes/reminderRoutes';
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api', commentRoutes);
+app.use('/api', reminderRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

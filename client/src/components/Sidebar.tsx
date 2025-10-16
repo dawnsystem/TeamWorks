@@ -15,14 +15,17 @@ import {
   BarChart3,
   Archive,
   Link2,
-  ListPlus
+  ListPlus,
+  Plus
 } from 'lucide-react';
 import { useUIStore } from '@/store/useStore';
 import { projectsAPI, labelsAPI } from '@/lib/api';
 import { useState } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
+import LabelModal from './LabelModal';
 import type { ContextMenuItem } from '@/types/contextMenu';
+import type { Label } from '@/types';
 import toast from 'react-hot-toast';
 
 export default function Sidebar() {
@@ -36,6 +39,8 @@ export default function Sidebar() {
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [editProjectName, setEditProjectName] = useState('');
   const [editProjectColor, setEditProjectColor] = useState('');
+  const [showLabelModal, setShowLabelModal] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<Label | null>(null);
 
   const queryClient = useQueryClient();
   const projectContextMenu = useContextMenu();
@@ -169,7 +174,10 @@ export default function Sidebar() {
         id: 'edit',
         label: 'Editar etiqueta',
         icon: Edit,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => {
+          setEditingLabel(label);
+          setShowLabelModal(true);
+        },
         separator: true,
       },
       {
@@ -297,6 +305,17 @@ export default function Sidebar() {
                     )}
                   </button>
                 ))}
+
+                <button
+                  onClick={() => {
+                    setEditingLabel(null);
+                    setShowLabelModal(true);
+                  }}
+                  className="flex items-center gap-3 px-3 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="text-sm">Nueva etiqueta</span>
+                </button>
               </div>
             )}
           </div>
@@ -485,6 +504,16 @@ export default function Sidebar() {
           </div>
         </div>
       )}
+
+      {/* Modal Etiqueta */}
+      <LabelModal
+        isOpen={showLabelModal}
+        onClose={() => {
+          setShowLabelModal(false);
+          setEditingLabel(null);
+        }}
+        editLabel={editingLabel}
+      />
     </aside>
   );
 }

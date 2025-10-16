@@ -136,3 +136,17 @@ export const useAIStore = create<AIState>()(
   )
 );
 
+interface TaskDetailState {
+  isOpen: boolean;
+  taskId: string | null;
+  openDetail: (taskId: string) => void;
+  closeDetail: () => void;
+}
+
+export const useTaskDetailStore = create<TaskDetailState>()((set) => ({
+  isOpen: false,
+  taskId: null,
+  openDetail: (taskId) => set({ isOpen: true, taskId }),
+  closeDetail: () => set({ isOpen: false, taskId: null }),
+}));
+

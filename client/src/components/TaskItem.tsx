@@ -92,11 +92,23 @@ export default function TaskItem({ task }: TaskItemProps) {
   });
 
   const moveToProjectMutation = useMutation({
-    mutationFn: (projectId: string) => tasksAPI.update(task.id, { projectId, sectionId: null }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Tarea movida');
+    mutationFn: (newProjectId: string) => tasksAPI.update(task.id, { projectId: newProjectId, sectionId: null }),
+    onSuccess: (_, newProjectId) => {
+      const oldProjectId = task.projectId;
+      const projectName = projects?.find(p => p.id === newProjectId)?.nombre || 'proyecto';
+      
+      // Invalidar todas las queries relacionadas
+      queryClient.invalidateQueries({ queryKey: ['tasks'] }); // Todas las tareas
+      queryClient.invalidateQueries({ queryKey: ['tasks', oldProjectId] }); // Tareas del proyecto antiguo
+      queryClient.invalidateQueries({ queryKey: ['tasks', newProjectId] }); // Tareas del proyecto nuevo
+      queryClient.invalidateQueries({ queryKey: ['projects'] }); // Lista de proyectos
+      queryClient.invalidateQueries({ queryKey: ['project', oldProjectId] }); // Proyecto antiguo (contador)
+      queryClient.invalidateQueries({ queryKey: ['project', newProjectId] }); // Proyecto nuevo (contador)
+      
+      toast.success(`Tarea movida a ${projectName}`);
+    },
+    onError: () => {
+      toast.error('Error al mover tarea');
     },
   });
 

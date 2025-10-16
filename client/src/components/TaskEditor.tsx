@@ -8,7 +8,7 @@ import type { Task } from '@/types';
 
 export default function TaskEditor() {
   const queryClient = useQueryClient();
-  const { isOpen, taskId, projectId: defaultProjectId, sectionId, closeEditor } = useTaskEditorStore();
+  const { isOpen, taskId, projectId: defaultProjectId, sectionId, parentTaskId, closeEditor } = useTaskEditorStore();
 
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -106,6 +106,7 @@ export default function TaskEditor() {
       fechaVencimiento: fechaVencimiento || undefined,
       projectId,
       sectionId,
+      parentTaskId, // Incluir parentTaskId para subtareas
       labelIds: selectedLabels,
     };
 

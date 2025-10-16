@@ -45,8 +45,12 @@ export interface Task {
   labels?: TaskLabel[];
   subTasks?: Task[];
   parentTask?: Task;
+  comments?: Comment[];
+  reminders?: Reminder[];
   _count?: {
     subTasks: number;
+    comments: number;
+    reminders: number;
   };
 }
 
@@ -67,6 +71,29 @@ export interface TaskLabel {
   labelId: string;
   task?: Task;
   label: Label;
+}
+
+export interface Comment {
+  id: string;
+  contenido: string;
+  taskId: string;
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: string;
+    nombre: string;
+    email: string;
+  };
+}
+
+export interface Reminder {
+  id: string;
+  fechaHora: string;
+  taskId: string;
+  enviado: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface AIAction {

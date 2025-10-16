@@ -75,7 +75,7 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
           orderBy: { orden: 'asc' }
         },
         _count: {
-          select: { subTasks: true }
+          select: { subTasks: true, comments: true, reminders: true }
         }
       },
       orderBy: { orden: 'asc' }
@@ -106,7 +106,25 @@ export const getTask = async (req: AuthRequest, res: Response) => {
         subTasks: {
           orderBy: { orden: 'asc' }
         },
-        parentTask: true
+        parentTask: true,
+        comments: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                nombre: true,
+                email: true
+              }
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        },
+        reminders: {
+          orderBy: { fechaHora: 'asc' }
+        },
+        _count: {
+          select: { subTasks: true, comments: true, reminders: true }
+        }
       }
     });
 
@@ -314,6 +332,40 @@ export const toggleTask = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Error en toggleTask:', error);
     res.status(500).json({ error: 'Error al cambiar estado de tarea' });
+  }
+};
+
+export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
+  try {
+    const { labelId } = req.params;
+
+    const tasks = await prisma.task.findMany({
+      where: {
+        project: { userId: req.userId },
+        labels: {
+          some: { labelId }
+        }
+      },
+      include: {
+        labels: {
+          include: {
+            label: true
+          }
+        },
+        subTasks: {
+          orderBy: { orden: 'asc' }
+        },
+        _count: {
+          select: { subTasks: true, comments: true, reminders: true }
+        }
+      },
+      orderBy: { orden: 'asc' }
+    });
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error en getTasksByLabel:', error);
+    res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });
   }
 };
 

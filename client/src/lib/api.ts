@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Project, Task, Label, AIAction, TaskFilters } from '@/types';
+import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder } from '@/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
@@ -72,6 +72,8 @@ export const tasksAPI = {
   
   getOne: (id: string) => api.get<Task>(`/tasks/${id}`),
   
+  getByLabel: (labelId: string) => api.get<Task[]>(`/tasks/by-label/${labelId}`),
+  
   create: (data: {
     titulo: string;
     descripcion?: string;
@@ -105,6 +107,29 @@ export const labelsAPI = {
     api.patch<Label>(`/labels/${id}`, data),
   
   delete: (id: string) => api.delete(`/labels/${id}`),
+};
+
+// Comments
+export const commentsAPI = {
+  getByTask: (taskId: string) => api.get<Comment[]>(`/tasks/${taskId}/comments`),
+  
+  create: (taskId: string, data: { contenido: string }) =>
+    api.post<Comment>(`/tasks/${taskId}/comments`, data),
+  
+  update: (id: string, data: { contenido: string }) =>
+    api.patch<Comment>(`/comments/${id}`, data),
+  
+  delete: (id: string) => api.delete(`/comments/${id}`),
+};
+
+// Reminders
+export const remindersAPI = {
+  getByTask: (taskId: string) => api.get<Reminder[]>(`/tasks/${taskId}/reminders`),
+  
+  create: (taskId: string, data: { fechaHora: string | Date }) =>
+    api.post<Reminder>(`/tasks/${taskId}/reminders`, data),
+  
+  delete: (id: string) => api.delete(`/reminders/${id}`),
 };
 
 // AI

@@ -5,7 +5,8 @@ import {
   createTask,
   updateTask,
   deleteTask,
-  toggleTask
+  toggleTask,
+  getTasksByLabel
 } from '../controllers/taskController';
 import { authMiddleware } from '../middleware/auth';
 
@@ -15,6 +16,7 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/', getTasks);
+router.get('/by-label/:labelId', getTasksByLabel);
 router.get('/:id', getTask);
 router.post('/', createTask);
 router.patch('/:id', updateTask);
