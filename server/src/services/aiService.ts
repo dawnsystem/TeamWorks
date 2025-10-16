@@ -1,6 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || ''
+});
+
+// Función para verificar API Key
+const checkApiKey = () => {
+  if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+    throw new Error('GROQ_API_KEY no está configurada. Obtén una gratis en https://console.groq.com');
+  }
+};
 
 export interface AIAction {
   type: 'create' | 'update' | 'delete' | 'query' | 'complete';
@@ -13,7 +22,7 @@ export interface AIAction {
 
 export const processNaturalLanguage = async (input: string, context?: any): Promise<AIAction[]> => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    checkApiKey();
 
     const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
 
@@ -43,7 +52,7 @@ Ejemplos de comandos y respuestas:
     "data": {
       "titulo": "Comprar leche",
       "prioridad": 1,
-      "fechaVencimiento": "TOMORROW_DATE"
+      "fechaVencimiento": "mañana"
     },
     "confidence": 0.95,
     "explanation": "Crear tarea 'Comprar leche' con prioridad alta para mañana"
@@ -97,17 +106,29 @@ Prioridades:
 - P3 o "baja" = 3
 - P4 o sin prioridad = 4
 
-Fechas comunes:
-- "hoy" = fecha de hoy
-- "mañana" = fecha de mañana
+Fechas comunes (devolver exactamente estas palabras):
+- "hoy" = tarea para hoy
+- "mañana" = tarea para mañana  
+- "pasado mañana" = tarea para pasado mañana
 - "esta semana" = próximos 7 días
-- Fechas específicas en formato ISO
+- Para fechas específicas: usar texto descriptivo como "hoy", "mañana", etc.
+- Si no hay fecha: no incluir el campo fechaVencimiento
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      model: 'llama-3.1-8b-instant', // Llama 3.1 8B Instant - rápido, gratis y actualizado
+      temperature: 0.7,
+      max_tokens: 1000
+    });
+
+    const text = chatCompletion.choices[0]?.message?.content || '';
 
     // Extraer JSON del texto
     let jsonText = text.trim();
@@ -162,18 +183,28 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               }
             });
 
-            // Procesar fecha
+            // Procesar fecha de forma robusta
             let fechaVencimiento = null;
             if (action.data?.fechaVencimiento) {
-              if (action.data.fechaVencimiento === 'TOMORROW_DATE') {
+              const fechaInput = action.data.fechaVencimiento.toString().toLowerCase();
+              
+              if (fechaInput.includes('mañana') || fechaInput === 'tomorrow_date') {
                 fechaVencimiento = new Date();
                 fechaVencimiento.setDate(fechaVencimiento.getDate() + 1);
                 fechaVencimiento.setHours(23, 59, 59, 999);
-              } else if (action.data.fechaVencimiento === 'TODAY_DATE') {
+              } else if (fechaInput.includes('hoy') || fechaInput === 'today_date' || fechaInput === 'today') {
                 fechaVencimiento = new Date();
                 fechaVencimiento.setHours(23, 59, 59, 999);
+              } else if (fechaInput.includes('pasado mañana')) {
+                fechaVencimiento = new Date();
+                fechaVencimiento.setDate(fechaVencimiento.getDate() + 2);
+                fechaVencimiento.setHours(23, 59, 59, 999);
               } else {
-                fechaVencimiento = new Date(action.data.fechaVencimiento);
+                // Intentar parsear como fecha ISO
+                const parsed = new Date(action.data.fechaVencimiento);
+                if (!isNaN(parsed.getTime())) {
+                  fechaVencimiento = parsed;
+                }
               }
             }
 

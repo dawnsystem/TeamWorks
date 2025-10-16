@@ -26,7 +26,7 @@ JWT_SECRET="tu-secreto-super-secreto-cambialo"
 JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
-GEMINI_API_KEY="tu-api-key-de-google-gemini"
+GROQ_API_KEY="tu-api-key-de-groq"
 FRONTEND_URL="http://localhost:5173"
 ```
 
@@ -89,14 +89,15 @@ El servidor estará disponible en `http://0.0.0.0:3000` y será accesible desde 
 - `POST /api/ai/process` - Procesar comando en lenguaje natural
 - `POST /api/ai/execute` - Ejecutar acciones de IA
 
-## Obtener API Key de Google Gemini
+## Obtener API Key de Groq (GRATIS)
 
-1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Inicia sesión con tu cuenta de Google
-3. Crea una nueva API key
-4. Copia la key y pégala en el archivo `.env`
+1. Ve a [Groq Console](https://console.groq.com)
+2. Crea una cuenta (gratis)
+3. Ve a "API Keys"
+4. Crea una nueva API key
+5. Copia la key y pégala en el archivo `.env` como `GROQ_API_KEY`
 
-El tier gratuito de Gemini es suficiente para desarrollo.
+Groq es completamente gratuito y usa Llama 3 - muy rápido y potente.
 
 ## Base de datos
 
