@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Plus, Edit, Trash2, Copy, Archive, ChevronUp, ChevronDown, ListPlus, BarChart3 } from 'lucide-react';
+import { Plus, Edit, Trash2, Copy, Archive, ListPlus, BarChart3 } from 'lucide-react';
 import TaskList from './TaskList';
 import { projectsAPI, tasksAPI } from '@/lib/api';
 import { useTaskEditorStore } from '@/store/useStore';
@@ -72,13 +72,13 @@ export default function ProjectView() {
         id: 'edit',
         label: 'Editar proyecto',
         icon: Edit,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => toast.success('Función próximamente'),
       },
       {
         id: 'add-section',
         label: 'Añadir sección',
         icon: ListPlus,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => toast.success('Función próximamente'),
         separator: true,
       },
       {
@@ -94,7 +94,7 @@ export default function ProjectView() {
         id: 'stats',
         label: 'Ver estadísticas',
         icon: BarChart3,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => toast.success('Función próximamente'),
       },
     ];
   };
@@ -118,7 +118,7 @@ export default function ProjectView() {
         id: 'edit',
         label: 'Editar nombre',
         icon: Edit,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => toast.success('Función próximamente'),
       },
       {
         id: 'archive',

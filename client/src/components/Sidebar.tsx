@@ -12,10 +12,7 @@ import {
   Copy,
   Trash2,
   FolderOpen,
-  BarChart3,
-  Archive,
   Link2,
-  ListPlus,
   Plus
 } from 'lucide-react';
 import { useUIStore } from '@/store/useStore';
@@ -168,7 +165,7 @@ export default function Sidebar() {
         id: 'filter',
         label: 'Ver tareas con esta etiqueta',
         icon: Tag,
-        onClick: () => toast.info('Función próximamente'),
+        onClick: () => toast.success('Función próximamente'),
       },
       {
         id: 'edit',
@@ -288,8 +285,9 @@ export default function Sidebar() {
             {labelsExpanded && (
               <div className="mt-1 space-y-1">
                 {labels.map((label) => (
-                  <button
+                  <Link
                     key={label.id}
+                    to={`/label/${label.id}`}
                     className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full"
                     onContextMenu={(e) => {
                       setSelectedLabelId(label.id);
@@ -303,7 +301,7 @@ export default function Sidebar() {
                         {label._count.tasks}
                       </span>
                     )}
-                  </button>
+                  </Link>
                 ))}
 
                 <button

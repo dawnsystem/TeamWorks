@@ -4,7 +4,6 @@ import { X, Calendar, Flag, Tag, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTaskEditorStore } from '@/store/useStore';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
-import type { Task } from '@/types';
 
 export default function TaskEditor() {
   const queryClient = useQueryClient();
@@ -239,7 +238,6 @@ export default function TaskEditor() {
                     style={{
                       backgroundColor: `${label.color}20`,
                       color: label.color,
-                      ringColor: label.color,
                     }}
                   >
                     {label.nombre}
