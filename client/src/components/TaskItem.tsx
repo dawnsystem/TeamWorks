@@ -15,9 +15,10 @@ import ContextMenu from './ContextMenu';
 
 interface TaskItemProps {
   task: Task;
+  depth?: number;
 }
 
-export default function TaskItem({ task }: TaskItemProps) {
+export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const openDetail = useTaskDetailStore((state) => state.openDetail);
@@ -293,7 +294,12 @@ export default function TaskItem({ task }: TaskItemProps) {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    marginLeft: `${depth * 24}px`,
   };
+
+  // Calculate completed subtasks count
+  const completedSubTasks = task.subTasks?.filter(st => st.completada).length || 0;
+  const totalSubTasks = task._count?.subTasks || task.subTasks?.length || 0;
 
   return (
     <div className="group" ref={setNodeRef} style={style}>
@@ -306,14 +312,16 @@ export default function TaskItem({ task }: TaskItemProps) {
         onContextMenu={contextMenu.show}
       >
         <div className="flex items-start gap-3">
-          {/* Drag Handle */}
-          <button
-            className="mt-0.5 opacity-0 group-hover:opacity-100 transition cursor-grab active:cursor-grabbing"
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="w-4 h-4 text-gray-400" />
-          </button>
+          {/* Drag Handle - only show for depth 0 (root tasks) */}
+          {depth === 0 && (
+            <button
+              className="mt-0.5 opacity-0 group-hover:opacity-100 transition cursor-grab active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="w-4 h-4 text-gray-400" />
+            </button>
+          )}
 
           <button
             onClick={(e) => {
@@ -398,7 +406,7 @@ export default function TaskItem({ task }: TaskItemProps) {
                       subTasksOpen ? 'rotate-90' : ''
                     }`}
                   />
-                  {task._count.subTasks} subtarea{task._count.subTasks !== 1 ? 's' : ''}
+                  {completedSubTasks}/{totalSubTasks} completada{totalSubTasks !== 1 ? 's' : ''}
                 </button>
               )}
             </div>
@@ -407,9 +415,9 @@ export default function TaskItem({ task }: TaskItemProps) {
       </div>
 
       {subTasksOpen && task.subTasks && task.subTasks.length > 0 && (
-        <div className="ml-8 mt-2 space-y-2">
+        <div className="mt-2 space-y-2">
           {task.subTasks.map((subTask) => (
-            <TaskItem key={subTask.id} task={subTask} />
+            <TaskItem key={subTask.id} task={subTask} depth={depth + 1} />
           ))}
         </div>
       )}
