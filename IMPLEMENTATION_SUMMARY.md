@@ -14,7 +14,7 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
 - ✅ Gestión completa de proyectos, secciones y tareas
 - ✅ Sistema de etiquetas y prioridades
 - ✅ Subtareas con anidamiento
-- ✅ Asistente de IA con Google Gemini para procesamiento de lenguaje natural
+- ✅ Asistente de IA con Groq (Llama 3.1) para procesamiento de lenguaje natural
 - ✅ PWA configurado (instalable como app)
 - ✅ Tema oscuro/claro
 - ✅ Acceso en red local configurado
@@ -26,7 +26,7 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
 - **Framework**: Express + TypeScript
 - **Base de datos**: PostgreSQL + Prisma ORM
 - **Autenticación**: JWT + bcrypt
-- **IA**: Google Gemini API
+- **IA**: Groq SDK (Llama 3.1 8B Instant)
 
 **Archivos creados:**
 - ✅ `server/package.json` - Dependencias y scripts
@@ -36,7 +36,7 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
 - ✅ `server/src/middleware/auth.ts` - Middleware de autenticación
 - ✅ `server/src/controllers/` - 5 controladores (auth, project, task, label, ai)
 - ✅ `server/src/routes/` - 5 archivos de rutas
-- ✅ `server/src/services/aiService.ts` - Servicio de IA con Gemini
+- ✅ `server/src/services/aiService.ts` - Servicio de IA con Groq
 - ✅ `server/README.md` - Documentación del backend
 
 ### Frontend (100% Completo)
@@ -95,8 +95,10 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
 7. ✅ **TaskItem** - Item individual con todas las propiedades
 8. ✅ **TaskEditor** - Modal para crear/editar tareas
 9. ✅ **AIAssistant** - Panel de asistente de IA
+10. ✅ **ContextMenu** - Menú contextual con click derecho
 
 ### Características UI
+- ✅ Menú contextual con click derecho en tareas
 - ✅ Colores de prioridad (P1-P4)
 - ✅ Tema oscuro/claro
 - ✅ Diseño responsive
@@ -108,7 +110,7 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
 ## 🤖 Sistema de IA
 
 **Implementado:**
-- ✅ Integración con Google Gemini API
+- ✅ Integración con Groq API (Llama 3.1 8B Instant)
 - ✅ Procesamiento de lenguaje natural
 - ✅ Extracción de intenciones (crear, modificar, eliminar, consultar)
 - ✅ Sistema de confianza (confidence score)
@@ -224,7 +226,7 @@ Se ha implementado una aplicación completa de gestión de tareas estilo Todoist
   "dotenv": "^16.4.5",
   "express": "^4.19.2",
   "jsonwebtoken": "^9.0.2",
-  "@google/generative-ai": "^0.17.1"
+  "groq-sdk": "^0.33.0"
 }
 ```
 
@@ -370,9 +372,9 @@ dev.bat     # Windows
 
 ## 📝 Notas Importantes
 
-1. **Requiere configuración de .env** en backend y frontend
+1. **Requiere configuración de .env** en backend y frontend (ver .env.example)
 2. **Requiere PostgreSQL** instalado o en Docker
-3. **Requiere API Key de Gemini** (gratuita) para usar IA
+3. **Requiere API Key de Groq** (gratuita, sin tarjeta) para usar IA - https://console.groq.com
 4. **Imágenes PWA** deben generarse manualmente (ver PWA_IMAGES.md)
 5. **Firewall** debe permitir puertos 3000 y 5173 para acceso en red
 
