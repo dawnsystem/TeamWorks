@@ -1,4 +1,5 @@
 import TaskItem from './TaskItem';
+import TaskItemSkeleton from './TaskItemSkeleton';
 import type { Task } from '@/types';
 
 interface TaskListProps {
@@ -12,7 +13,7 @@ export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas
     return (
       <div className="space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-lg p-4 skeleton h-24" />
+          <TaskItemSkeleton key={i} />
         ))}
       </div>
     );
