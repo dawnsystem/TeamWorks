@@ -306,6 +306,52 @@ router.get('/protected', auth, async (req, res) => {
 });
 ```
 
+### Validación de Inputs
+
+El proyecto usa **Zod** para validación de schemas. Esto previene errores y vulnerabilidades de seguridad:
+
+```typescript
+import { validateBody } from '../middleware/validation';
+import { createTaskSchema } from '../validation/schemas';
+
+// Validar body de request automáticamente
+router.post('/tasks', auth, validateBody(createTaskSchema), async (req, res) => {
+  // req.body ya está validado y tipado
+  const { titulo, descripcion, prioridad } = req.body;
+  // ...
+});
+```
+
+**Crear un nuevo schema de validación**:
+
+```typescript
+// server/src/validation/schemas.ts
+import { z } from 'zod';
+
+export const createMyEntitySchema = z.object({
+  nombre: z.string().min(1).max(200),
+  email: z.string().email(),
+  edad: z.number().int().min(0).max(150).optional(),
+});
+
+export type CreateMyEntityInput = z.infer<typeof createMyEntitySchema>;
+```
+
+### Rate Limiting
+
+La aplicación tiene rate limiting para prevenir abuso:
+
+- **General**: 100 requests por 15 minutos
+- **Auth** (login/register): 5 intentos por 15 minutos
+- **IA**: 10 requests por minuto
+- **Bulk Operations**: 5 operaciones por minuto
+
+```typescript
+import { bulkOperationLimiter } from '../middleware/security';
+
+router.post('/bulk-action', auth, bulkOperationLimiter, handler);
+```
+
 ### Verificar en Frontend
 
 ```typescript
@@ -346,19 +392,180 @@ import { useStore } from '../store/useStore';
 console.log('Store state:', useStore.getState());
 ```
 
+### Debugging en VS Code
+
+**Backend**:
+Crea `.vscode/launch.json`:
+```json
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Backend",
+      "skipFiles": ["<node_internals>/**"],
+      "program": "${workspaceFolder}/server/src/index.ts",
+      "preLaunchTask": "npm: dev",
+      "outFiles": ["${workspaceFolder}/server/dist/**/*.js"],
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/server"
+    }
+  ]
+}
+```
+
+**Frontend**:
+1. Abre DevTools del navegador (F12)
+2. Usa la pestaña Sources para poner breakpoints
+3. O usa `debugger;` en tu código
+
+**Tests**:
+```json
+{
+  "type": "node",
+  "request": "launch",
+  "name": "Debug Jest Tests",
+  "program": "${workspaceFolder}/server/node_modules/.bin/jest",
+  "args": ["--runInBand", "--no-cache"],
+  "console": "integratedTerminal",
+  "cwd": "${workspaceFolder}/server"
+}
+```
+
+### Common Debugging Tips
+
+**Backend no arranca**:
+```bash
+# Verificar puerto 3000
+lsof -ti:3000 | xargs kill
+
+# Verificar variables de entorno
+cat server/.env
+
+# Verificar logs
+cd server && npm run dev
+```
+
+**Frontend no se conecta**:
+```bash
+# Verificar que backend esté corriendo
+curl http://localhost:3000/health
+
+# Verificar VITE_API_URL
+cat client/.env
+
+# Limpiar caché y reinstalar
+cd client
+rm -rf node_modules package-lock.json dist
+npm install
+npm run dev
+```
+
+**Base de datos no conecta**:
+```bash
+# Docker
+docker ps | grep postgres
+docker logs teamworks-db
+
+# Local
+psql -U postgres -d teamworks -c "SELECT 1"
+
+# Regenerar Prisma Client
+cd server
+npm run prisma:generate
+```
+
+**Tests fallan**:
+```bash
+# Backend
+cd server
+npm test -- --verbose
+
+# Frontend
+cd client
+npm test -- --run
+```
+
+
 ## 🧪 Testing (Futuro)
 
-Actualmente no hay tests. Para añadirlos:
+### Configuración de Testing
 
-**Backend**: Jest + Supertest
+TeamWorks utiliza:
+- **Backend**: Jest + Supertest para tests unitarios e integración
+- **Frontend**: Vitest + React Testing Library para tests de componentes
+
+### Backend Testing
+
 ```bash
-npm install --save-dev jest @types/jest ts-jest supertest @types/supertest
+cd server
+
+# Ejecutar todos los tests
+npm test
+
+# Ejecutar en modo watch
+npm run test:watch
+
+# Generar reporte de cobertura
+npm run test:coverage
 ```
 
-**Frontend**: Vitest + React Testing Library
-```bash
-npm install --save-dev vitest @testing-library/react @testing-library/jest-dom
+**Escribir un test de controlador**:
+```typescript
+// server/src/controllers/__tests__/taskController.test.ts
+import { getTasks } from '../taskController';
+import { Request, Response } from 'express';
+
+describe('TaskController', () => {
+  it('debería retornar todas las tareas', async () => {
+    const req = { userId: 'test-user' } as any;
+    const res = {
+      json: jest.fn(),
+      status: jest.fn().mockReturnThis()
+    } as any;
+    
+    await getTasks(req, res);
+    expect(res.json).toHaveBeenCalled();
+  });
+});
 ```
+
+### Frontend Testing
+
+```bash
+cd client
+
+# Ejecutar todos los tests
+npm test
+
+# Ejecutar en modo watch (con UI)
+npm run test:ui
+
+# Generar reporte de cobertura
+npm run test:coverage
+```
+
+**Escribir un test de componente**:
+```typescript
+// client/src/components/__tests__/TaskItem.test.tsx
+import { render, screen } from '@testing-library/react';
+import { TaskItem } from '../TaskItem';
+import { describe, it, expect } from 'vitest';
+
+describe('TaskItem', () => {
+  it('debería renderizar el título', () => {
+    const task = { id: '1', titulo: 'Test' };
+    render(<TaskItem task={task} />);
+    expect(screen.getByText('Test')).toBeInTheDocument();
+  });
+});
+```
+
+Ver [TESTING.md](../TESTING.md) para guía completa de testing.
+
 
 ## 📚 Recursos
 
@@ -369,6 +576,160 @@ npm install --save-dev vitest @testing-library/react @testing-library/jest-dom
 - [Zustand Docs](https://docs.pmnd.rs/zustand)
 - [React Query Docs](https://tanstack.com/query/latest)
 - [Groq API Docs](https://console.groq.com/docs)
+
+## 💡 Best Practices
+
+### Código Limpio
+
+**Nombres descriptivos**:
+```typescript
+// ✅ Bien
+const userAuthToken = generateAuthToken(user);
+
+// ❌ Evitar
+const uat = genTok(u);
+```
+
+**Funciones pequeñas y enfocadas**:
+```typescript
+// ✅ Bien: Una responsabilidad
+function calculatePriority(task: Task): number {
+  const map = { P1: 4, P2: 3, P3: 2, P4: 1 };
+  return map[task.prioridad] || 0;
+}
+
+// ❌ Evitar: Hace demasiadas cosas
+function processTask(task: Task) {
+  // 100 líneas con múltiples responsabilidades
+}
+```
+
+**Manejo de errores**:
+```typescript
+// ✅ Bien: Errores específicos
+try {
+  await createTask(data);
+} catch (error) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      throw new Error('Tarea duplicada');
+    }
+  }
+  throw new Error('Error al crear tarea');
+}
+
+// ❌ Evitar: Catch silencioso
+try {
+  await createTask(data);
+} catch (error) {
+  // No hace nada
+}
+```
+
+### Seguridad
+
+**Validar inputs**:
+```typescript
+// ✅ Bien
+if (!titulo || titulo.length < 1) {
+  throw new Error('Título requerido');
+}
+
+// Sanitizar datos de usuario
+const sanitizedTitulo = titulo.trim();
+```
+
+**No exponer información sensible**:
+```typescript
+// ✅ Bien
+res.status(401).json({ error: 'Credenciales inválidas' });
+
+// ❌ Evitar
+res.status(401).json({ error: 'Usuario no existe' }); // Info leak
+```
+
+### Performance
+
+**Optimizar queries**:
+```typescript
+// ✅ Bien: Include solo lo necesario
+const task = await prisma.task.findUnique({
+  where: { id },
+  include: { labels: true }
+});
+
+// ❌ Evitar: Include todo sin necesidad
+const task = await prisma.task.findUnique({
+  where: { id },
+  include: {
+    labels: true,
+    comments: true,
+    reminders: true,
+    subTasks: { include: { subTasks: true } }
+  }
+});
+```
+
+**Usar paginación**:
+```typescript
+// ✅ Bien
+const tasks = await prisma.task.findMany({
+  skip: (page - 1) * limit,
+  take: limit
+});
+
+// ❌ Evitar: Cargar todo
+const tasks = await prisma.task.findMany();
+```
+
+### TypeScript
+
+**Tipos explícitos**:
+```typescript
+// ✅ Bien
+interface CreateTaskInput {
+  titulo: string;
+  descripcion?: string;
+  prioridad: 'P1' | 'P2' | 'P3' | 'P4';
+}
+
+function createTask(data: CreateTaskInput): Promise<Task> {
+  // ...
+}
+
+// ❌ Evitar
+function createTask(data: any): any {
+  // ...
+}
+```
+
+### Git
+
+**Commits descriptivos**:
+```bash
+# ✅ Bien
+git commit -m "feat: añadir filtro por etiqueta en tareas
+
+Implementa endpoint GET /api/tasks/by-label/:id
+que permite filtrar tareas por etiqueta."
+
+# ❌ Evitar
+git commit -m "cambios"
+```
+
+**Branches con nombres claros**:
+```bash
+# ✅ Bien
+feature/task-filter-by-label
+fix/auth-token-expiration
+
+# ❌ Evitar
+test
+temp
+```
+
+Ver [CONTRIBUTING.md](../CONTRIBUTING.md) para más guías de estilo.
+
 
 ## 🆘 Solución de Problemas
 

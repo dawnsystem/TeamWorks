@@ -5,7 +5,7 @@ export const getFormattedDate = (days: number = 0): string => {
   return date.toISOString();
 };
 
-export const copyToClipboard = async (text: string, _successMessage: string): Promise<boolean> => {
+export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text);
     return true;
