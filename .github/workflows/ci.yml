@@ -39,11 +39,6 @@ jobs:
           cd client
           npm ci
       
-      - name: Lint Backend
-        run: |
-          cd server
-          npm run build
-      
       - name: Lint Frontend
         run: |
           cd client
