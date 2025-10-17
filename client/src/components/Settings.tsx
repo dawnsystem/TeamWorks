@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { X, Save, RotateCcw, Server, Key, Palette, Image } from 'lucide-react';
+import { X, Save, RotateCcw, Server, Key, Palette, Image, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettingsStore } from '@/store/useStore';
 import { updateApiUrl } from '@/lib/api';
+import { useApiStatus } from '@/hooks/useApiStatus';
 
 interface SettingsProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface SettingsProps {
 
 export default function Settings({ isOpen, onClose }: SettingsProps) {
   const settings = useSettingsStore();
+  const { isConnected, isChecking, checkConnection } = useApiStatus();
   const [apiUrl, setApiUrl] = useState(settings.apiUrl);
   const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
   const [groqApiKey, setGroqApiKey] = useState(settings.groqApiKey);
@@ -106,17 +108,48 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 <label htmlFor="apiUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   URL de la API
                 </label>
-                <input
-                  id="apiUrl"
-                  type="text"
-                  value={apiUrl}
-                  onChange={(e) => setApiUrl(e.target.value)}
-                  placeholder="http://192.168.0.165:3000/api"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Ej: http://192.168.0.165:3000/api (para acceso en red local)
-                </p>
+                <div className="flex gap-2">
+                  <input
+                    id="apiUrl"
+                    type="text"
+                    value={apiUrl}
+                    onChange={(e) => setApiUrl(e.target.value)}
+                    placeholder="http://192.168.0.165:3000/api"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={checkConnection}
+                    disabled={isChecking}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition disabled:opacity-50"
+                    title="Verificar conexión"
+                  >
+                    {isChecking ? (
+                      <Loader2 className="w-5 h-5 text-gray-600 dark:text-gray-300 animate-spin" />
+                    ) : (
+                      <Server className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                    )}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Ej: http://192.168.0.165:3000/api (para acceso en red local)
+                  </p>
+                  {isConnected !== null && (
+                    <div className="flex items-center gap-1 text-xs">
+                      {isConnected ? (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          <span className="text-green-600 dark:text-green-400">Conectado</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                          <span className="text-red-600 dark:text-red-400">Sin conexión</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </section>
