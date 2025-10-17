@@ -306,6 +306,52 @@ router.get('/protected', auth, async (req, res) => {
 });
 ```
 
+### Validación de Inputs
+
+El proyecto usa **Zod** para validación de schemas. Esto previene errores y vulnerabilidades de seguridad:
+
+```typescript
+import { validateBody } from '../middleware/validation';
+import { createTaskSchema } from '../validation/schemas';
+
+// Validar body de request automáticamente
+router.post('/tasks', auth, validateBody(createTaskSchema), async (req, res) => {
+  // req.body ya está validado y tipado
+  const { titulo, descripcion, prioridad } = req.body;
+  // ...
+});
+```
+
+**Crear un nuevo schema de validación**:
+
+```typescript
+// server/src/validation/schemas.ts
+import { z } from 'zod';
+
+export const createMyEntitySchema = z.object({
+  nombre: z.string().min(1).max(200),
+  email: z.string().email(),
+  edad: z.number().int().min(0).max(150).optional(),
+});
+
+export type CreateMyEntityInput = z.infer<typeof createMyEntitySchema>;
+```
+
+### Rate Limiting
+
+La aplicación tiene rate limiting para prevenir abuso:
+
+- **General**: 100 requests por 15 minutos
+- **Auth** (login/register): 5 intentos por 15 minutos
+- **IA**: 10 requests por minuto
+- **Bulk Operations**: 5 operaciones por minuto
+
+```typescript
+import { bulkOperationLimiter } from '../middleware/security';
+
+router.post('/bulk-action', auth, bulkOperationLimiter, handler);
+```
+
 ### Verificar en Frontend
 
 ```typescript
