@@ -143,6 +143,7 @@ TeamWorks es una aplicación completa de gestión de tareas con IA, inspirada en
 - Crear subtareas de tareas existentes
 - Completar tareas por nombre
 - Actualizar tareas existentes (cambiar prioridad, fecha, proyecto, etc.)
+- Actualizar múltiples tareas a la vez (bulk update)
 - Eliminar tareas completadas
 - Consultar tareas pendientes (hoy, semana)
 
@@ -376,12 +377,19 @@ client/
    - Mover a otro proyecto o sección
    - Añadir o modificar etiquetas
 
-4. **Completar y eliminar tareas**
+4. **Actualización en bulk**
+   - Modificar múltiples tareas que cumplan filtros específicos
+   - Cambiar prioridad de todas las tareas de un proyecto
+   - Añadir etiquetas a todas las tareas de hoy
+   - Mover todas las tareas de una sección a otra
+   - Cambiar fechas de múltiples tareas
+
+5. **Completar y eliminar tareas**
    - Búsqueda por título aproximado
    - Marcar como completada
    - Eliminación con filtros (por estado, fecha, etc.)
 
-5. **Gestión de proyectos**
+6. **Gestión de proyectos**
    - Crear proyectos con nombre y color personalizado
    - Búsqueda de proyectos por nombre para asignar tareas
 

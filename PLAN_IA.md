@@ -79,7 +79,7 @@ Crear un asistente de IA que sea tan capaz como un usuario humano, pero más efi
 - ✅ Fechas absolutas ("25 de diciembre", "15/10/2025")
 - ⏸️ Rangos ("del 10 al 15 de noviembre") - Pendiente
 
-## Fase 2: Operaciones Bulk (Múltiples Elementos) ✅ PARCIALMENTE COMPLETADA
+## Fase 2: Operaciones Bulk (Múltiples Elementos) ✅ COMPLETADA
 
 ### 2.1 Creación en Bulk ✅
 **Objetivo**: Crear múltiples elementos en un solo comando
@@ -93,7 +93,7 @@ Crear un asistente de IA que sea tan capaz como un usuario humano, pero más efi
 "crear etiquetas: urgente rojo, opcional azul, en proceso amarillo, completado verde"
 ```
 
-### 2.2 Modificación en Bulk ⏸️ PENDIENTE
+### 2.2 Modificación en Bulk ✅ COMPLETADA
 **Objetivo**: Modificar múltiples tareas a la vez
 
 **Casos de uso**:
@@ -105,7 +105,11 @@ Crear un asistente de IA que sea tan capaz como un usuario humano, pero más efi
 "añadir etiqueta urgente a todas las tareas de hoy"
 
 "completar todas las tareas con etiqueta quick-win"
+
+"cambiar todas las tareas vencidas a próxima semana"
 ```
+
+**Estado**: ✅ Implementado - El sistema puede modificar múltiples tareas que coincidan con filtros específicos
 
 ### 2.3 Eliminación en Bulk ✅
 **Objetivo**: Eliminar múltiples elementos con filtros
@@ -505,11 +509,11 @@ Toggle para habilitar:
 - [x] Soporte para etiquetas
 - [x] Testing de creación avanzada
 
-### Sprint 2: Bulk Actions ✅ PARCIALMENTE COMPLETADO (Semana 2)
+### Sprint 2: Bulk Actions ✅ COMPLETADO (Semana 2)
 - [x] Crear múltiples tareas
-- [ ] Modificar múltiples tareas - PENDIENTE
+- [x] Modificar múltiples tareas
 - [x] Eliminar en bulk
-- [ ] UI para confirmar bulk actions - PENDIENTE
+- [ ] UI para confirmar bulk actions - PENDIENTE (opcional)
 - [ ] Testing de bulk operations - PENDIENTE
 
 ### Sprint 3: Acciones Secuenciales ⏸️ PENDIENTE (Semana 3)
