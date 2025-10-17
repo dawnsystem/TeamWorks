@@ -4,6 +4,63 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Helper function to recursively fetch subtasks
+async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<any> {
+  const task = await prisma.task.findFirst({
+    where: {
+      id: taskId,
+      project: { userId }
+    },
+    include: {
+      labels: {
+        include: {
+          label: true
+        }
+      },
+      _count: {
+        select: { subTasks: true, comments: true, reminders: true }
+      }
+    }
+  });
+
+  if (!task) return null;
+
+  // Fetch all direct subtasks
+  const subTasks = await prisma.task.findMany({
+    where: {
+      parentTaskId: taskId,
+      project: { userId }
+    },
+    include: {
+      labels: {
+        include: {
+          label: true
+        }
+      },
+      _count: {
+        select: { subTasks: true, comments: true, reminders: true }
+      }
+    },
+    orderBy: { orden: 'asc' }
+  });
+
+  // Recursively fetch subtasks of each subtask
+  const subTasksWithChildren = await Promise.all(
+    subTasks.map(async (subTask) => {
+      const children = await getTaskWithAllSubtasks(subTask.id, userId);
+      return {
+        ...subTask,
+        subTasks: children?.subTasks || []
+      };
+    })
+  );
+
+  return {
+    ...task,
+    subTasks: subTasksWithChildren
+  };
+}
+
 export const getTasks = async (req: AuthRequest, res: Response) => {
   try {
     const { projectId, sectionId, filter, search } = req.query;
@@ -63,16 +120,16 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
       where.completada = false;
     }
 
-    const tasks = await prisma.task.findMany({
+    // Only fetch root tasks (those without a parent)
+    where.parentTaskId = null;
+
+    const rootTasks = await prisma.task.findMany({
       where,
       include: {
         labels: {
           include: {
             label: true
           }
-        },
-        subTasks: {
-          orderBy: { orden: 'asc' }
         },
         _count: {
           select: { subTasks: true, comments: true, reminders: true }
@@ -81,7 +138,15 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
       orderBy: { orden: 'asc' }
     });
 
-    res.json(tasks);
+    // Recursively fetch all subtasks for each root task
+    const tasksWithAllSubtasks = await Promise.all(
+      rootTasks.map(async (task) => {
+        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, req.userId!);
+        return taskWithSubtasks;
+      })
+    );
+
+    res.json(tasksWithAllSubtasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
     res.status(500).json({ error: 'Error al obtener tareas' });
@@ -339,9 +404,10 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
   try {
     const { labelId } = req.params;
 
-    const tasks = await prisma.task.findMany({
+    const rootTasks = await prisma.task.findMany({
       where: {
         project: { userId: req.userId },
+        parentTaskId: null,
         labels: {
           some: { labelId }
         }
@@ -352,9 +418,6 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
             label: true
           }
         },
-        subTasks: {
-          orderBy: { orden: 'asc' }
-        },
         _count: {
           select: { subTasks: true, comments: true, reminders: true }
         }
@@ -362,10 +425,61 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
       orderBy: { orden: 'asc' }
     });
 
-    res.json(tasks);
+    // Recursively fetch all subtasks for each root task
+    const tasksWithAllSubtasks = await Promise.all(
+      rootTasks.map(async (task) => {
+        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, req.userId!);
+        return taskWithSubtasks;
+      })
+    );
+
+    res.json(tasksWithAllSubtasks);
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });
+  }
+};
+
+export const reorderTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const { taskUpdates } = req.body;
+
+    if (!Array.isArray(taskUpdates)) {
+      return res.status(400).json({ error: 'taskUpdates debe ser un array' });
+    }
+
+    // Verificar que todas las tareas pertenecen al usuario
+    const taskIds = taskUpdates.map((t: any) => t.id);
+    const tasks = await prisma.task.findMany({
+      where: {
+        id: { in: taskIds },
+        project: { userId: req.userId }
+      }
+    });
+
+    if (tasks.length !== taskIds.length) {
+      return res.status(403).json({ error: 'Acceso denegado a una o más tareas' });
+    }
+
+    // Actualizar todas las tareas en una transacción
+    await prisma.$transaction(
+      taskUpdates.map((update: any) =>
+        prisma.task.update({
+          where: { id: update.id },
+          data: {
+            orden: update.orden,
+            ...(update.projectId && { projectId: update.projectId }),
+            ...(update.sectionId !== undefined && { sectionId: update.sectionId }),
+            ...(update.parentTaskId !== undefined && { parentTaskId: update.parentTaskId })
+          }
+        })
+      )
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error en reorderTasks:', error);
+    res.status(500).json({ error: 'Error al reordenar tareas' });
   }
 };
 

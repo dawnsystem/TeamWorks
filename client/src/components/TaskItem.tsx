@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Circle, CheckCircle2, Calendar, Tag, ChevronRight, Edit, Copy, Trash2, Flag, FolderInput, ListPlus, Link2 } from 'lucide-react';
+import { Circle, CheckCircle2, Calendar, Tag, ChevronRight, Edit, Copy, Trash2, Flag, FolderInput, ListPlus, Link2, GripVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '@/types';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
@@ -13,14 +15,24 @@ import ContextMenu from './ContextMenu';
 
 interface TaskItemProps {
   task: Task;
+  depth?: number;
 }
 
-export default function TaskItem({ task }: TaskItemProps) {
+export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const openDetail = useTaskDetailStore((state) => state.openDetail);
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],
@@ -278,8 +290,19 @@ export default function TaskItem({ task }: TaskItemProps) {
     },
   ];
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    marginLeft: `${depth * 24}px`,
+  };
+
+  // Calculate completed subtasks count
+  const completedSubTasks = task.subTasks?.filter(st => st.completada).length || 0;
+  const totalSubTasks = task._count?.subTasks || task.subTasks?.length || 0;
+
   return (
-    <div className="group">
+    <div className="group" ref={setNodeRef} style={style}>
       <div
         className={`bg-white dark:bg-gray-800 border-l-4 ${
           priorityColors[task.prioridad]
@@ -289,6 +312,17 @@ export default function TaskItem({ task }: TaskItemProps) {
         onContextMenu={contextMenu.show}
       >
         <div className="flex items-start gap-3">
+          {/* Drag Handle - only show for depth 0 (root tasks) */}
+          {depth === 0 && (
+            <button
+              className="mt-0.5 opacity-0 group-hover:opacity-100 transition cursor-grab active:cursor-grabbing"
+              {...attributes}
+              {...listeners}
+            >
+              <GripVertical className="w-4 h-4 text-gray-400" />
+            </button>
+          )}
+
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -372,7 +406,7 @@ export default function TaskItem({ task }: TaskItemProps) {
                       subTasksOpen ? 'rotate-90' : ''
                     }`}
                   />
-                  {task._count.subTasks} subtarea{task._count.subTasks !== 1 ? 's' : ''}
+                  {completedSubTasks}/{totalSubTasks} completada{totalSubTasks !== 1 ? 's' : ''}
                 </button>
               )}
             </div>
@@ -381,9 +415,9 @@ export default function TaskItem({ task }: TaskItemProps) {
       </div>
 
       {subTasksOpen && task.subTasks && task.subTasks.length > 0 && (
-        <div className="ml-8 mt-2 space-y-2">
+        <div className="mt-2 space-y-2">
           {task.subTasks.map((subTask) => (
-            <TaskItem key={subTask.id} task={subTask} />
+            <TaskItem key={subTask.id} task={subTask} depth={depth + 1} />
           ))}
         </div>
       )}
