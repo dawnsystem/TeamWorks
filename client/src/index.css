@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --toast-bg: #1f2937;
+    --toast-text: #f9fafb;
+  }
+
   body {
     @apply bg-gray-50 text-gray-900 antialiased;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -14,6 +19,8 @@
 
   body.dark {
     @apply bg-gray-900 text-gray-100;
+    --toast-bg: #374151;
+    --toast-text: #f9fafb;
   }
 }
 
