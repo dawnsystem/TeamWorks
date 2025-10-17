@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSettingsStore } from '@/store/useStore';
 import axios from 'axios';
 
@@ -7,7 +7,7 @@ export function useApiStatus() {
   const [isChecking, setIsChecking] = useState(false);
   const apiUrl = useSettingsStore((state) => state.apiUrl);
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     setIsChecking(true);
     try {
       // Extract base URL from API URL (remove /api suffix if present)
@@ -21,7 +21,7 @@ export function useApiStatus() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, [apiUrl]);
 
   useEffect(() => {
     // Check connection on mount and when API URL changes
@@ -31,7 +31,7 @@ export function useApiStatus() {
     const interval = setInterval(checkConnection, 30000);
 
     return () => clearInterval(interval);
-  }, [apiUrl]);
+  }, [checkConnection]);
 
   return { isConnected, isChecking, checkConnection };
 }
