@@ -1,6 +1,7 @@
-import { Menu, Plus, Search, Moon, Sun, LogOut, Sparkles } from 'lucide-react';
+import { Menu, Plus, Search, Moon, Sun, LogOut, Sparkles, Settings as SettingsIcon } from 'lucide-react';
 import { useUIStore, useAuthStore, useTaskEditorStore, useAIStore } from '@/store/useStore';
 import { useState } from 'react';
+import Settings from './Settings';
 
 export default function TopBar() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
@@ -11,6 +12,7 @@ export default function TopBar() {
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const toggleAI = useAIStore((state) => state.toggleAI);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 sm:px-6">
@@ -72,6 +74,14 @@ export default function TopBar() {
           )}
         </button>
 
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+          title="Configuración"
+        >
+          <SettingsIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+        </button>
+
         <div className="hidden sm:flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700">
           <div className="text-right">
             <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{user?.nombre}</p>
@@ -87,6 +97,9 @@ export default function TopBar() {
           </button>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>
   );
 }

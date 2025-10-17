@@ -25,6 +25,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
 
+  // Only make root tasks draggable (depth 0)
   const {
     attributes,
     listeners,
@@ -32,7 +33,10 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ 
+    id: task.id,
+    disabled: depth > 0, // Disable dragging for subtasks
+  });
 
   const { data: projects } = useQuery({
     queryKey: ['projects'],
@@ -292,7 +296,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition,
+    transition: isDragging ? undefined : transition, // Remove transition during drag to prevent snap-back
     opacity: isDragging ? 0.5 : 1,
     marginLeft: `${depth * 24}px`,
   };
@@ -306,21 +310,18 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       <div
         className={`bg-white dark:bg-gray-800 border-l-4 ${
           priorityColors[task.prioridad]
-        } rounded-lg p-4 hover:shadow-md transition cursor-pointer ${
+        } rounded-lg p-4 hover:shadow-md transition ${
           task.completada ? 'opacity-60' : ''
-        }`}
+        } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
         onContextMenu={contextMenu.show}
+        {...(depth === 0 ? { ...attributes, ...listeners } : {})}
       >
         <div className="flex items-start gap-3">
-          {/* Drag Handle - only show for depth 0 (root tasks) */}
+          {/* Drag Handle - visual indicator for depth 0 (root tasks) */}
           {depth === 0 && (
-            <button
-              className="mt-0.5 opacity-0 group-hover:opacity-100 transition cursor-grab active:cursor-grabbing"
-              {...attributes}
-              {...listeners}
-            >
+            <div className="mt-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none">
               <GripVertical className="w-4 h-4 text-gray-400" />
-            </button>
+            </div>
           )}
 
           <button
@@ -337,7 +338,13 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             )}
           </button>
 
-          <div className="flex-1" onClick={() => openDetail(task.id)}>
+          <div 
+            className="flex-1 cursor-pointer" 
+            onClick={(e) => {
+              e.stopPropagation();
+              openDetail(task.id);
+            }}
+          >
             <h3
               className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${
                 task.completada ? 'line-through' : ''
