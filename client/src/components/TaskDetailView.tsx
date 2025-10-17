@@ -7,6 +7,7 @@ import { useTaskDetailStore, useTaskEditorStore } from '@/store/useStore';
 import CommentList from './CommentList';
 import CommentInput from './CommentInput';
 import ReminderManager from './ReminderManager';
+import TaskBreadcrumbs from './TaskBreadcrumbs';
 
 const priorityColors = {
   1: 'text-red-600 dark:text-red-400',
@@ -51,22 +52,33 @@ export default function TaskDetailView() {
     }
   };
 
+  const handleBreadcrumbNavigate = (taskId: string) => {
+    // Open the parent task detail view
+    closeDetail();
+    setTimeout(() => {
+      useTaskDetailStore.getState().openDetail(taskId);
+    }, 100);
+  };
+
   return (
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 z-40"
+        className="fixed inset-0 bg-black/50 z-40 animate-fade-in"
         onClick={closeDetail}
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto">
+      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto animate-slide-in-right">
         {isLoading || !task ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
         ) : (
           <div className="p-6 space-y-6">
+            {/* Breadcrumbs */}
+            <TaskBreadcrumbs task={task} onNavigate={handleBreadcrumbNavigate} />
+
             {/* Header */}
             <div className="flex items-start justify-between">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex-1 pr-4">
