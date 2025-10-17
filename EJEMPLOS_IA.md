@@ -54,6 +54,13 @@ Este documento contiene ejemplos prácticos de cómo usar el asistente de IA de 
 "nueva tarea diseño con etiqueta creativo"
 ```
 
+### Con Subtareas
+```
+"añadir subtarea diseñar logo a tarea preparar presentación"
+"crear subtarea investigación como parte de tarea escribir informe"
+"nueva subtarea revisar código de tarea desarrollo backend"
+```
+
 ### Combinado (Avanzado)
 ```
 "añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes prioridad alta"
@@ -61,31 +68,63 @@ Este documento contiene ejemplos prácticos de cómo usar el asistente de IA de 
 "crear tarea escribir informe trimestral en proyecto Empresa sección Documentación con etiquetas importante y deadline para este viernes prioridad P1"
 
 "nueva tarea comprar regalo cumpleaños en proyecto Personal con etiqueta familia para en 3 días"
+
+"crear subtarea diseñar mockups de tarea proyecto web en proyecto Desarrollo con etiqueta diseño para mañana"
 ```
 
 ---
 
-## 📦 Bulk Actions (Crear Múltiples Tareas)
+## 📂 Gestión de Proyectos
 
-### Lista Simple
+### Crear Proyectos
 ```
-"crear 3 tareas: comprar pan, sacar basura y lavar ropa"
-
-"añadir 5 tareas: email cliente, llamar proveedor, revisar facturas, actualizar web, reunión equipo"
-```
-
-### Con Fecha Común
-```
-"crear 3 tareas para hoy: comprar leche, sacar basura, lavar coche"
-
-"añadir 4 tareas para mañana: reunión 9am, llamar cliente, enviar propuesta, revisar código"
+"crear proyecto Marketing"
+"nuevo proyecto Clientes con color azul"
+"añadir proyecto Desarrollo con color verde"
 ```
 
-### Con Proyecto/Prioridad Común
-```
-"crear 3 tareas en proyecto Trabajo: escribir informe, revisar presupuesto, llamar proveedor"
+---
 
-"añadir 3 tareas prioridad alta: pagar facturas, llamar banco, revisar contrato"
+## 📑 Gestión de Secciones
+
+### Crear Secciones
+```
+"crear sección Backlog en proyecto Desarrollo"
+"añadir sección En Progreso en proyecto Trabajo"
+"nueva sección Completado en proyecto Personal"
+```
+
+---
+
+## 🏷️ Gestión de Etiquetas
+
+### Crear Etiquetas
+```
+"crear etiqueta urgente"
+"nueva etiqueta importante con color rojo"
+"añadir etiqueta opcional con color azul"
+```
+
+---
+
+## 💬 Comentarios
+
+### Añadir Comentarios a Tareas
+```
+"añadir comentario en tarea comprar leche: verificar si queda algo"
+"comentar en tarea reunión cliente: preparar presentación"
+"añadir nota en escribir informe: incluir datos del último trimestre"
+```
+
+---
+
+## ⏰ Recordatorios
+
+### Crear Recordatorios
+```
+"recordarme mañana a las 9am sobre reunión cliente"
+"crear recordatorio para tarea llamar proveedor mañana"
+"añadir recordatorio en tarea enviar informe para en 1 hora"
 ```
 
 ---
@@ -117,6 +156,70 @@ Este documento contiene ejemplos prácticos de cómo usar el asistente de IA de 
 ```
 "renombrar tarea de comprar a comprar leche y pan"
 "cambiar título de reunión a reunión con cliente ABC"
+```
+
+---
+
+## 🔄 Actualización Masiva de Tareas (Bulk Update)
+
+### Cambiar Prioridad de Múltiples Tareas
+```
+"cambiar todas las tareas del proyecto Personal a prioridad alta"
+"poner todas las tareas de hoy en prioridad urgente"
+"cambiar prioridad de todas las tareas vencidas a media"
+```
+
+### Añadir Etiquetas a Múltiples Tareas
+```
+"añadir etiqueta urgente a todas las tareas de hoy"
+"etiquetar todas las tareas del proyecto Trabajo como importantes"
+"añadir etiqueta review a todas las tareas de la sección Backlog"
+```
+
+### Mover Múltiples Tareas
+```
+"mover todas las tareas de la sección Backlog a En Progreso"
+"cambiar todas las tareas completadas al proyecto Archivo"
+"mover todas las tareas vencidas al proyecto Personal"
+```
+
+### Cambiar Fechas en Bulk
+```
+"cambiar todas las tareas vencidas a mañana"
+"reprogramar todas las tareas de la próxima semana para en 2 semanas"
+"poner todas las tareas sin fecha para hoy"
+```
+
+### Completar/Marcar Múltiples Tareas
+```
+"completar todas las tareas del proyecto Personal"
+"marcar como completadas todas las tareas de la sección Testing"
+"terminar todas las tareas con etiqueta quick-win"
+```
+
+---
+
+## 📦 Bulk Actions (Crear Múltiples Tareas)
+
+### Lista Simple
+```
+"crear 3 tareas: comprar pan, sacar basura y lavar ropa"
+
+"añadir 5 tareas: email cliente, llamar proveedor, revisar facturas, actualizar web, reunión equipo"
+```
+
+### Con Fecha Común
+```
+"crear 3 tareas para hoy: comprar leche, sacar basura, lavar coche"
+
+"añadir 4 tareas para mañana: reunión 9am, llamar cliente, enviar propuesta, revisar código"
+```
+
+### Con Proyecto/Prioridad Común
+```
+"crear 3 tareas en proyecto Trabajo: escribir informe, revisar presupuesto, llamar proveedor"
+
+"añadir 3 tareas prioridad alta: pagar facturas, llamar banco, revisar contrato"
 ```
 
 ---
@@ -308,13 +411,13 @@ Puedes escribir en lenguaje completamente natural:
 ## 🚀 Próximas Funcionalidades
 
 Funcionalidades que se añadirán próximamente:
-- 🔜 Crear proyectos desde IA
-- 🔜 Crear secciones desde IA
-- 🔜 Añadir comentarios a tareas
-- 🔜 Crear recordatorios
-- 🔜 Acciones secuenciales (crear proyecto + secciones + tareas)
-- 🔜 Búsquedas más complejas
+- 🔜 Editar/eliminar proyectos, secciones y etiquetas desde IA
+- 🔜 Modificaciones bulk (cambiar múltiples tareas a la vez)
+- 🔜 Acciones secuenciales (crear proyecto + secciones + tareas en un comando)
+- 🔜 Búsquedas más complejas con full-text
 - 🔜 Estadísticas y analytics
+- 🔜 Detección inteligente de tareas relacionadas
+- 🔜 Sugerencias contextuales automáticas
 
 ---
 

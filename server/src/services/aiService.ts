@@ -104,7 +104,7 @@ const parseDateString = (dateInput: string): Date | null => {
 };
 
 export interface AIAction {
-  type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk';
+  type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk' | 'update_bulk' | 'create_project' | 'create_section' | 'create_label' | 'add_comment' | 'create_reminder';
   entity: 'task' | 'project' | 'label' | 'section' | 'comment' | 'reminder';
   data?: any;
   query?: string;
@@ -127,7 +127,7 @@ ${contextString}
 Comando del usuario: "${input}"
 
 Analiza el comando y devuelve un JSON con un array de acciones a realizar. Cada acción debe tener:
-- type: "create", "update", "delete", "query", "complete" o "create_bulk" (para crear múltiples tareas)
+- type: "create", "update", "update_bulk", "delete", "query", "complete", "create_bulk", "create_project", "create_section", "create_label", "add_comment" o "create_reminder"
 - entity: "task", "project", "label", "section", "comment" o "reminder"
 - data: objeto con los datos necesarios para la acción
 - query: para consultas, la pregunta a responder
@@ -267,6 +267,148 @@ Bulk actions:
 - Si el usuario menciona crear varias tareas (ej: "crear 5 tareas", "añadir X, Y y Z")
 - Usa type "create_bulk" con un array de tasks en data.tasks
 - Cada tarea en el array debe tener las propiedades necesarias
+
+Subtareas:
+- Si el usuario quiere crear una subtarea de otra tarea, usa parentTaskTitle
+- La subtarea heredará el proyecto y sección de la tarea padre si no se especifica
+
+Proyectos, Secciones y Etiquetas:
+7. "crear proyecto Marketing con color azul"
+{
+  "actions": [{
+    "type": "create_project",
+    "entity": "project",
+    "data": {
+      "nombre": "Marketing",
+      "color": "#3b82f6"
+    },
+    "confidence": 0.95,
+    "explanation": "Crear proyecto 'Marketing' con color azul"
+  }]
+}
+
+8. "añadir sección Backlog en proyecto Desarrollo"
+{
+  "actions": [{
+    "type": "create_section",
+    "entity": "section",
+    "data": {
+      "nombre": "Backlog",
+      "projectName": "Desarrollo"
+    },
+    "confidence": 0.93,
+    "explanation": "Crear sección 'Backlog' en proyecto Desarrollo"
+  }]
+}
+
+9. "crear etiqueta urgente con color rojo"
+{
+  "actions": [{
+    "type": "create_label",
+    "entity": "label",
+    "data": {
+      "nombre": "urgente",
+      "color": "#ef4444"
+    },
+    "confidence": 0.95,
+    "explanation": "Crear etiqueta 'urgente' con color rojo"
+  }]
+}
+
+Comentarios y Recordatorios:
+10. "añadir comentario en tarea comprar leche: verificar si queda algo"
+{
+  "actions": [{
+    "type": "add_comment",
+    "entity": "comment",
+    "data": {
+      "taskTitle": "comprar leche",
+      "contenido": "verificar si queda algo"
+    },
+    "confidence": 0.90,
+    "explanation": "Añadir comentario en tarea 'comprar leche'"
+  }]
+}
+
+11. "recordarme mañana a las 9am sobre reunión cliente"
+{
+  "actions": [{
+    "type": "create_reminder",
+    "entity": "reminder",
+    "data": {
+      "taskTitle": "reunión cliente",
+      "fecha": "mañana 09:00"
+    },
+    "confidence": 0.88,
+    "explanation": "Crear recordatorio para mañana a las 9am sobre tarea 'reunión cliente'"
+  }]
+}
+
+Modificaciones en Bulk:
+12. "cambiar todas las tareas del proyecto Personal a prioridad alta"
+{
+  "actions": [{
+    "type": "update_bulk",
+    "entity": "task",
+    "data": {
+      "filter": {
+        "projectName": "Personal"
+      },
+      "updates": {
+        "prioridad": 1
+      }
+    },
+    "confidence": 0.90,
+    "explanation": "Cambiar prioridad a alta de todas las tareas del proyecto Personal"
+  }]
+}
+
+13. "añadir etiqueta urgente a todas las tareas de hoy"
+{
+  "actions": [{
+    "type": "update_bulk",
+    "entity": "task",
+    "data": {
+      "filter": {
+        "fechaVencimiento": "hoy"
+      },
+      "updates": {
+        "addLabelNames": ["urgente"]
+      }
+    },
+    "confidence": 0.88,
+    "explanation": "Añadir etiqueta 'urgente' a todas las tareas de hoy"
+  }]
+}
+
+14. "mover todas las tareas de sección Backlog a En Progreso"
+{
+  "actions": [{
+    "type": "update_bulk",
+    "entity": "task",
+    "data": {
+      "filter": {
+        "sectionName": "Backlog"
+      },
+      "updates": {
+        "sectionName": "En Progreso"
+      }
+    },
+    "confidence": 0.85,
+    "explanation": "Mover todas las tareas de sección Backlog a En Progreso"
+  }]
+}
+
+Colores disponibles:
+- rojo: #ef4444
+- naranja: #f59e0b
+- amarillo: #eab308
+- verde: #10b981
+- azul: #3b82f6
+- indigo: #6366f1
+- morado: #8b5cf6
+- rosa: #ec4899
+- gris: #6b7280
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
@@ -451,6 +593,27 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               }
             }
 
+            // Buscar tarea padre si se especifica (para subtareas)
+            let parentTaskId = null;
+            if (action.data?.parentTaskTitle) {
+              const parentTask = await prisma.task.findFirst({
+                where: {
+                  project: { userId },
+                  titulo: { contains: action.data.parentTaskTitle, mode: 'insensitive' }
+                }
+              });
+              if (parentTask) {
+                parentTaskId = parentTask.id;
+                // Si hay tarea padre, heredar su proyecto y sección
+                if (!action.data.projectName && !targetProject) {
+                  targetProject = { id: parentTask.projectId } as any;
+                }
+                if (!action.data.sectionName && !targetSectionId) {
+                  targetSectionId = parentTask.sectionId;
+                }
+              }
+            }
+
             result = await prisma.task.create({
               data: {
                 titulo: action.data.titulo,
@@ -459,6 +622,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 fechaVencimiento,
                 projectId: targetProject?.id || action.data.projectId,
                 sectionId: targetSectionId,
+                parentTaskId,
                 orden: 0,
                 ...(labelConnections.length > 0 && {
                   labels: {
@@ -528,6 +692,173 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
           }
           break;
 
+        case 'update_bulk':
+          if (action.entity === 'task' && action.data?.filter && action.data?.updates) {
+            // Construir filtro de búsqueda
+            const where: any = {
+              project: { userId }
+            };
+
+            // Filtrar por proyecto
+            if (action.data.filter.projectName) {
+              const project = await prisma.project.findFirst({
+                where: {
+                  userId,
+                  nombre: { equals: action.data.filter.projectName, mode: 'insensitive' }
+                }
+              });
+              if (project) where.projectId = project.id;
+            }
+
+            // Filtrar por sección
+            if (action.data.filter.sectionName) {
+              const section = await prisma.section.findFirst({
+                where: {
+                  nombre: { equals: action.data.filter.sectionName, mode: 'insensitive' },
+                  project: { userId }
+                }
+              });
+              if (section) where.sectionId = section.id;
+            }
+
+            // Filtrar por etiqueta
+            if (action.data.filter.labelName) {
+              where.labels = {
+                some: {
+                  label: {
+                    nombre: { equals: action.data.filter.labelName, mode: 'insensitive' },
+                    userId
+                  }
+                }
+              };
+            }
+
+            // Filtrar por fecha de vencimiento
+            if (action.data.filter.fechaVencimiento) {
+              const fecha = parseDateString(action.data.filter.fechaVencimiento);
+              if (fecha) {
+                const startOfDay = new Date(fecha);
+                startOfDay.setHours(0, 0, 0, 0);
+                const endOfDay = new Date(fecha);
+                endOfDay.setHours(23, 59, 59, 999);
+                where.fechaVencimiento = {
+                  gte: startOfDay,
+                  lte: endOfDay
+                };
+              }
+            }
+
+            // Filtrar por prioridad
+            if (action.data.filter.prioridad) {
+              where.prioridad = action.data.filter.prioridad;
+            }
+
+            // Filtrar por completada
+            if (action.data.filter.completada !== undefined) {
+              where.completada = action.data.filter.completada;
+            }
+
+            // Construir datos de actualización
+            const updateData: any = {};
+
+            if (action.data.updates.prioridad) {
+              updateData.prioridad = action.data.updates.prioridad;
+            }
+
+            if (action.data.updates.completada !== undefined) {
+              updateData.completada = action.data.updates.completada;
+            }
+
+            if (action.data.updates.fechaVencimiento) {
+              updateData.fechaVencimiento = parseDateString(action.data.updates.fechaVencimiento);
+            }
+
+            // Actualizar proyecto
+            if (action.data.updates.projectName) {
+              const foundProject = await prisma.project.findFirst({
+                where: {
+                  userId,
+                  nombre: { equals: action.data.updates.projectName, mode: 'insensitive' }
+                }
+              });
+              if (foundProject) updateData.projectId = foundProject.id;
+            }
+
+            // Actualizar sección
+            if (action.data.updates.sectionName) {
+              // Necesitamos el proyecto para buscar la sección
+              const projectId = updateData.projectId || where.projectId;
+              if (projectId) {
+                const foundSection = await prisma.section.findFirst({
+                  where: {
+                    projectId,
+                    nombre: { equals: action.data.updates.sectionName, mode: 'insensitive' }
+                  }
+                });
+                if (foundSection) updateData.sectionId = foundSection.id;
+              }
+            }
+
+            // Para añadir etiquetas, necesitamos actualizar cada tarea individualmente
+            if (action.data.updates.addLabelNames && Array.isArray(action.data.updates.addLabelNames)) {
+              // Primero buscar todas las tareas que coinciden
+              const tasks = await prisma.task.findMany({
+                where,
+                select: { id: true }
+              });
+
+              // Para cada tarea, añadir las etiquetas
+              for (const task of tasks) {
+                for (const labelName of action.data.updates.addLabelNames) {
+                  // Buscar o crear etiqueta
+                  let label = await prisma.label.findFirst({
+                    where: {
+                      userId,
+                      nombre: { equals: labelName, mode: 'insensitive' }
+                    }
+                  });
+
+                  if (!label) {
+                    const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+                    label = await prisma.label.create({
+                      data: {
+                        nombre: labelName,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        userId
+                      }
+                    });
+                  }
+
+                  // Verificar si la tarea ya tiene esta etiqueta
+                  const existing = await prisma.taskLabel.findFirst({
+                    where: {
+                      taskId: task.id,
+                      labelId: label.id
+                    }
+                  });
+
+                  if (!existing) {
+                    await prisma.taskLabel.create({
+                      data: {
+                        taskId: task.id,
+                        labelId: label.id
+                      }
+                    });
+                  }
+                }
+              }
+
+              result = { count: tasks.length, message: `Etiquetas añadidas a ${tasks.length} tareas` };
+            } else {
+              // Actualización normal sin etiquetas
+              result = await prisma.task.updateMany({
+                where,
+                data: updateData
+              });
+            }
+          }
+          break;
+
         case 'complete':
           if (action.entity === 'task' && action.data?.search) {
             // Buscar tarea por título
@@ -591,6 +922,125 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               },
               orderBy: { orden: 'asc' }
             });
+          }
+          break;
+
+        case 'create_project':
+          if (action.entity === 'project') {
+            // Obtener el último orden
+            const lastProject = await prisma.project.findFirst({
+              where: { userId },
+              orderBy: { orden: 'desc' }
+            });
+
+            const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
+            let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
+
+            result = await prisma.project.create({
+              data: {
+                nombre: action.data.nombre,
+                color,
+                userId,
+                orden: (lastProject?.orden || 0) + 1
+              }
+            });
+          }
+          break;
+
+        case 'create_section':
+          if (action.entity === 'section') {
+            // Buscar proyecto por nombre
+            let targetProject = null;
+            if (action.data?.projectName) {
+              targetProject = await prisma.project.findFirst({
+                where: {
+                  userId,
+                  nombre: { equals: action.data.projectName, mode: 'insensitive' }
+                }
+              });
+            }
+
+            if (targetProject) {
+              // Obtener el último orden
+              const lastSection = await prisma.section.findFirst({
+                where: { projectId: targetProject.id },
+                orderBy: { orden: 'desc' }
+              });
+
+              result = await prisma.section.create({
+                data: {
+                  nombre: action.data.nombre,
+                  projectId: targetProject.id,
+                  orden: (lastSection?.orden || 0) + 1
+                }
+              });
+            }
+          }
+          break;
+
+        case 'create_label':
+          if (action.entity === 'label') {
+            const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
+            let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
+
+            result = await prisma.label.create({
+              data: {
+                nombre: action.data.nombre,
+                color,
+                userId
+              }
+            });
+          }
+          break;
+
+        case 'add_comment':
+          if (action.entity === 'comment') {
+            // Buscar tarea por título
+            const task = await prisma.task.findFirst({
+              where: {
+                project: { userId },
+                titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
+              }
+            });
+
+            if (task) {
+              result = await prisma.comment.create({
+                data: {
+                  contenido: action.data.contenido,
+                  taskId: task.id,
+                  userId
+                }
+              });
+            }
+          }
+          break;
+
+        case 'create_reminder':
+          if (action.entity === 'reminder') {
+            // Buscar tarea por título
+            const task = await prisma.task.findFirst({
+              where: {
+                project: { userId },
+                titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
+              }
+            });
+
+            if (task) {
+              // Parsear fecha del recordatorio
+              let fechaRecordatorio = parseDateString(action.data.fecha);
+              
+              // Si no se pudo parsear, intentar crear fecha a partir de la cadena
+              if (!fechaRecordatorio) {
+                fechaRecordatorio = new Date(action.data.fecha);
+              }
+
+              result = await prisma.reminder.create({
+                data: {
+                  fecha: fechaRecordatorio,
+                  taskId: task.id
+                }
+              });
+            }
           }
           break;
       }
