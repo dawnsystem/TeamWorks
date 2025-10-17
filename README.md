@@ -179,12 +179,26 @@ Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 
 ## 📚 Documentación
 
+### Para Usuarios
 - **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
 - **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
-- **[ESTADO_IMPLEMENTACION.md](ESTADO_IMPLEMENTACION.md)** - Estado del proyecto
-- **[SESION5_RESUMEN.md](SESION5_RESUMEN.md)** - ⭐ Últimas mejoras implementadas
+- **[EJEMPLOS_IA.md](EJEMPLOS_IA.md)** - Ejemplos de comandos del asistente de IA
 - **Manual integrado** - Click en el botón ? dentro de la app
+
+### Para Desarrolladores
+- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - ⭐ Guía rápida para desarrolladores
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - ⭐ Cómo contribuir al proyecto
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Código de conducta
+- **[TESTING.md](TESTING.md)** - ⭐ Guía completa de testing
+- **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Arquitectura del proyecto
+- **[ESTADO_ACTUAL.md](ESTADO_ACTUAL.md)** - Estado actual del proyecto
+- **[PLAN_IA.md](PLAN_IA.md)** - Plan de mejoras del sistema de IA
+
+### Histórico
+- **[ESTADO_IMPLEMENTACION.md](ESTADO_IMPLEMENTACION.md)** - Estado del proyecto (histórico)
+- **[docs/sesiones/](docs/sesiones/)** - Resúmenes de sesiones de desarrollo
+
 
 ## 🚀 Ejecución
 

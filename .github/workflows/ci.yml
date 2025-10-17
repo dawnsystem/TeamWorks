@@ -1,0 +1,178 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Job 1: Lint and Build
+  lint-and-build:
+    name: Lint and Build
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      
+      - name: Install Backend Dependencies
+        run: |
+          cd server
+          npm ci
+      
+      - name: Install Frontend Dependencies
+        run: |
+          cd client
+          npm ci
+      
+      - name: Lint Backend
+        run: |
+          cd server
+          npm run build
+      
+      - name: Lint Frontend
+        run: |
+          cd client
+          npm run lint
+      
+      - name: Build Backend
+        run: |
+          cd server
+          npm run build
+      
+      - name: Build Frontend
+        run: |
+          cd client
+          npm run build
+  
+  # Job 2: Test Backend
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: teamworks_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      
+      - name: Install Dependencies
+        run: |
+          cd server
+          npm ci
+      
+      - name: Generate Prisma Client
+        run: |
+          cd server
+          npm run prisma:generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/teamworks_test
+      
+      - name: Run Tests
+        run: |
+          cd server
+          npm run test:ci
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/teamworks_test
+          JWT_SECRET: test-secret-key
+          NODE_ENV: test
+      
+      - name: Upload Backend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./server/coverage/lcov.info
+          flags: backend
+          name: backend-coverage
+  
+  # Job 3: Test Frontend
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+      
+      - name: Install Dependencies
+        run: |
+          cd client
+          npm ci
+      
+      - name: Run Tests
+        run: |
+          cd client
+          npm run test:ci
+      
+      - name: Upload Frontend Coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./client/coverage/lcov.info
+          flags: frontend
+          name: frontend-coverage
+  
+  # Job 4: Security Audit
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      
+      - name: Audit Backend Dependencies
+        run: |
+          cd server
+          npm audit --production --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Audit Frontend Dependencies
+        run: |
+          cd client
+          npm audit --production --audit-level=moderate
+        continue-on-error: true
