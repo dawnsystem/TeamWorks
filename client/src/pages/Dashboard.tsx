@@ -8,8 +8,12 @@ import LabelView from '@/components/LabelView';
 import TaskEditor from '@/components/TaskEditor';
 import TaskDetailView from '@/components/TaskDetailView';
 import AIAssistant from '@/components/AIAssistant';
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 export default function Dashboard() {
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -39,6 +43,9 @@ export default function Dashboard() {
 
       {/* AI Assistant */}
       <AIAssistant />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp />
     </div>
   );
 }
