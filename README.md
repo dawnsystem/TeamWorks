@@ -15,6 +15,9 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 📱 **PWA** - Instálala como app en tu dispositivo
 - 🔐 **Multi-usuario** - Sistema de autenticación y datos separados por usuario
 - 🌐 **Acceso en red local** - Accede desde cualquier dispositivo en tu red
+- ⚙️ **Totalmente configurable** - Configura todo desde la UI sin tocar código
+- 📖 **Manual integrado** - Ayuda y documentación accesible desde la app
+- 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
 
 ## 🛠️ Tecnologías
 
@@ -101,10 +104,51 @@ cd ../client
 npm install
 ```
 
-Crear archivo `.env`:
+Crear archivo `.env` (opcional, se puede configurar desde la UI):
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
+
+## 🚀 Inicio Rápido
+
+### Configuración Automática (Recomendado)
+
+#### Windows
+```bash
+setup.bat
+dev.bat
+```
+
+#### macOS/Linux
+```bash
+chmod +x setup.sh dev.sh
+./setup.sh
+./dev.sh
+```
+
+### Acceso desde Otro Dispositivo en Red
+
+Si quieres acceder a TeamWorks desde tu móvil, tablet u otro ordenador en tu red local:
+
+1. **Lee la guía completa**: [NETWORK_SETUP.md](NETWORK_SETUP.md)
+2. **En resumen**:
+   - Inicia el servidor en un PC
+   - Abre TeamWorks en el otro dispositivo
+   - Click en ⚙️ (Settings)
+   - Configura la URL del API: `http://[IP-DEL-SERVIDOR]:3000/api`
+   - Guarda y recarga
+   - ¡Listo!
+
+Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
+
+## 📚 Documentación
+
+- **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
+- **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
+- **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
+- **[ESTADO_IMPLEMENTACION.md](ESTADO_IMPLEMENTACION.md)** - Estado del proyecto
+- **[SESION5_RESUMEN.md](SESION5_RESUMEN.md)** - ⭐ Últimas mejoras implementadas
+- **Manual integrado** - Click en el botón ? dentro de la app
 
 ## 🚀 Ejecución
 
@@ -130,9 +174,24 @@ Abre tu navegador en `http://localhost:5173`
 
 ## 🌐 Acceso en Red Local
 
+⭐ **Nuevo**: Ahora puedes configurar la URL del servidor desde la interfaz de usuario sin editar archivos.
+
 El servidor y cliente están configurados para escuchar en `0.0.0.0`, permitiendo acceso desde otros dispositivos en la red local.
 
-### Desde otro dispositivo:
+### Configuración Simplificada (Recomendado):
+
+1. Inicia el servidor en tu PC principal
+2. Desde cualquier dispositivo en la red:
+   - Abre un navegador
+   - Navega a la aplicación
+   - Click en el botón ⚙️ (Settings)
+   - Configura "URL de la API": `http://[IP-DEL-PC]:3000/api`
+   - Verifica conexión con el botón de test
+   - Guarda cambios
+
+**Ver guía completa**: [NETWORK_SETUP.md](NETWORK_SETUP.md)
+
+### Método Manual (Avanzado):
 
 1. Obtén tu IP local:
    - **Windows**: `ipconfig` (busca IPv4)
@@ -140,7 +199,7 @@ El servidor y cliente están configurados para escuchar en `0.0.0.0`, permitiend
 
 2. Accede desde otro dispositivo:
    - Frontend: `http://TU_IP:5173`
-   - Backend: `http://TU_IP:3000`
+   - Backend API: `http://TU_IP:3000/api`
 
 3. Asegúrate de:
    - Permitir conexiones en el firewall (puertos 3000 y 5173)
