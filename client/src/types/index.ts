@@ -97,8 +97,8 @@ export interface Reminder {
 }
 
 export interface AIAction {
-  type: 'create' | 'update' | 'delete' | 'query' | 'complete';
-  entity: 'task' | 'project' | 'label';
+  type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk';
+  entity: 'task' | 'project' | 'label' | 'section' | 'comment' | 'reminder';
   data?: any;
   query?: string;
   confidence: number;

@@ -4,20 +4,48 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 
 ## 🚀 Características
 
+### Gestión de Tareas
 - ✅ **Gestión completa de tareas** - Crear, editar, eliminar y organizar tareas
 - 📁 **Proyectos y secciones** - Organiza tus tareas en proyectos con secciones
 - 🏷️ **Etiquetas personalizables** - Categoriza tus tareas con etiquetas de colores
 - ⭐ **Prioridades** - 4 niveles de prioridad (P1-P4) con colores distintivos
 - 📅 **Fechas de vencimiento** - Programa tus tareas con fechas límite
-- 🔄 **Subtareas** - Divide tareas grandes en subtareas más manejables
-- 🤖 **Asistente de IA** - Gestiona tareas con lenguaje natural
+- 🔄 **Subtareas infinitas** - Divide tareas grandes en subtareas más manejables (sin límite de profundidad)
+- 💬 **Comentarios** - Añade notas y actualizaciones a tus tareas
+- ⏰ **Recordatorios** - Programa recordatorios para no olvidar tus tareas
+- 🎯 **Drag & Drop** - Reordena tareas arrastrándolas desde cualquier parte
+
+### Asistente de IA Avanzado ✨
+- 🤖 **Lenguaje natural** - Crea y gestiona tareas hablando normalmente
+- 📝 **Creación avanzada** - Especifica proyecto, sección, etiquetas y fechas en un comando
+  - Ejemplo: *"añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"*
+- 🎯 **Bulk actions** - Crea múltiples tareas a la vez
+  - Ejemplo: *"crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"*
+- 🔄 **Actualización inteligente** - Cambia prioridad, fecha, proyecto de tareas existentes
+  - Ejemplo: *"cambiar prioridad de comprar leche a alta"*
+- 📅 **Fechas inteligentes** - Entiende "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"
+- 🔍 **Consultas** - Pregunta por tareas pendientes, de hoy, de la semana, etc.
+- 🎉 **Auto-etiquetado** - Las etiquetas se crean automáticamente si no existen
+
+### Gestión Inteligente de Relaciones 🧠
+- 🎊 **Popup inteligente** - Al completar la última subtarea, te pregunta:
+  - ✅ ¿Completar también la tarea padre?
+  - 💬 ¿Añadir un comentario de progreso?
+  - ➕ ¿Crear una nueva subtarea? (por si olvidaste algo)
+- 🔔 **Notificaciones contextuales** - El sistema te ayuda a mantener tus tareas organizadas
+
+### Experiencia de Usuario
 - 🌓 **Tema oscuro/claro** - Cambia entre temas según tu preferencia
+- ⌨️ **Atajos de teclado** - Cmd/Ctrl+K (nueva tarea), Cmd/Ctrl+/ (IA), Esc (cerrar)
+- ✨ **Animaciones suaves** - Interfaz fluida y agradable
 - 📱 **PWA** - Instálala como app en tu dispositivo
+- 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
+
+### Configuración y Acceso
 - 🔐 **Multi-usuario** - Sistema de autenticación y datos separados por usuario
 - 🌐 **Acceso en red local** - Accede desde cualquier dispositivo en tu red
 - ⚙️ **Totalmente configurable** - Configura todo desde la UI sin tocar código
 - 📖 **Manual integrado** - Ayuda y documentación accesible desde la app
-- 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
 
 ## 🛠️ Tecnologías
 
@@ -81,15 +109,17 @@ JWT_SECRET="cambia-este-secreto-por-algo-seguro"
 JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
-GEMINI_API_KEY="tu-api-key-aqui"
+GROQ_API_KEY="tu-groq-api-key-aqui"
 FRONTEND_URL="http://localhost:5173"
 ```
 
-**Obtener API Key de Gemini:**
-1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Inicia sesión con tu cuenta de Google
-3. Crea una nueva API key
-4. Copia la key al archivo `.env`
+**Obtener API Key de Groq (para IA):**
+1. Ve a [Groq Console](https://console.groq.com)
+2. Crea una cuenta gratuita
+3. Ve a API Keys y crea una nueva key
+4. Copia la key al archivo `.env` como `GROQ_API_KEY`
+
+**Nota**: Groq ofrece acceso gratuito a modelos potentes como Llama 3.1 8B Instant, ideal para procesamiento de lenguaje natural.
 
 Configurar base de datos:
 ```bash

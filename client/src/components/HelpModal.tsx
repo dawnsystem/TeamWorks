@@ -112,20 +112,49 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
               </div>
 
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Asistente de IA</h4>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Asistente de IA ✨ (Mejorado)</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Usa comandos en lenguaje natural para gestionar tareas de forma eficiente</p>
                 <ul className="space-y-2 ml-4">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
-                    <span>Crear, modificar y gestionar tareas usando lenguaje natural</span>
+                    <span><strong>Crear tareas avanzadas:</strong> "añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
-                    <span>Ejemplo: "Crea una tarea para llamar a Juan mañana a las 3pm con prioridad alta"</span>
+                    <span><strong>Bulk actions:</strong> "crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
+                    <span><strong>Actualizar tareas:</strong> "cambiar prioridad de comprar leche a alta"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
+                    <span><strong>Completar:</strong> "marcar como completada la tarea de escribir informe"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
+                    <span><strong>Consultas:</strong> "qué tengo pendiente esta semana" o "mostrar tareas de hoy"</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-1" />
+                    <span><strong>Fechas inteligentes:</strong> Soporta "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-1" />
-                    <span>Requiere API key de Google Gemini (gratuita)</span>
+                    <span>Requiere API key de Groq (gratuita) - configúrala en Ajustes ⚙️</span>
                   </li>
+                </ul>
+              </div>
+              
+              <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+                <h5 className="font-semibold text-purple-900 dark:text-purple-100 mb-2">🎉 Nueva función: Gestión Inteligente de Subtareas</h5>
+                <p className="text-sm text-purple-800 dark:text-purple-200">
+                  Cuando completes la última subtarea de una tarea, se mostrará un popup preguntándote si quieres:
+                </p>
+                <ul className="mt-2 space-y-1 text-sm text-purple-800 dark:text-purple-200 ml-4">
+                  <li>• Completar también la tarea padre</li>
+                  <li>• Añadir un comentario de progreso</li>
+                  <li>• Crear una nueva subtarea (si olvidaste algo)</li>
                 </ul>
               </div>
             </div>
