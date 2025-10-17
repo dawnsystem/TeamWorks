@@ -10,12 +10,12 @@
 
 TeamWorks es una aplicación completa de gestión de tareas con IA, inspirada en Todoist, que permite a usuarios crear, organizar y gestionar sus tareas mediante una interfaz intuitiva y un asistente de IA con procesamiento de lenguaje natural.
 
-**Estado del Proyecto**: 95% completado
+**Estado del Proyecto**: 98% completado
 - ✅ Backend: 100%
 - ✅ Frontend Core: 100%
-- ✅ Sistema de IA: 85% (en mejora)
+- ✅ Sistema de IA: 95% (en mejora)
 - ✅ UX/UI: 100%
-- ✅ Documentación: 90% (en actualización)
+- ✅ Documentación: 95% (en actualización)
 
 ---
 
@@ -128,18 +128,45 @@ TeamWorks es una aplicación completa de gestión de tareas con IA, inspirada en
 - Estado de enviado
 
 ### ✅ Asistente de IA
-- Procesamiento de lenguaje natural en español
+- Procesamiento de lenguaje natural en español e inglés
 - Interpretación de comandos para crear tareas
 - Modo automático y manual
 - Sistema de confianza (confidence)
 - Ejemplos de comandos
 - Historial de acciones ejecutadas
 
-**Comandos Soportados Actualmente**:
-- Crear tareas con título, prioridad y fecha
+**Comandos Soportados**:
+
+**Gestión de Tareas**:
+- Crear tareas con título, prioridad, fecha, proyecto, sección y etiquetas
+- Crear múltiples tareas en un solo comando (bulk)
+- Crear subtareas de tareas existentes
 - Completar tareas por nombre
+- Actualizar tareas existentes (cambiar prioridad, fecha, proyecto, etc.)
 - Eliminar tareas completadas
 - Consultar tareas pendientes (hoy, semana)
+
+**Gestión de Proyectos**:
+- Crear proyectos con colores personalizados
+- Especificar proyecto destino para tareas
+
+**Gestión de Secciones**:
+- Crear secciones dentro de proyectos
+- Asignar tareas a secciones específicas
+
+**Gestión de Etiquetas**:
+- Crear etiquetas con colores personalizados
+- Asignar múltiples etiquetas a tareas
+
+**Comentarios y Recordatorios**:
+- Añadir comentarios a tareas
+- Crear recordatorios para tareas
+
+**Parseo Avanzado de Fechas**:
+- Fechas relativas: "hoy", "mañana", "pasado mañana"
+- Días de la semana: "próximo lunes", "este viernes"
+- Fechas relativas: "en 3 días", "en 2 semanas"
+- Fechas específicas: "25 de diciembre", "15/10/2025"
 
 ### ✅ Drag & Drop
 - Reordenamiento de tareas dentro de proyectos
@@ -330,36 +357,62 @@ client/
 **Método**: Procesamiento de lenguaje natural con prompts estructurados
 
 ### Capacidades Implementadas
-1. **Creación de tareas básica**
-   - Extracción de título
+1. **Creación de tareas completa**
+   - Extracción de título y descripción
    - Detección de prioridad (alta/media/baja, P1-P4)
-   - Parseo de fechas comunes (hoy, mañana, pasado mañana)
-   - Asignación automática a proyecto Inbox
+   - Parseo de fechas avanzado (días de semana, fechas relativas)
+   - Asignación a proyecto específico por nombre
+   - Asignación a sección específica dentro del proyecto
+   - Asignación de múltiples etiquetas (se crean automáticamente si no existen)
+   - Creación de subtareas vinculadas a tarea padre
 
-2. **Completar tareas**
+2. **Creación en bulk**
+   - Crear múltiples tareas en un solo comando
+   - Propiedades compartidas o individuales para cada tarea
+
+3. **Actualización de tareas**
+   - Cambiar título, descripción, prioridad
+   - Modificar fecha de vencimiento
+   - Mover a otro proyecto o sección
+   - Añadir o modificar etiquetas
+
+4. **Completar y eliminar tareas**
    - Búsqueda por título aproximado
    - Marcar como completada
+   - Eliminación con filtros (por estado, fecha, etc.)
 
-3. **Eliminar tareas**
-   - Filtros: tareas completadas
-   - Eliminación en bulk
+5. **Gestión de proyectos**
+   - Crear proyectos con nombre y color personalizado
+   - Búsqueda de proyectos por nombre para asignar tareas
 
-4. **Consultas**
-   - Tareas de hoy
-   - Tareas de la semana
-   - Filtros por estado (completada/pendiente)
+6. **Gestión de secciones**
+   - Crear secciones dentro de proyectos
+   - Búsqueda de secciones por nombre
+
+7. **Gestión de etiquetas**
+   - Crear etiquetas con nombre y color
+   - Auto-creación al asignar a tareas
+   - Múltiples etiquetas por tarea
+
+8. **Comentarios**
+   - Añadir comentarios a tareas por nombre
+
+9. **Recordatorios**
+   - Crear recordatorios con fecha y hora para tareas
+
+10. **Consultas**
+    - Tareas de hoy
+    - Tareas de la semana
+    - Filtros por estado (completada/pendiente)
 
 ### Limitaciones Actuales (A Mejorar)
-- ❌ No soporta especificar proyecto destino (siempre va a Inbox)
-- ❌ No soporta especificar sección
-- ❌ No soporta añadir etiquetas en comando
-- ❌ No soporta crear múltiples tareas en un comando
-- ❌ No soporta acciones secuenciales (crear proyecto → crear tareas)
-- ❌ No soporta crear subtareas directamente
-- ❌ No soporta añadir comentarios
-- ❌ No soporta crear recordatorios
-- ❌ No soporta actualizar tareas existentes (cambiar prioridad, fecha, etc.)
-- ❌ Parseo de fechas limitado (no soporta "próximo lunes", "en 3 días", etc.)
+- ❌ No soporta acciones secuenciales (crear proyecto → crear secciones → crear tareas)
+- ❌ No soporta acciones condicionales (if-then)
+- ❌ No soporta edición de proyectos/secciones/etiquetas existentes
+- ❌ No soporta eliminación de proyectos/secciones/etiquetas
+- ❌ No soporta consultas analíticas avanzadas (estadísticas, tendencias)
+- ❌ No soporta búsquedas complejas o full-text
+- ❌ No detecta automáticamente tareas relacionadas al completar subtareas
 
 ### Sistema de Confianza
 - Cada acción tiene un `confidence` score (0-1)
@@ -411,10 +464,10 @@ client/
 ### Completitud
 - Backend: 100% ✅
 - Frontend Core: 100% ✅
-- Sistema de IA: 85% ⚠️ (en mejora)
+- Sistema de IA: 95% ✅ (en mejora)
 - UX/UI: 100% ✅
 - Testing: 0% (no implementado)
-- Documentación: 90% ⚠️ (en actualización)
+- Documentación: 95% ✅ (actualizada)
 
 ---
 
@@ -504,7 +557,16 @@ Ver `SETUP.md` para instrucciones detalladas.
 
 ## 🔄 Historial de Versiones
 
-### v1.0.0 - Estado Actual (17 Oct 2025)
+### v1.1.0 - Estado Actual (17 Oct 2025)
+- Sistema de IA mejorado con capacidades completas
+- Soporte para proyectos, secciones y etiquetas vía IA
+- Creación de subtareas vía comandos
+- Comentarios y recordatorios vía IA
+- Parseo avanzado de fechas (días de semana, fechas relativas)
+- Creación bulk de tareas
+- Documentación actualizada
+
+### v1.0.0 - Versión Inicial (17 Oct 2025)
 - Sistema completo funcional
 - Backend y frontend operativos
 - IA básica implementada

@@ -17,22 +17,28 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 
 ### Asistente de IA Avanzado ✨
 - 🤖 **Lenguaje natural** - Crea y gestiona tareas hablando normalmente
-- 📝 **Creación avanzada** - Especifica proyecto, sección, etiquetas y fechas en un comando
+- 📝 **Creación completa** - Especifica proyecto, sección, etiquetas, fechas y subtareas en un comando
   - Ejemplo: *"añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"*
+- 🔗 **Subtareas vía IA** - Crea subtareas directamente con comandos
+  - Ejemplo: *"añadir diseñar mockups como subtarea de proyecto web"*
 - 🎯 **Bulk actions** - Crea múltiples tareas a la vez
   - Ejemplo: *"crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"*
 - 🔄 **Actualización inteligente** - Cambia prioridad, fecha, proyecto de tareas existentes
   - Ejemplo: *"cambiar prioridad de comprar leche a alta"*
 - 📅 **Fechas inteligentes** - Entiende "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"
 - 🔍 **Consultas** - Pregunta por tareas pendientes, de hoy, de la semana, etc.
-- 🎉 **Auto-etiquetado** - Las etiquetas se crean automáticamente si no existen
+- 🎉 **Auto-creación** - Proyectos, secciones y etiquetas se crean automáticamente si no existen
+- 💬 **Comentarios** - Añade comentarios a tareas con comandos de voz
+  - Ejemplo: *"añadir comentario en tarea comprar leche: verificar si queda algo"*
+- ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
+  - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
 
-### Gestión Inteligente de Relaciones 🧠
-- 🎊 **Popup inteligente** - Al completar la última subtarea, te pregunta:
+### Gestión Inteligente de Relaciones 🧠 (Próximamente)
+- 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
   - ✅ ¿Completar también la tarea padre?
   - 💬 ¿Añadir un comentario de progreso?
   - ➕ ¿Crear una nueva subtarea? (por si olvidaste algo)
-- 🔔 **Notificaciones contextuales** - El sistema te ayuda a mantener tus tareas organizadas
+- 🔔 **Notificaciones contextuales** - El sistema te ayudará a mantener tus tareas organizadas
 
 ### Experiencia de Usuario
 - 🌓 **Tema oscuro/claro** - Cambia entre temas según tu preferencia

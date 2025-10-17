@@ -54,6 +54,13 @@ Este documento contiene ejemplos prácticos de cómo usar el asistente de IA de 
 "nueva tarea diseño con etiqueta creativo"
 ```
 
+### Con Subtareas
+```
+"añadir subtarea diseñar logo a tarea preparar presentación"
+"crear subtarea investigación como parte de tarea escribir informe"
+"nueva subtarea revisar código de tarea desarrollo backend"
+```
+
 ### Combinado (Avanzado)
 ```
 "añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes prioridad alta"
@@ -61,6 +68,63 @@ Este documento contiene ejemplos prácticos de cómo usar el asistente de IA de 
 "crear tarea escribir informe trimestral en proyecto Empresa sección Documentación con etiquetas importante y deadline para este viernes prioridad P1"
 
 "nueva tarea comprar regalo cumpleaños en proyecto Personal con etiqueta familia para en 3 días"
+
+"crear subtarea diseñar mockups de tarea proyecto web en proyecto Desarrollo con etiqueta diseño para mañana"
+```
+
+---
+
+## 📂 Gestión de Proyectos
+
+### Crear Proyectos
+```
+"crear proyecto Marketing"
+"nuevo proyecto Clientes con color azul"
+"añadir proyecto Desarrollo con color verde"
+```
+
+---
+
+## 📑 Gestión de Secciones
+
+### Crear Secciones
+```
+"crear sección Backlog en proyecto Desarrollo"
+"añadir sección En Progreso en proyecto Trabajo"
+"nueva sección Completado en proyecto Personal"
+```
+
+---
+
+## 🏷️ Gestión de Etiquetas
+
+### Crear Etiquetas
+```
+"crear etiqueta urgente"
+"nueva etiqueta importante con color rojo"
+"añadir etiqueta opcional con color azul"
+```
+
+---
+
+## 💬 Comentarios
+
+### Añadir Comentarios a Tareas
+```
+"añadir comentario en tarea comprar leche: verificar si queda algo"
+"comentar en tarea reunión cliente: preparar presentación"
+"añadir nota en escribir informe: incluir datos del último trimestre"
+```
+
+---
+
+## ⏰ Recordatorios
+
+### Crear Recordatorios
+```
+"recordarme mañana a las 9am sobre reunión cliente"
+"crear recordatorio para tarea llamar proveedor mañana"
+"añadir recordatorio en tarea enviar informe para en 1 hora"
 ```
 
 ---
@@ -308,13 +372,13 @@ Puedes escribir en lenguaje completamente natural:
 ## 🚀 Próximas Funcionalidades
 
 Funcionalidades que se añadirán próximamente:
-- 🔜 Crear proyectos desde IA
-- 🔜 Crear secciones desde IA
-- 🔜 Añadir comentarios a tareas
-- 🔜 Crear recordatorios
-- 🔜 Acciones secuenciales (crear proyecto + secciones + tareas)
-- 🔜 Búsquedas más complejas
+- 🔜 Editar/eliminar proyectos, secciones y etiquetas desde IA
+- 🔜 Modificaciones bulk (cambiar múltiples tareas a la vez)
+- 🔜 Acciones secuenciales (crear proyecto + secciones + tareas en un comando)
+- 🔜 Búsquedas más complejas con full-text
 - 🔜 Estadísticas y analytics
+- 🔜 Detección inteligente de tareas relacionadas
+- 🔜 Sugerencias contextuales automáticas
 
 ---
 
