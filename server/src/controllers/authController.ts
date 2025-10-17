@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import jwt, { Secret } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -46,10 +46,12 @@ export const register = async (req: Request, res: Response) => {
     });
 
     // Generar token
+    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      secret,
+      { expiresIn: expiresIn as any }
     );
 
     res.status(201).json({
@@ -92,10 +94,12 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Generar token
+    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      secret,
+      { expiresIn: expiresIn as any }
     );
 
     res.json({
