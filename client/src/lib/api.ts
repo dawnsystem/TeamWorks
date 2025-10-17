@@ -1,14 +1,35 @@
 import axios from 'axios';
 import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder } from '@/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Function to get API URL from settings or environment
+const getApiUrl = () => {
+  // Try to get from localStorage settings first
+  const settingsStorage = localStorage.getItem('settings-storage');
+  if (settingsStorage) {
+    try {
+      const settings = JSON.parse(settingsStorage);
+      if (settings.state?.apiUrl) {
+        return settings.state.apiUrl;
+      }
+    } catch (e) {
+      console.error('Error parsing settings:', e);
+    }
+  }
+  // Fallback to environment variable or default
+  return import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+};
 
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: getApiUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Update base URL when settings change
+export const updateApiUrl = (url: string) => {
+  api.defaults.baseURL = url;
+};
 
 // Interceptor para agregar token a todas las peticiones
 api.interceptors.request.use((config) => {

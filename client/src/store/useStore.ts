@@ -150,3 +150,46 @@ export const useTaskDetailStore = create<TaskDetailState>()((set) => ({
   closeDetail: () => set({ isOpen: false, taskId: null }),
 }));
 
+interface SettingsState {
+  apiUrl: string;
+  geminiApiKey: string;
+  groqApiKey: string;
+  theme: {
+    primaryColor: string;
+    accentColor: string;
+    logoUrl: string;
+  };
+  setApiUrl: (url: string) => void;
+  setGeminiApiKey: (key: string) => void;
+  setGroqApiKey: (key: string) => void;
+  setTheme: (theme: Partial<SettingsState['theme']>) => void;
+  resetToDefaults: () => void;
+}
+
+const defaultSettings = {
+  apiUrl: 'http://localhost:3000/api',
+  geminiApiKey: '',
+  groqApiKey: '',
+  theme: {
+    primaryColor: '#dc2626', // red-600
+    accentColor: '#ec4899', // pink-500
+    logoUrl: '',
+  },
+};
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      ...defaultSettings,
+      setApiUrl: (url) => set({ apiUrl: url }),
+      setGeminiApiKey: (key) => set({ geminiApiKey: key }),
+      setGroqApiKey: (key) => set({ groqApiKey: key }),
+      setTheme: (theme) => set((state) => ({ theme: { ...state.theme, ...theme } })),
+      resetToDefaults: () => set(defaultSettings),
+    }),
+    {
+      name: 'settings-storage',
+    }
+  )
+);
+

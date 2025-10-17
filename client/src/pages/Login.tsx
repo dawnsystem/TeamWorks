@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LogIn, Settings as SettingsIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/useStore';
+import Settings from '@/components/Settings';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +24,17 @@ export default function Login() {
       toast.success('¡Bienvenido de nuevo!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Error al iniciar sesión');
+      console.error('Login error:', error);
+      
+      if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+        toast.error('No se puede conectar al servidor. Verifica la configuración de red y la URL del API en Configuración.');
+      } else if (error.response?.status === 401) {
+        toast.error('Credenciales inválidas. Verifica tu email y contraseña.');
+      } else if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error('Error al iniciar sesión. Por favor, intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
@@ -30,6 +42,15 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 p-4">
+      {/* Settings Button */}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        className="fixed top-4 right-4 p-3 bg-white/90 hover:bg-white rounded-full shadow-lg transition z-10"
+        title="Configuración"
+      >
+        <SettingsIcon className="w-5 h-5 text-gray-700" />
+      </button>
+
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
@@ -85,7 +106,16 @@ export default function Login() {
             Regístrate
           </Link>
         </p>
+
+        <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-xs text-blue-800 text-center">
+            💡 Si accedes desde otro dispositivo, primero configura la URL del servidor clickeando en el botón ⚙️ arriba a la derecha
+          </p>
+        </div>
       </div>
+
+      {/* Settings Modal */}
+      <Settings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
