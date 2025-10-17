@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import ProjectView from '@/components/ProjectView';
@@ -9,11 +10,24 @@ import TaskEditor from '@/components/TaskEditor';
 import TaskDetailView from '@/components/TaskDetailView';
 import AIAssistant from '@/components/AIAssistant';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
+import TaskRelationshipPopup from '@/components/TaskRelationshipPopup';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useTaskRelationshipStore } from '@/store/useStore';
+import { tasksAPI } from '@/lib/api';
 
 export default function Dashboard() {
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Task relationship popup state
+  const relationshipState = useTaskRelationshipStore();
+  
+  // Fetch parent task when popup opens
+  const { data: parentTaskData } = useQuery({
+    queryKey: ['tasks', relationshipState.parentTaskId],
+    queryFn: () => tasksAPI.getOne(relationshipState.parentTaskId!).then((res) => res.data),
+    enabled: relationshipState.isOpen && !!relationshipState.parentTaskId,
+  });
 
   return (
     <div className="h-screen flex overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -46,6 +60,15 @@ export default function Dashboard() {
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp />
+
+      {/* Task Relationship Popup - shown when last subtask is completed */}
+      {relationshipState.isOpen && parentTaskData && relationshipState.completedSubTaskTitle && (
+        <TaskRelationshipPopup
+          parentTask={parentTaskData}
+          completedSubTaskTitle={relationshipState.completedSubTaskTitle}
+          onClose={relationshipState.closePopup}
+        />
+      )}
     </div>
   );
 }

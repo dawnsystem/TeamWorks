@@ -8,7 +8,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '@/types';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
-import { useTaskEditorStore, useTaskDetailStore } from '@/store/useStore';
+import { useTaskEditorStore, useTaskDetailStore, useTaskRelationshipStore } from '@/store/useStore';
 import { useState } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
@@ -22,6 +22,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const openDetail = useTaskDetailStore((state) => state.openDetail);
+  const openRelationshipPopup = useTaskRelationshipStore((state) => state.openPopup);
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
 
@@ -50,7 +51,30 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
   const toggleMutation = useMutation({
     mutationFn: () => tasksAPI.toggle(task.id),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Check if this is a subtask being completed and it's the last one
+      if (task.parentTaskId && !task.completada) {
+        // Fetch parent task to check if all subtasks will be completed
+        try {
+          const parentResponse = await tasksAPI.getOne(task.parentTaskId);
+          const parentTask = parentResponse.data;
+          
+          // Count incomplete subtasks (excluding this one that will be completed)
+          const incompleteSubtasks = parentTask.subTasks?.filter(
+            (st: Task) => !st.completada && st.id !== task.id
+          ) || [];
+          
+          // If this is the last subtask to complete, show relationship popup
+          if (incompleteSubtasks.length === 0) {
+            setTimeout(() => {
+              openRelationshipPopup(parentTask.id, task.titulo);
+            }, 300); // Small delay to ensure UI updates first
+          }
+        } catch (error) {
+          console.error('Error checking parent task:', error);
+        }
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success(task.completada ? 'Tarea marcada como pendiente' : 'Tarea completada');

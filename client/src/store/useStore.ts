@@ -193,3 +193,22 @@ export const useSettingsStore = create<SettingsState>()(
   )
 );
 
+// Store for task relationship popup
+interface TaskRelationshipState {
+  isOpen: boolean;
+  parentTaskId: string | null;
+  completedSubTaskTitle: string | null;
+  openPopup: (parentTaskId: string, completedSubTaskTitle: string) => void;
+  closePopup: () => void;
+}
+
+export const useTaskRelationshipStore = create<TaskRelationshipState>()((set) => ({
+  isOpen: false,
+  parentTaskId: null,
+  completedSubTaskTitle: null,
+  openPopup: (parentTaskId, completedSubTaskTitle) => 
+    set({ isOpen: true, parentTaskId, completedSubTaskTitle }),
+  closePopup: () => 
+    set({ isOpen: false, parentTaskId: null, completedSubTaskTitle: null }),
+}));
+
