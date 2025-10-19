@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -131,6 +131,25 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     }
   }, [isOpen]);
   
+  const handleSelectResult = useCallback((result: any) => {
+    switch (result.type) {
+      case 'task':
+        navigate(`/project/${result.data.projectId}`);
+        // TODO: Scroll to task or open task detail
+        break;
+      case 'project':
+        navigate(`/project/${result.id}`);
+        break;
+      case 'label':
+        navigate(`/label/${result.id}`);
+        break;
+      case 'action':
+        result.data.handler();
+        break;
+    }
+    onClose();
+  }, [navigate, onClose]);
+  
   // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -153,26 +172,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose, results, selectedIndex]);
-  
-  const handleSelectResult = (result: any) => {
-    switch (result.type) {
-      case 'task':
-        navigate(`/project/${result.data.projectId}`);
-        // TODO: Scroll to task or open task detail
-        break;
-      case 'project':
-        navigate(`/project/${result.id}`);
-        break;
-      case 'label':
-        navigate(`/label/${result.id}`);
-        break;
-      case 'action':
-        result.data.handler();
-        break;
-    }
-    onClose();
-  };
+  }, [isOpen, onClose, results, selectedIndex, handleSelectResult]);
   
   const getIcon = (result: any) => {
     switch (result.type) {
@@ -287,7 +287,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                     {getCategoryTitle(type)}
                   </h3>
                   <div className="space-y-1">
-                    {items.map((result, idx) => {
+                    {items.map((result) => {
                       const globalIndex = results.indexOf(result);
                       const isSelected = globalIndex === selectedIndex;
                       
