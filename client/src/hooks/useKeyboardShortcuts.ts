@@ -1,11 +1,13 @@
 import { useEffect } from 'react';
-import { useTaskEditorStore, useAIStore } from '@/store/useStore';
+import { useTaskEditorStore, useAIStore, useCommandPaletteStore } from '@/store/useStore';
 
 export const useKeyboardShortcuts = () => {
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const toggleAI = useAIStore((state) => state.toggleAI);
   const isAIOpen = useAIStore((state) => state.isOpen);
   const isEditorOpen = useTaskEditorStore((state) => state.isOpen);
+  const togglePalette = useCommandPaletteStore((state) => state.togglePalette);
+  const isPaletteOpen = useCommandPaletteStore((state) => state.isOpen);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -21,19 +23,29 @@ export const useKeyboardShortcuts = () => {
         }
       }
 
+      // Cmd/Ctrl + P - Toggle command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p' && !isTyping) {
+        e.preventDefault();
+        togglePalette();
+      }
+
       // Cmd/Ctrl + / - Toggle AI assistant
       if ((e.metaKey || e.ctrlKey) && e.key === '/' && !isTyping) {
         e.preventDefault();
         toggleAI();
       }
 
-      // Escape - Close AI assistant if open
-      if (e.key === 'Escape' && isAIOpen) {
-        toggleAI();
+      // Escape - Close AI assistant or command palette if open
+      if (e.key === 'Escape') {
+        if (isAIOpen) {
+          toggleAI();
+        } else if (isPaletteOpen) {
+          togglePalette();
+        }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [openEditor, toggleAI, isAIOpen, isEditorOpen]);
+  }, [openEditor, toggleAI, isAIOpen, isEditorOpen, togglePalette, isPaletteOpen]);
 };

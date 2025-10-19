@@ -6,8 +6,9 @@ export default function KeyboardShortcutsHelp() {
 
   const shortcuts = [
     { keys: ['Cmd/Ctrl', 'K'], description: 'Crear nueva tarea' },
+    { keys: ['Cmd/Ctrl', 'P'], description: 'Abrir búsqueda / Command Palette' },
     { keys: ['Cmd/Ctrl', '/'], description: 'Abrir/cerrar asistente de IA' },
-    { keys: ['Esc'], description: 'Cerrar asistente de IA' },
+    { keys: ['Esc'], description: 'Cerrar ventanas modales' },
     { keys: ['Cmd/Ctrl', 'Enter'], description: 'Enviar comentario (en campo de comentario)' },
   ];
 
