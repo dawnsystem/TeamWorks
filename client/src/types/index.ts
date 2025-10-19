@@ -117,6 +117,7 @@ export type ViewType = 'inbox' | 'today' | 'week' | 'project' | 'label';
 export interface TaskFilters {
   projectId?: string;
   sectionId?: string;
+  labelId?: string;
   filter?: 'today' | 'week' | 'completed' | 'pending';
   search?: string;
 }

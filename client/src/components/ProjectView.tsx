@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import TaskList from './TaskList';
 import TaskItem from './TaskItem';
+import LabelFilter from './LabelFilter';
 import { projectsAPI, tasksAPI } from '@/lib/api';
 import { useTaskEditorStore } from '@/store/useStore';
 import { useContextMenu } from '@/hooks/useContextMenu';
@@ -33,6 +34,7 @@ export default function ProjectView() {
   const sectionContextMenu = useContextMenu();
   const projectHeaderContextMenu = useContextMenu();
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
   // Sensors for drag and drop
@@ -60,8 +62,11 @@ export default function ProjectView() {
   });
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId],
-    queryFn: () => tasksAPI.getAll({ projectId: projectId! }).then(res => res.data),
+    queryKey: ['tasks', projectId, selectedLabelId],
+    queryFn: () => tasksAPI.getAll({ 
+      projectId: projectId!,
+      labelId: selectedLabelId || undefined
+    }).then(res => res.data),
     enabled: !!projectId,
   });
 
@@ -250,6 +255,11 @@ export default function ProjectView() {
             <span>Agregar tarea</span>
           </button>
         </div>
+
+        <LabelFilter 
+          selectedLabelId={selectedLabelId}
+          onSelectLabel={setSelectedLabelId}
+        />
 
         {/* Tareas sin sección */}
         {tasksWithoutSection.length > 0 && (

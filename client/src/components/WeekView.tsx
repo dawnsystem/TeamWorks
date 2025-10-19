@@ -1,12 +1,19 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CalendarDays } from 'lucide-react';
 import TaskList from './TaskList';
+import LabelFilter from './LabelFilter';
 import { tasksAPI } from '@/lib/api';
 
 export default function WeekView() {
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', 'week'],
-    queryFn: () => tasksAPI.getAll({ filter: 'week' }).then(res => res.data),
+    queryKey: ['tasks', 'week', selectedLabelId],
+    queryFn: () => tasksAPI.getAll({ 
+      filter: 'week',
+      labelId: selectedLabelId || undefined
+    }).then(res => res.data),
   });
 
   return (
@@ -22,6 +29,11 @@ export default function WeekView() {
           Tareas programadas para esta semana
         </p>
       </div>
+
+      <LabelFilter 
+        selectedLabelId={selectedLabelId}
+        onSelectLabel={setSelectedLabelId}
+      />
 
       <TaskList
         tasks={tasks || []}

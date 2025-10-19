@@ -1,14 +1,21 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import TaskList from './TaskList';
+import LabelFilter from './LabelFilter';
 import { tasksAPI } from '@/lib/api';
 
 export default function TodayView() {
+  const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
+
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', 'today'],
-    queryFn: () => tasksAPI.getAll({ filter: 'today' }).then(res => res.data),
+    queryKey: ['tasks', 'today', selectedLabelId],
+    queryFn: () => tasksAPI.getAll({ 
+      filter: 'today',
+      labelId: selectedLabelId || undefined
+    }).then(res => res.data),
   });
 
   const today = new Date();
@@ -24,6 +31,11 @@ export default function TodayView() {
           {format(today, "EEEE, d 'de' MMMM", { locale: es })}
         </p>
       </div>
+
+      <LabelFilter 
+        selectedLabelId={selectedLabelId}
+        onSelectLabel={setSelectedLabelId}
+      />
 
       <TaskList
         tasks={tasks || []}
