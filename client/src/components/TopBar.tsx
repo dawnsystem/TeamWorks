@@ -1,8 +1,9 @@
-import { Menu, Plus, Search, Moon, Sun, LogOut, Sparkles, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
+import { Menu, Plus, Search, Moon, Sun, LogOut, Sparkles, Settings as SettingsIcon, HelpCircle, Tag } from 'lucide-react';
 import { useUIStore, useAuthStore, useTaskEditorStore, useAIStore, useCommandPaletteStore } from '@/store/useStore';
 import { useState } from 'react';
 import Settings from './Settings';
 import HelpModal from './HelpModal';
+import LabelModal from './LabelModal';
 
 export default function TopBar() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
@@ -15,6 +16,7 @@ export default function TopBar() {
   const openPalette = useCommandPaletteStore((state) => state.openPalette);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [labelModalOpen, setLabelModalOpen] = useState(false);
 
   return (
     <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 sm:px-6">
@@ -48,6 +50,14 @@ export default function TopBar() {
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Nueva Tarea</span>
+        </button>
+
+        <button
+          onClick={() => setLabelModalOpen(true)}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+          title="Nueva etiqueta"
+        >
+          <Tag className="w-5 h-5 text-gray-600 dark:text-gray-300" />
         </button>
 
         <button
@@ -107,6 +117,9 @@ export default function TopBar() {
       
       {/* Help Modal */}
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      
+      {/* Label Modal */}
+      <LabelModal isOpen={labelModalOpen} onClose={() => setLabelModalOpen(false)} />
     </header>
   );
 }

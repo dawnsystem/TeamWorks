@@ -63,7 +63,7 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
 
 export const getTasks = async (req: AuthRequest, res: Response) => {
   try {
-    const { projectId, sectionId, filter, search } = req.query;
+    const { projectId, sectionId, filter, search, labelId } = req.query;
 
     // Construir filtros
     const where: any = {
@@ -76,6 +76,14 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
 
     if (sectionId) {
       where.sectionId = sectionId as string;
+    }
+
+    if (labelId) {
+      where.labels = {
+        some: {
+          labelId: labelId as string
+        }
+      };
     }
 
     if (search) {
