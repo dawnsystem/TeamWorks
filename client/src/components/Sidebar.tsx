@@ -21,6 +21,7 @@ import { useState } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
 import LabelModal from './LabelModal';
+import LabelManager from './LabelManager';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import type { Label } from '@/types';
 import toast from 'react-hot-toast';
@@ -38,6 +39,7 @@ export default function Sidebar() {
   const [editProjectColor, setEditProjectColor] = useState('');
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [editingLabel, setEditingLabel] = useState<Label | null>(null);
+  const [showLabelManager, setShowLabelManager] = useState(false);
 
   const queryClient = useQueryClient();
   const projectContextMenu = useContextMenu();
@@ -314,6 +316,14 @@ export default function Sidebar() {
                   <Plus className="w-4 h-4" />
                   <span className="text-sm">Nueva etiqueta</span>
                 </button>
+                <button
+                  onClick={() => setShowLabelManager(true)}
+                  className="flex items-center gap-3 px-3 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full"
+                  title="Gestionar todas las etiquetas"
+                >
+                  <Tag className="w-4 h-4" />
+                  <span className="text-sm">Gestionar etiquetas</span>
+                </button>
               </div>
             )}
           </div>
@@ -511,6 +521,12 @@ export default function Sidebar() {
           setEditingLabel(null);
         }}
         editLabel={editingLabel}
+      />
+
+      {/* Label Manager */}
+      <LabelManager
+        isOpen={showLabelManager}
+        onClose={() => setShowLabelManager(false)}
       />
     </aside>
   );
