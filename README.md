@@ -183,7 +183,7 @@ Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 - **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
 - **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
-- **[EJEMPLOS_IA.md](EJEMPLOS_IA.md)** - Ejemplos de comandos del asistente de IA
+- **[GUIA_IA.md](GUIA_IA.md)** - ⭐ Guía completa del asistente de IA
 - **Manual integrado** - Click en el botón ? dentro de la app
 
 ### Para Desarrolladores
