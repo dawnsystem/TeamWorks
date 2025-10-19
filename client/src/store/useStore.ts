@@ -212,3 +212,18 @@ export const useTaskRelationshipStore = create<TaskRelationshipState>()((set) =>
     set({ isOpen: false, parentTaskId: null, completedSubTaskTitle: null }),
 }));
 
+// Command Palette Store
+interface CommandPaletteState {
+  isOpen: boolean;
+  openPalette: () => void;
+  closePalette: () => void;
+  togglePalette: () => void;
+}
+
+export const useCommandPaletteStore = create<CommandPaletteState>()((set) => ({
+  isOpen: false,
+  openPalette: () => set({ isOpen: true }),
+  closePalette: () => set({ isOpen: false }),
+  togglePalette: () => set((state) => ({ isOpen: !state.isOpen })),
+}));
+

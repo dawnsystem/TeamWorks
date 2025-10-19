@@ -41,8 +41,11 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 🔔 **Notificaciones contextuales** - El sistema te ayudará a mantener tus tareas organizadas
 
 ### Experiencia de Usuario
+- 🔍 **Búsqueda avanzada** - Command Palette estilo VSCode (Cmd/Ctrl+P)
+- 🎯 **Filtros inteligentes** - Busca con `p:proyecto` `#etiqueta` `@hoy` `!alta`
+- 🏷️ **Gestión de etiquetas** - Panel completo para crear y organizar etiquetas
 - 🌓 **Tema oscuro/claro** - Cambia entre temas según tu preferencia
-- ⌨️ **Atajos de teclado** - Cmd/Ctrl+K (nueva tarea), Cmd/Ctrl+/ (IA), Esc (cerrar)
+- ⌨️ **Atajos de teclado** - Cmd/Ctrl+K (nueva tarea), Cmd/Ctrl+P (búsqueda), Cmd/Ctrl+/ (IA)
 - ✨ **Animaciones suaves** - Interfaz fluida y agradable
 - 📱 **PWA** - Instálala como app en tu dispositivo
 - 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
@@ -183,7 +186,7 @@ Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 - **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
 - **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
-- **[EJEMPLOS_IA.md](EJEMPLOS_IA.md)** - Ejemplos de comandos del asistente de IA
+- **[GUIA_IA.md](GUIA_IA.md)** - ⭐ Guía completa del asistente de IA
 - **Manual integrado** - Click en el botón ? dentro de la app
 
 ### Para Desarrolladores

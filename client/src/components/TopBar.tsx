@@ -1,5 +1,5 @@
 import { Menu, Plus, Search, Moon, Sun, LogOut, Sparkles, Settings as SettingsIcon, HelpCircle } from 'lucide-react';
-import { useUIStore, useAuthStore, useTaskEditorStore, useAIStore } from '@/store/useStore';
+import { useUIStore, useAuthStore, useTaskEditorStore, useAIStore, useCommandPaletteStore } from '@/store/useStore';
 import { useState } from 'react';
 import Settings from './Settings';
 import HelpModal from './HelpModal';
@@ -12,7 +12,7 @@ export default function TopBar() {
   const user = useAuthStore((state) => state.user);
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const toggleAI = useAIStore((state) => state.toggleAI);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const openPalette = useCommandPaletteStore((state) => state.openPalette);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -27,23 +27,17 @@ export default function TopBar() {
         </button>
 
         <div className="flex-1 max-w-2xl">
-          {searchOpen ? (
-            <input
-              type="text"
-              placeholder="Buscar tareas..."
-              autoFocus
-              onBlur={() => setSearchOpen(false)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
-            />
-          ) : (
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full sm:w-auto"
-            >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">Buscar</span>
-            </button>
-          )}
+          <button
+            onClick={openPalette}
+            className="flex items-center gap-2 px-4 py-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition w-full"
+          >
+            <Search className="w-4 h-4" />
+            <span className="hidden sm:inline">Buscar tareas, acciones...</span>
+            <span className="ml-auto hidden sm:flex items-center gap-1 text-xs">
+              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">Cmd</kbd>
+              <kbd className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">P</kbd>
+            </span>
+          </button>
         </div>
       </div>
 

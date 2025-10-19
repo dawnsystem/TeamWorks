@@ -11,8 +11,9 @@ import TaskDetailView from '@/components/TaskDetailView';
 import AIAssistant from '@/components/AIAssistant';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import TaskRelationshipPopup from '@/components/TaskRelationshipPopup';
+import CommandPalette from '@/components/CommandPalette';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
-import { useTaskRelationshipStore } from '@/store/useStore';
+import { useTaskRelationshipStore, useCommandPaletteStore } from '@/store/useStore';
 import { tasksAPI } from '@/lib/api';
 
 export default function Dashboard() {
@@ -21,6 +22,9 @@ export default function Dashboard() {
 
   // Task relationship popup state
   const relationshipState = useTaskRelationshipStore();
+  
+  // Command palette state
+  const paletteState = useCommandPaletteStore();
   
   // Fetch parent task when popup opens
   const { data: parentTaskData } = useQuery({
@@ -60,6 +64,12 @@ export default function Dashboard() {
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp />
+
+      {/* Command Palette */}
+      <CommandPalette 
+        isOpen={paletteState.isOpen} 
+        onClose={paletteState.closePalette} 
+      />
 
       {/* Task Relationship Popup - shown when last subtask is completed */}
       {relationshipState.isOpen && parentTaskData && relationshipState.completedSubTaskTitle && (

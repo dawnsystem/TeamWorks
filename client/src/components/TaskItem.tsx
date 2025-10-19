@@ -398,20 +398,29 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
               )}
 
               {task.labels && task.labels.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {task.labels.map((tl) => (
+                <div className="flex items-center gap-1" title={`Etiquetas: ${task.labels.map(tl => tl.label.nombre).join(', ')}`}>
+                  {task.labels.slice(0, 3).map((tl) => (
                     <span
                       key={tl.labelId}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-80 transition cursor-pointer"
                       style={{
                         backgroundColor: `${tl.label.color}20`,
                         color: tl.label.color,
                       }}
+                      title={tl.label.nombre}
                     >
                       <Tag className="w-3 h-3" />
                       {tl.label.nombre}
                     </span>
                   ))}
+                  {task.labels.length > 3 && (
+                    <span
+                      className="px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      title={`Más etiquetas: ${task.labels.slice(3).map(tl => tl.label.nombre).join(', ')}`}
+                    >
+                      +{task.labels.length - 3}
+                    </span>
+                  )}
                 </div>
               )}
 
