@@ -162,8 +162,40 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
           {/* Keyboard Shortcuts */}
           <section>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🔍 Búsqueda Avanzada (Nuevo)</h3>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 mb-4">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Command Palette - Búsqueda Universal</h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                Pulsa <kbd className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 rounded text-sm font-mono">Cmd/Ctrl + P</kbd> para abrir 
+                el buscador universal estilo VSCode. Busca tareas, proyectos, etiquetas y ejecuta acciones rápidas.
+              </p>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">Filtros Inteligentes:</span>
+                  <ul className="ml-4 mt-1 space-y-1 text-gray-700 dark:text-gray-300">
+                    <li><code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">p:Trabajo</code> - Buscar en proyecto "Trabajo"</li>
+                    <li><code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">#urgente</code> - Buscar con etiqueta "urgente"</li>
+                    <li><code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">@hoy</code> - Tareas de hoy</li>
+                    <li><code className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">!alta</code> - Prioridad alta</li>
+                  </ul>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">Acciones Rápidas:</span>
+                  <p className="ml-4 mt-1 text-gray-700 dark:text-gray-300">
+                    Escribe "nueva", "ia", "tema", "hoy" para ejecutar acciones sin tocar el ratón
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Atajos de Teclado</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <span className="text-gray-700 dark:text-gray-300">Búsqueda / Command Palette</span>
+                <kbd className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
+                  Cmd/Ctrl + P
+                </kbd>
+              </div>
               <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <span className="text-gray-700 dark:text-gray-300">Nueva tarea</span>
                 <kbd className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-sm font-mono">
@@ -188,6 +220,39 @@ export default function HelpModal({ isOpen, onClose }: HelpModalProps) {
                   Cmd/Ctrl + Enter
                 </kbd>
               </div>
+            </div>
+          </section>
+
+          {/* Label Management */}
+          <section>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">🏷️ Gestión de Etiquetas (Mejorado)</h3>
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Panel de Gestión de Etiquetas</h4>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
+                Ahora puedes gestionar todas tus etiquetas desde un panel centralizado. Accede desde el sidebar → "Gestionar etiquetas"
+              </p>
+              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>Crear, editar y eliminar etiquetas con facilidad</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>Selector de color mejorado con 8 colores predefinidos</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>Buscar y filtrar etiquetas</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>Ver cuántas tareas tiene cada etiqueta</span>
+                </li>
+                <li className="flex gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                  <span>Tooltips mejorados en tarjetas de tareas - pasa el ratón para ver todas las etiquetas</span>
+                </li>
+              </ul>
             </div>
           </section>
 
