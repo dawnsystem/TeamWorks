@@ -34,9 +34,22 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
     setChecking(true);
     try {
       const baseUrl = url.replace(/\/api\/?$/, '');
+      // Try health endpoint first
       const healthUrl = `${baseUrl}/health`;
       const response = await axios.get(healthUrl, { timeout: 5000 });
-      setConnectionStatus(response.status === 200 ? 'connected' : 'failed');
+      
+      if (response.status === 200) {
+        // Also try to get server info for additional validation
+        try {
+          const serverInfoUrl = `${url}/server-info`;
+          await axios.get(serverInfoUrl, { timeout: 3000 });
+        } catch (e) {
+          // Server info endpoint is optional, health check is enough
+        }
+        setConnectionStatus('connected');
+      } else {
+        setConnectionStatus('failed');
+      }
     } catch (error) {
       setConnectionStatus('failed');
     } finally {
@@ -54,6 +67,16 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
       const response = await axios.get(healthUrl, { timeout: 5000 });
       
       if (response.status === 200) {
+        // Verify server info endpoint as well
+        try {
+          const serverInfoUrl = `${suggestedUrl}/server-info`;
+          const serverInfo = await axios.get(serverInfoUrl, { timeout: 3000 });
+          console.log('Server info:', serverInfo.data);
+        } catch (e) {
+          // Server info is optional, health check is enough
+          console.log('Server info endpoint not available, but health check passed');
+        }
+        
         // It works! Update the settings
         settings.setApiUrl(suggestedUrl);
         updateApiUrl(suggestedUrl);
@@ -66,8 +89,12 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
         toast.error('No se pudo conectar a la URL sugerida');
         setConnectionStatus('failed');
       }
-    } catch (error) {
-      toast.error('No se pudo conectar a la URL sugerida. Configura manualmente en Ajustes.');
+    } catch (error: any) {
+      console.error('Auto-fix error:', error);
+      const errorMessage = error.code === 'ERR_NETWORK' || error.message === 'Network Error'
+        ? 'No se pudo conectar al servidor. Asegúrate de que el servidor esté ejecutándose.'
+        : 'No se pudo conectar a la URL sugerida. Configura manualmente en Ajustes.';
+      toast.error(errorMessage);
       setConnectionStatus('failed');
     } finally {
       setChecking(false);

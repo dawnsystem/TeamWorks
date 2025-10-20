@@ -116,6 +116,17 @@ export const getCorsOptions = () => {
         ) {
           return callback(null, true);
         }
+        
+        // Permitir IPv6 localhost y direcciones link-local
+        if (
+          hostname === '::1' ||
+          hostname === '::' ||
+          hostname.startsWith('fe80:') ||
+          hostname.startsWith('[::1]') ||
+          hostname.startsWith('[fe80:')
+        ) {
+          return callback(null, true);
+        }
 
         // Permitir URL de frontend configurada si existe
         if (process.env.FRONTEND_URL) {
@@ -135,10 +146,10 @@ export const getCorsOptions = () => {
 
         // Log rejected origins para debugging
         console.warn(`CORS: Origin no permitido: ${origin}`);
-        return callback(new Error('No permitido por CORS'));
+        return callback(null, false);
       } catch (e) {
         console.error(`CORS: URL de origin inválida: ${origin}`);
-        return callback(new Error('Origin inválido'));
+        return callback(null, false);
       }
     },
     credentials: true,
