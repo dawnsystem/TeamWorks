@@ -3,12 +3,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Send, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAIStore } from '@/store/useStore';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { aiAPI } from '@/lib/api';
 import type { AIAction } from '@/types';
 
 export default function AIAssistant() {
   const queryClient = useQueryClient();
   const { isOpen, autoExecute, toggleAI, setAutoExecute } = useAIStore();
+  const isMobile = useIsMobile();
   const [command, setCommand] = useState('');
   const [actions, setActions] = useState<AIAction[]>([]);
   const [results, setResults] = useState<any[]>([]);
@@ -59,21 +61,37 @@ export default function AIAssistant() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 w-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
-      <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Sparkles className="w-6 h-6 text-white" />
-          <h3 className="text-lg font-semibold text-white">Asistente IA</h3>
-        </div>
-        <button
+    <>
+      {/* Mobile overlay */}
+      {isMobile && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={toggleAI}
-          className="p-1 hover:bg-white/20 rounded-lg transition"
-        >
-          <X className="w-5 h-5 text-white" />
-        </button>
-      </div>
+        />
+      )}
+      
+      {/* AI Assistant Panel */}
+      <div className={`
+        fixed bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50
+        ${isMobile 
+          ? 'inset-x-4 bottom-20 top-20' 
+          : 'bottom-6 right-6 w-96'
+        }
+      `}>
+        <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-6 h-6 text-white" />
+            <h3 className="text-lg font-semibold text-white">Asistente IA</h3>
+          </div>
+          <button
+            onClick={toggleAI}
+            className="p-1 hover:bg-white/20 rounded-lg transition"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        </div>
 
-      <div className="p-4 max-h-96 overflow-y-auto">
+        <div className={`p-4 overflow-y-auto ${isMobile ? 'max-h-full' : 'max-h-96'}`}>
         {/* Modo auto-ejecutar */}
         <div className="mb-4 flex items-center gap-2">
           <input
@@ -211,6 +229,7 @@ export default function AIAssistant() {
         </div>
       </form>
     </div>
+    </>
   );
 }
 

@@ -17,8 +17,9 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/store/useStore';
 import { projectsAPI, labelsAPI } from '@/lib/api';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import ContextMenu from './ContextMenu';
 import LabelModal from './LabelModal';
 import LabelManager from './LabelManager';
@@ -29,6 +30,8 @@ import toast from 'react-hot-toast';
 export default function Sidebar() {
   const location = useLocation();
   const sidebarOpen = useUIStore((state) => state.sidebarOpen);
+  const setSidebarOpen = useUIStore((state) => state.setSidebarOpen);
+  const isMobile = useIsMobile();
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
@@ -94,6 +97,13 @@ export default function Sidebar() {
       toast.success('Etiqueta eliminada');
     },
   });
+
+  // Close sidebar on mobile when navigating
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile, setSidebarOpen]);
 
   if (!sidebarOpen) return null;
 
@@ -191,10 +201,32 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white">TeamWorks</h1>
-      </div>
+    <>
+      {/* Mobile overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col
+        ${isMobile ? 'fixed inset-y-0 left-0 z-40 transform transition-transform duration-300' : ''}
+        ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
+      `}>
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">TeamWorks</h1>
+          {isMobile && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition"
+            >
+              <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            </button>
+          )}
+        </div>
 
       <nav className="flex-1 overflow-y-auto p-4 space-y-1">
         {navItems.map((item) => {
@@ -529,6 +561,7 @@ export default function Sidebar() {
         onClose={() => setShowLabelManager(false)}
       />
     </aside>
+    </>
   );
 }
 
