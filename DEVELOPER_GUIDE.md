@@ -14,7 +14,8 @@ cd server && npm install
 cd ../client && npm install
 
 # Configurar variables de entorno
-# Crear server/.env y client/.env según SETUP.md
+# Crear server/.env según SETUP.md (DATABASE_URL, JWT_SECRET, GROQ_API_KEY)
+# client/.env es OPCIONAL - la URL del API se configura desde la UI
 
 # Iniciar base de datos (si usas Docker)
 docker run --name teamworks-db -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres

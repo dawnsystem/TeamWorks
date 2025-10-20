@@ -2,9 +2,13 @@
 
 Esta guía te ayudará a configurar TeamWorks para que puedas acceder desde cualquier dispositivo en tu red local (móvil, tablet, otro ordenador).
 
-## 🎉 ¡Nuevo! Configuración Automática
+## 🎉 ¡Actualizado! Configuración Automática Mejorada
 
-TeamWorks ahora detecta automáticamente cuando accedes desde una red remota y te ofrece configurar la URL del API con un solo clic. **Ya no necesitas editar archivos de configuración manualmente.**
+TeamWorks ahora está completamente configurado para funcionar en red local **sin necesidad de configuración manual**. El servidor acepta automáticamente conexiones desde:
+- ✅ Localhost (127.0.0.1, localhost, 0.0.0.0)
+- ✅ Red local clase C (192.168.x.x)
+- ✅ Red local clase A (10.x.x.x)
+- ✅ Red local clase B (172.16.x.x - 172.31.x.x)
 
 ### Flujo de Configuración Simplificado:
 
@@ -19,7 +23,12 @@ El sistema verificará que el servidor esté accesible y configurará todo por t
 
 ## Paso 1: Configuración del Servidor
 
-El servidor ya está configurado para escuchar en todas las interfaces de red (`0.0.0.0`), así que no necesitas hacer cambios en el código.
+El servidor ya está configurado para:
+- ✅ Escuchar en todas las interfaces de red (`0.0.0.0`)
+- ✅ Aceptar conexiones CORS desde cualquier IP de red local
+- ✅ Manejar credenciales de autenticación de forma segura
+
+**No necesitas hacer cambios en el código ni en archivos .env para la configuración de red local.**
 
 ### 1.1 Iniciar el Servidor
 
@@ -161,6 +170,7 @@ Ahora ya puedes:
 2. La IP ingresada es incorrecta
 3. El firewall está bloqueando el puerto 3000
 4. Los dispositivos no están en la misma red
+5. **NUEVO**: Error de CORS (muy poco probable con la nueva configuración)
 
 **Soluciones:**
 1. **Automática**: Si ves el banner naranja, prueba hacer clic en "Configurar Automáticamente"
@@ -168,6 +178,19 @@ Ahora ya puedes:
 3. Confirma la IP con `ipconfig` (Windows) o `ifconfig` (Mac/Linux)
 4. Revisa la configuración del firewall (ver Paso 1.3)
 5. Asegúrate de que ambos dispositivos están en la misma WiFi
+6. **NUEVO**: Verifica los logs del servidor. La configuración CORS ahora acepta automáticamente conexiones desde red local.
+
+### CORS Bloqueado / Error de Cross-Origin
+
+**⚠️ SOLUCIONADO**: Este error ya no debería ocurrir con la nueva configuración. El servidor ahora acepta automáticamente:
+- Todas las IPs de localhost (127.0.0.1, localhost, 0.0.0.0)
+- Todas las IPs de red local privada (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+
+Si aún ves este error:
+1. Reinicia el servidor completamente
+2. Verifica que estés usando la última versión del código
+3. Comprueba los logs del servidor para ver qué origin está siendo rechazado
+4. Asegúrate de que estás accediendo desde una IP de red local válida
 
 ### El banner de configuración automática no aparece
 
@@ -205,6 +228,22 @@ Ahora ya puedes:
 3. Algunos routers tienen "aislamiento de clientes" activado - desactívalo en la configuración del router
 
 ## Configuración Avanzada
+
+### Entendiendo la Configuración CORS
+
+La aplicación ahora incluye una configuración CORS inteligente que:
+- ✅ Permite automáticamente conexiones desde localhost y todas sus variantes
+- ✅ Permite automáticamente conexiones desde rangos de IP de red local privada
+- ✅ Permite conexiones configuradas explícitamente via `FRONTEND_URL` en .env
+- ✅ Soporta credenciales (cookies, headers de autenticación) de forma segura
+- ✅ Registra en consola cualquier origen rechazado para debugging
+
+**No necesitas configurar FRONTEND_URL** para uso en red local. La configuración CORS es automática.
+
+Si quieres restringir el acceso a IPs específicas, puedes configurar `FRONTEND_URL` en el archivo `.env` del servidor:
+```env
+FRONTEND_URL=http://192.168.1.100:5173
+```
 
 ### Usar un Dominio Local
 

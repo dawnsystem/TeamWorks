@@ -54,17 +54,25 @@ createdb teamworks
 ```env
 DATABASE_URL="postgresql://postgres:password@localhost:5432/teamworks?schema=public"
 JWT_SECRET="mi-secreto-super-seguro-123"
-GEMINI_API_KEY="obtener-en-google-ai-studio"
+GROQ_API_KEY="obtener-en-groq-console"
 PORT=3000
-FRONTEND_URL="http://localhost:5173"
+# FRONTEND_URL es OPCIONAL - el servidor acepta automáticamente red local
+# FRONTEND_URL="http://localhost:5173"
 ```
 
-**Obtener Gemini API Key (GRATIS):**
-1. Ve a https://makersuite.google.com/app/apikey
-2. Crea API key
-3. Copia y pega en `.env`
+**Obtener Groq API Key (GRATIS):**
+1. Ve a https://console.groq.com
+2. Crea una cuenta gratuita
+3. Ve a API Keys y crea una nueva key
+4. Copia y pega en `.env` como `GROQ_API_KEY`
 
-### Frontend: `client/.env`
+**Nota sobre Groq**: Groq ofrece acceso gratuito a modelos potentes como Llama 3.1, ideal para procesamiento de lenguaje natural.
+
+### Frontend: `client/.env` (OPCIONAL)
+
+**No necesitas crear este archivo**. La aplicación detecta automáticamente la configuración de red y te permite configurarla desde la UI.
+
+Si prefieres configurarlo manualmente:
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
@@ -122,17 +130,28 @@ eliminar todas las tareas completadas
 
 ## 🌐 Acceso desde otro Dispositivo
 
-1. Obtén tu IP local:
-   - Windows: `ipconfig`
+**¡ACTUALIZADO! Sin configuración manual necesaria:**
+
+1. Inicia el servidor en tu PC principal
+2. Obtén tu IP local:
+   - Windows: `ipconfig` (busca "IPv4 Address")
    - Mac/Linux: `ifconfig` o `hostname -I`
 
-2. En otro dispositivo (misma red WiFi):
+3. En otro dispositivo (misma red WiFi):
    - Abre: `http://TU_IP:5173`
+   - **Verás un banner naranja automáticamente**
+   - Haz clic en "Configurar Automáticamente"
+   - ¡Listo! Ya puedes iniciar sesión
 
-3. Actualiza `client/.env`:
-   ```env
-   VITE_API_URL=http://TU_IP:3000/api
-   ```
+**¿Por qué funciona automáticamente?**
+- ✅ El servidor ahora acepta conexiones CORS desde cualquier IP de red local
+- ✅ La aplicación detecta automáticamente tu configuración de red
+- ✅ No necesitas editar archivos .env manualmente
+
+**Si prefieres configuración manual:**
+- Click en ⚙️ (Settings) en la app
+- Configura URL del API: `http://TU_IP:3000/api`
+- Guarda y recarga
 
 ## 🐛 Problemas Comunes
 
@@ -152,7 +171,8 @@ docker start teamworks-db
 ```
 
 ### "Invalid API key" (IA)
-- Verifica `GEMINI_API_KEY` en `server/.env`
+- Verifica `GROQ_API_KEY` en `server/.env`
+- Obtén una key gratis en https://console.groq.com
 - La app funciona sin IA, solo no podrás usar comandos de lenguaje natural
 
 ### "Port already in use"
