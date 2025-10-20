@@ -61,7 +61,11 @@ jobs:
     
     services:
       postgres:
-        image: postgres:16-alpine
+        # Using postgres:16 instead of postgres:16-alpine to avoid occasional
+        # Docker Hub manifest 503 errors during CI runs
+        # Alternative: Use GHCR mirror for better reliability
+        # image: ghcr.io/dawnsystem/postgres:16
+        image: postgres:16
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
