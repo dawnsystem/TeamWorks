@@ -43,6 +43,17 @@ app.use(cors({
         return callback(null, true);
       }
       
+      // Allow IPv6 localhost and link-local addresses
+      if (
+        hostname === '::1' ||
+        hostname === '::' ||
+        hostname.startsWith('fe80:') ||
+        hostname.startsWith('[::1]') ||
+        hostname.startsWith('[fe80:')
+      ) {
+        return callback(null, true);
+      }
+      
       // Allow configured frontend URL if set
       if (process.env.FRONTEND_URL) {
         const frontendUrl = new URL(process.env.FRONTEND_URL);
@@ -53,10 +64,10 @@ app.use(cors({
       
       // Log rejected origins for debugging
       console.warn(`CORS: Origin not allowed: ${origin}`);
-      return callback(new Error('Not allowed by CORS'));
+      return callback(null, false);
     } catch (e) {
       console.error(`CORS: Invalid origin URL: ${origin}`);
-      return callback(new Error('Invalid origin'));
+      return callback(null, false);
     }
   },
   credentials: true
@@ -76,6 +87,18 @@ app.use('/api', reminderRoutes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Server info endpoint for auto-discovery
+app.get('/api/server-info', (req, res) => {
+  const serverInfo = {
+    version: '2.1.1',
+    serverTime: new Date().toISOString(),
+    apiEndpoint: '/api',
+    corsEnabled: true,
+    authRequired: true,
+  };
+  res.json(serverInfo);
 });
 
 // Error handling middleware
