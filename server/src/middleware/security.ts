@@ -87,32 +87,58 @@ export const isValidUUID = (id: string): boolean => {
 };
 
 /**
- * Configuración de CORS segura
+ * Configuración de CORS segura que permite acceso desde red local
  */
 export const getCorsOptions = () => {
-  const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'http://localhost:5173',
-  ];
-
-  // En producción, añadir más orígenes permitidos si es necesario
-  if (process.env.NODE_ENV === 'production') {
-    // Añadir dominio de producción
-    if (process.env.PRODUCTION_FRONTEND_URL) {
-      allowedOrigins.push(process.env.PRODUCTION_FRONTEND_URL);
-    }
-  }
-
   return {
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Permitir requests sin origin (mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
+      // Permitir requests sin origin (mobile apps, curl, Postman, etc.)
+      if (!origin) {
+        return callback(null, true);
+      }
 
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
+      // Parse the origin URL
+      try {
+        const originUrl = new URL(origin);
+        const hostname = originUrl.hostname;
+
+        // Permitir localhost variants
+        const localhostVariants = ['localhost', '127.0.0.1', '0.0.0.0'];
+        if (localhostVariants.includes(hostname)) {
+          return callback(null, true);
+        }
+
+        // Permitir IPs de red local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+        if (
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+        ) {
+          return callback(null, true);
+        }
+
+        // Permitir URL de frontend configurada si existe
+        if (process.env.FRONTEND_URL) {
+          const frontendUrl = new URL(process.env.FRONTEND_URL);
+          if (hostname === frontendUrl.hostname) {
+            return callback(null, true);
+          }
+        }
+
+        // En producción, permitir dominio de producción si está configurado
+        if (process.env.NODE_ENV === 'production' && process.env.PRODUCTION_FRONTEND_URL) {
+          const productionUrl = new URL(process.env.PRODUCTION_FRONTEND_URL);
+          if (hostname === productionUrl.hostname) {
+            return callback(null, true);
+          }
+        }
+
+        // Log rejected origins para debugging
         console.warn(`CORS: Origin no permitido: ${origin}`);
-        callback(new Error('No permitido por CORS'));
+        return callback(new Error('No permitido por CORS'));
+      } catch (e) {
+        console.error(`CORS: URL de origin inválida: ${origin}`);
+        return callback(new Error('Origin inválido'));
       }
     },
     credentials: true,
