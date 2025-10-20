@@ -170,13 +170,15 @@ chmod +x setup.sh dev.sh
 Si quieres acceder a TeamWorks desde tu móvil, tablet u otro ordenador en tu red local:
 
 1. **Lee la guía completa**: [NETWORK_SETUP.md](NETWORK_SETUP.md)
-2. **En resumen**:
+2. **Flujo simplificado** (⭐ NUEVO - Configuración Automática):
    - Inicia el servidor en un PC
-   - Abre TeamWorks en el otro dispositivo
+   - Abre TeamWorks en el otro dispositivo: `http://[IP-DEL-SERVIDOR]:5173`
+   - **Haz clic en el banner naranja "Configurar Automáticamente"**
+   - ¡Listo! Ya puedes usar la aplicación
+3. **Flujo manual** (alternativo):
    - Click en ⚙️ (Settings)
    - Configura la URL del API: `http://[IP-DEL-SERVIDOR]:3000/api`
    - Guarda y recarga
-   - ¡Listo!
 
 Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 
@@ -227,36 +229,30 @@ Abre tu navegador en `http://localhost:5173`
 
 ## 🌐 Acceso en Red Local
 
-⭐ **Nuevo**: Ahora puedes configurar la URL del servidor desde la interfaz de usuario sin editar archivos.
+⭐ **¡NUEVO! Configuración Automática**: TeamWorks ahora detecta automáticamente cuando accedes desde una red remota y te ofrece configurar todo con un solo clic.
 
 El servidor y cliente están configurados para escuchar en `0.0.0.0`, permitiendo acceso desde otros dispositivos en la red local.
 
-### Configuración Simplificada (Recomendado):
+### Configuración Automática (Más Fácil que Nunca):
 
 1. Inicia el servidor en tu PC principal
 2. Desde cualquier dispositivo en la red:
    - Abre un navegador
-   - Navega a la aplicación
-   - Click en el botón ⚙️ (Settings)
+   - Navega a `http://[IP-DEL-PC]:5173`
+   - **Verás un banner naranja que detecta tu configuración automáticamente**
+   - Haz clic en "Configurar Automáticamente"
+   - ¡Listo! Ya puedes iniciar sesión
+
+### Configuración Manual (Si prefieres):
+
+1. Desde cualquier dispositivo en la red:
+   - Abre un navegador y navega a la aplicación
+   - Click en el botón ⚙️ (Settings) en la esquina superior derecha
    - Configura "URL de la API": `http://[IP-DEL-PC]:3000/api`
    - Verifica conexión con el botón de test
    - Guarda cambios
 
 **Ver guía completa**: [NETWORK_SETUP.md](NETWORK_SETUP.md)
-
-### Método Manual (Avanzado):
-
-1. Obtén tu IP local:
-   - **Windows**: `ipconfig` (busca IPv4)
-   - **Mac/Linux**: `ifconfig` o `ip addr`
-
-2. Accede desde otro dispositivo:
-   - Frontend: `http://TU_IP:5173`
-   - Backend API: `http://TU_IP:3000/api`
-
-3. Asegúrate de:
-   - Permitir conexiones en el firewall (puertos 3000 y 5173)
-   - Estar en la misma red WiFi
 
 ## 🤖 Uso del Asistente de IA
 

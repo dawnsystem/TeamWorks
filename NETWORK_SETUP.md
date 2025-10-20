@@ -2,6 +2,21 @@
 
 Esta guía te ayudará a configurar TeamWorks para que puedas acceder desde cualquier dispositivo en tu red local (móvil, tablet, otro ordenador).
 
+## 🎉 ¡Nuevo! Configuración Automática
+
+TeamWorks ahora detecta automáticamente cuando accedes desde una red remota y te ofrece configurar la URL del API con un solo clic. **Ya no necesitas editar archivos de configuración manualmente.**
+
+### Flujo de Configuración Simplificado:
+
+1. **Inicia el servidor** en tu PC principal (ver Paso 1 abajo)
+2. **Abre TeamWorks** desde otro dispositivo: `http://[IP-DEL-SERVIDOR]:5173`
+3. **Verás un banner naranja** que detecta automáticamente la configuración necesaria
+4. **Haz clic en "Configurar Automáticamente"** y ¡listo! 🎊
+
+El sistema verificará que el servidor esté accesible y configurará todo por ti automáticamente.
+
+---
+
 ## Paso 1: Configuración del Servidor
 
 El servidor ya está configurado para escuchar en todas las interfaces de red (`0.0.0.0`), así que no necesitas hacer cambios en el código.
@@ -96,10 +111,31 @@ En el dispositivo desde el que quieres acceder (móvil, tablet, etc.):
 
 ### 3.3 Configurar la URL del API
 
-**IMPORTANTE**: Antes de intentar iniciar sesión o registrarte, debes configurar la URL del API:
+#### 🌟 Opción 1: Configuración Automática (Recomendado)
+
+Cuando abras TeamWorks desde un dispositivo remoto, verás automáticamente un **banner naranja en la parte superior** con el mensaje:
+
+> ⚠️ **Configuración de Red Requerida**
+
+Este banner:
+- ✅ Detecta automáticamente tu dirección IP
+- ✅ Sugiere la URL correcta del API
+- ✅ Verifica la conexión antes de aplicar cambios
+- ✅ Te avisa si algo no funciona
+
+**Pasos:**
+1. Haz clic en **"Configurar Automáticamente"**
+2. Espera unos segundos mientras verifica la conexión
+3. Si todo va bien, verás "✅ Configuración actualizada correctamente"
+4. La página se recargará automáticamente
+5. ¡Ya puedes iniciar sesión!
+
+#### 🔧 Opción 2: Configuración Manual (Si la automática no funciona)
+
+Si prefieres configurar manualmente o la configuración automática no funciona:
 
 1. En la pantalla de Login/Register, verás un botón flotante ⚙️ en la esquina superior derecha
-2. Haz click en el botón ⚙️
+2. Haz click en el botón ⚙️ (también puedes hacer clic en "Configurar Manualmente" en el banner)
 3. Se abrirá el panel de Configuración
 4. En la sección "Configuración del Servidor", campo "URL de la API":
    - Ingresa: `http://[IP-DEL-SERVIDOR]:3000/api`
@@ -127,10 +163,20 @@ Ahora ya puedes:
 4. Los dispositivos no están en la misma red
 
 **Soluciones:**
-1. Verifica que el servidor esté corriendo (`npm run dev` en carpeta server)
-2. Confirma la IP con `ipconfig` o `ifconfig`
-3. Revisa la configuración del firewall (ver Paso 1.3)
-4. Asegúrate de que ambos dispositivos están en la misma WiFi
+1. **Automática**: Si ves el banner naranja, prueba hacer clic en "Configurar Automáticamente"
+2. Verifica que el servidor esté corriendo (`npm run dev` en carpeta server)
+3. Confirma la IP con `ipconfig` (Windows) o `ifconfig` (Mac/Linux)
+4. Revisa la configuración del firewall (ver Paso 1.3)
+5. Asegúrate de que ambos dispositivos están en la misma WiFi
+
+### El banner de configuración automática no aparece
+
+**Posibles razones:**
+- Ya has configurado correctamente la URL del API anteriormente
+- Estás accediendo desde localhost (no es necesaria la configuración)
+
+**Solución:**
+- Si aun así no puedes conectarte, usa la configuración manual (botón ⚙️)
 
 ### Error: "Credenciales inválidas" al registrar usuario
 
@@ -232,7 +278,17 @@ Entonces solo necesitas acceder a `http://[IP]:3000` (sin especificar puerto del
 
 ## Resumen Rápido
 
-Para el usuario final:
+### Para el usuario final (Nueva Experiencia Simplificada):
+
+1. ✅ Asegúrate de que el servidor esté corriendo en tu PC principal
+2. ✅ Obtén la IP del servidor (usa `ipconfig` en Windows o `ifconfig` en Mac/Linux)
+3. ✅ Abre TeamWorks en el dispositivo: `http://[IP]:5173`
+4. ✅ **¡El banner naranja aparecerá automáticamente!**
+5. ✅ Haz clic en "Configurar Automáticamente"
+6. ✅ Espera la confirmación
+7. ✅ ¡Listo para usar! Inicia sesión o regístrate
+
+### Método tradicional (si prefieres configurar manualmente):
 
 1. ✅ Asegúrate de que el servidor esté corriendo
 2. ✅ Obtén la IP del servidor
