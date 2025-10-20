@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { authAPI } from '@/lib/api';
 import { useAuthStore } from '@/store/useStore';
 import Settings from '@/components/Settings';
+import ApiSetupBanner from '@/components/ApiSetupBanner';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -43,6 +44,9 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-500 to-pink-600 p-4">
+      {/* API Setup Banner */}
+      <ApiSetupBanner onSettingsClick={() => setSettingsOpen(true)} />
+      
       {/* Settings Button */}
       <button
         onClick={() => setSettingsOpen(true)}
