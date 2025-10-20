@@ -55,7 +55,14 @@ export function getApiUrlMismatchReason(apiUrl: string): string | null {
     
     const localhostVariants = ['localhost', '127.0.0.1', '0.0.0.0'];
     const apiIsLocalhost = localhostVariants.includes(apiHostname);
-    const pageIsRemote = !localhostVariants.includes(pageHostname);
+    const pageIsLocalhost = localhostVariants.includes(pageHostname);
+    
+    // If both are localhost variants, it's OK
+    if (apiIsLocalhost && pageIsLocalhost) {
+      return null;
+    }
+    
+    const pageIsRemote = !pageIsLocalhost;
     
     if (apiIsLocalhost && pageIsRemote) {
       return `Estás accediendo desde ${pageHostname} pero la API está configurada para localhost. Cambia la URL de la API a: ${suggestApiUrl()}`;
