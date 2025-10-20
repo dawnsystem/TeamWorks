@@ -20,27 +20,31 @@ JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
 
-# API Key de Google Gemini (obtener en https://makersuite.google.com/app/apikey)
-GEMINI_API_KEY="tu-api-key-de-gemini-aqui"
+# API Key de Groq (obtener en https://console.groq.com)
+GROQ_API_KEY="tu-api-key-de-groq-aqui"
 
-# URL del frontend (para CORS)
-FRONTEND_URL="http://localhost:5173"
+# URL del frontend (OPCIONAL - solo si quieres restringir CORS)
+# Por defecto, acepta automáticamente cualquier IP de red local
+# FRONTEND_URL="http://localhost:5173"
 ```
 
 **Importante:** 
 - Cambia `JWT_SECRET` por una cadena aleatoria segura
-- Obtén tu `GEMINI_API_KEY` de [Google AI Studio](https://makersuite.google.com/app/apikey)
+- Obtén tu `GROQ_API_KEY` de [Groq Console](https://console.groq.com)
 - Ajusta `DATABASE_URL` según tu configuración de PostgreSQL
+- **NUEVO**: `FRONTEND_URL` es OPCIONAL. El servidor acepta automáticamente conexiones desde red local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
 
 ### Frontend (client/.env)
 
-Crea un archivo `.env` en la carpeta `client/` con el siguiente contenido:
+El archivo `.env` en el cliente es **OPCIONAL**. La URL del API se puede configurar desde la interfaz de usuario.
+
+Si prefieres configurarlo manualmente, crea un archivo `.env` en la carpeta `client/`:
 
 ```env
 VITE_API_URL=http://localhost:3000/api
 ```
 
-Para acceso en red local, cambia `localhost` por tu IP local (ejemplo: `http://192.168.1.100:3000/api`)
+**NOTA**: Para acceso en red local, **no necesitas editar este archivo**. La aplicación detectará automáticamente tu configuración de red y te permitirá configurarla con un clic desde la UI.
 
 ## 2. Instalación de PostgreSQL
 

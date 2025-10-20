@@ -5,20 +5,22 @@
 echo "🚀 Iniciando TeamWorks en modo desarrollo..."
 echo ""
 
-# Verificar que existan los archivos .env
+# Verificar que exista el archivo .env del servidor (requerido para DB y JWT)
 if [ ! -f "server/.env" ]; then
     echo "❌ Error: No existe server/.env"
-    echo "   Crea el archivo con las variables necesarias (ver SETUP.md)"
+    echo "   Crea el archivo con las variables necesarias (ver SETUP.md o QUICK_START.md)"
+    echo "   Mínimo requerido: DATABASE_URL, JWT_SECRET"
     exit 1
 fi
 
+# El archivo client/.env ya no es requerido
 if [ ! -f "client/.env" ]; then
-    echo "❌ Error: No existe client/.env"
-    echo "   Crea el archivo con: VITE_API_URL=http://localhost:3000/api"
-    exit 1
+    echo "ℹ️  Nota: No existe client/.env (es opcional)"
+    echo "   La URL del API se puede configurar desde la interfaz de usuario"
+    echo ""
 fi
 
-echo "✓ Archivos de configuración encontrados"
+echo "✓ Configuración verificada"
 echo ""
 
 # Función para limpiar procesos al salir

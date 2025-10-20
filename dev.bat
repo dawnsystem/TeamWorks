@@ -2,22 +2,23 @@
 echo 🚀 Iniciando TeamWorks en modo desarrollo...
 echo.
 
-:: Verificar archivos .env
+:: Verificar archivo .env del servidor (requerido)
 if not exist "server\.env" (
     echo ❌ Error: No existe server\.env
-    echo    Crea el archivo con las variables necesarias (ver SETUP.md)
+    echo    Crea el archivo con las variables necesarias (ver SETUP.md o QUICK_START.md)
+    echo    Mínimo requerido: DATABASE_URL, JWT_SECRET
     pause
     exit /b 1
 )
 
+:: El archivo client/.env ya no es requerido
 if not exist "client\.env" (
-    echo ❌ Error: No existe client\.env
-    echo    Crea el archivo con: VITE_API_URL=http://localhost:3000/api
-    pause
-    exit /b 1
+    echo ℹ️  Nota: No existe client\.env (es opcional)
+    echo    La URL del API se puede configurar desde la interfaz de usuario
+    echo.
 )
 
-echo ✓ Archivos de configuración encontrados
+echo ✓ Configuración verificada
 echo.
 echo 📡 Iniciando backend en puerto 3000...
 echo 🎨 Iniciando frontend en puerto 5173...
