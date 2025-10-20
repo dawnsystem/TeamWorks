@@ -1,5 +1,7 @@
 # TeamWorks - Gestión de Tareas con IA
 
+> ⭐ **ACTUALIZACIÓN v2.1.0**: Nuevas características implementadas! Command Palette con búsqueda fuzzy, gestión avanzada de etiquetas, y más. [Ver características nuevas →](./FEATURES_IMPLEMENTED.md)
+
 Aplicación web de gestión de tareas inspirada en Todoist, con un potente asistente de IA integrado que permite crear, modificar y gestionar tareas usando lenguaje natural.
 
 ## 🚀 Características
@@ -41,9 +43,10 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 🔔 **Notificaciones contextuales** - El sistema te ayudará a mantener tus tareas organizadas
 
 ### Experiencia de Usuario
-- 🔍 **Búsqueda avanzada** - Command Palette estilo VSCode (Cmd/Ctrl+P)
-- 🎯 **Filtros inteligentes** - Busca con `p:proyecto` `#etiqueta` `@hoy` `!alta`
-- 🏷️ **Gestión de etiquetas** - Panel completo para crear y organizar etiquetas
+- 🔍 **Command Palette** - Búsqueda universal estilo VSCode (Cmd/Ctrl+P) ⭐ NUEVO
+- 🎯 **Filtros inteligentes** - Busca con `p:proyecto` `#etiqueta` `@hoy` `!alta` ⭐ NUEVO
+- 🏷️ **Gestión avanzada de etiquetas** - Panel completo para crear y organizar etiquetas ⭐ MEJORADO
+- 🔍 **Búsqueda fuzzy** - Búsqueda tolerante a errores en Command Palette ⭐ NUEVO
 - 🌓 **Tema oscuro/claro** - Cambia entre temas según tu preferencia
 - ⌨️ **Atajos de teclado** - Cmd/Ctrl+K (nueva tarea), Cmd/Ctrl+P (búsqueda), Cmd/Ctrl+/ (IA)
 - ✨ **Animaciones suaves** - Interfaz fluida y agradable
@@ -189,6 +192,7 @@ Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
 - **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
 - **[GUIA_IA.md](GUIA_IA.md)** - ⭐ Guía completa del asistente de IA
+- **[FEATURES_IMPLEMENTED.md](FEATURES_IMPLEMENTED.md)** - ⭐ NUEVO: Características implementadas v2.1.0
 - **Manual integrado** - Click en el botón ? dentro de la app
 
 ### Para Desarrolladores
