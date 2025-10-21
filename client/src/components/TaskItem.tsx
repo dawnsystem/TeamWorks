@@ -342,14 +342,21 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const handleContextMenu = (e: React.MouseEvent) => {
     // For root tasks (draggable), we need to handle context menu carefully
     if (depth === 0) {
+      // On touch devices, prevent default context menu on long-press
+      // This allows drag to work properly
+      // Context menu can still be accessed via right-click on desktop
+      if ('ontouchstart' in window) {
+        e.preventDefault();
+        return;
+      }
+      
       // Clear any existing timer
       if (contextMenuTimer) {
         clearTimeout(contextMenuTimer);
         setContextMenuTimer(null);
       }
       
-      // On touch devices, context menu might interfere with drag
-      // Only show context menu for actual right-clicks, not long-press
+      // Show context menu for actual right-clicks (desktop)
       if (e.button === 2 || e.type === 'contextmenu') {
         contextMenu.show(e);
       }
@@ -370,7 +377,6 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         style={{
           userSelect: depth === 0 ? 'none' : undefined,
           WebkitUserSelect: depth === 0 ? 'none' : undefined,
-          touchAction: depth === 0 ? 'none' : undefined,
         }}
         onContextMenu={handleContextMenu}
         {...(depth === 0 ? { ...attributes, ...listeners } : {})}
