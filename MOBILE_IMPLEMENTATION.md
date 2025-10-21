@@ -191,6 +191,22 @@ Documentos históricos movidos a `docs/archive/`:
 
 ---
 
+## 🚀 Actualizaciones Recientes (v2.3.0)
+
+### Mejoras de Drag & Drop Móvil ✅
+- [x] **TouchSensor implementado**: Soporte completo para dispositivos táctiles
+- [x] **Delay de activación**: 250ms para evitar conflictos con scroll
+- [x] **Tolerancia configurada**: 5px para mejor precisión
+- [x] **Feedback visual**: Indicadores durante el arrastre
+- [x] **Compatibilidad dual**: Funciona tanto con touch como con mouse
+
+### Corrección de Navegación Móvil ✅
+- [x] **Botón "Proyectos" mejorado**: Ahora abre el sidebar en lugar de navegar a ruta vacía
+- [x] **Acceso rápido**: Lista de proyectos accesible con un toque
+- [x] **UX optimizada**: Sin pantallas en blanco en navegación móvil
+
+---
+
 ## 🚀 Próximos Pasos Potenciales
 
 Aunque la implementación está completa, aquí hay algunas ideas para futuras mejoras:
@@ -198,7 +214,7 @@ Aunque la implementación está completa, aquí hay algunas ideas para futuras m
 ### Gestos Táctiles Avanzados
 - [ ] Swipe para completar tareas
 - [ ] Pull to refresh
-- [ ] Long press para opciones adicionales
+- [x] Long press para drag & drop (implementado con delay)
 
 ### Optimizaciones de Rendimiento
 - [ ] Code splitting para bundle más pequeño
@@ -222,15 +238,17 @@ Aunque la implementación está completa, aquí hay algunas ideas para futuras m
 ### Archivos Modificados
 ```
 ✅ client/src/hooks/useMediaQuery.ts (NUEVO)
-✅ client/src/components/MobileBottomNav.tsx (NUEVO)
+✅ client/src/components/MobileBottomNav.tsx (NUEVO - Actualizado v2.3.0)
 ✅ client/src/components/Sidebar.tsx
 ✅ client/src/components/TopBar.tsx
 ✅ client/src/components/AIAssistant.tsx
 ✅ client/src/pages/Dashboard.tsx
 ✅ client/src/store/useStore.ts
+✅ client/src/components/ProjectView.tsx (Actualizado v2.3.0)
 ✅ DOCUMENTATION.md (NUEVO)
 ✅ README.md
 ✅ client/src/hooks/__tests__/useMediaQuery.test.ts (NUEVO)
+✅ docs/CLICKUP_ANALYSIS.md (NUEVO v2.3.0)
 ```
 
 ### Líneas de Código
@@ -270,5 +288,12 @@ La implementación de la interfaz responsive para móviles y tablets está **100
 ---
 
 **Fecha de Implementación**: 20 de Octubre, 2025  
-**Versión**: 2.2.0  
+**Última Actualización**: 21 de Octubre, 2025 (v2.3.0)  
+**Versión**: 2.3.0  
 **Estado**: ✅ Producción Ready
+
+### Changelog v2.3.0
+- ✅ TouchSensor para drag & drop en móviles
+- ✅ Corrección de navegación "Proyectos" en móvil
+- ✅ Análisis completo de ClickUp con propuestas de mejora
+- ✅ Plan de implementación de 5 fases documentado
