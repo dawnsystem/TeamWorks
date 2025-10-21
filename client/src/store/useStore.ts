@@ -17,6 +17,7 @@ interface UIState {
   darkMode: boolean;
   setCurrentView: (view: ViewType, id?: string) => void;
   toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
   toggleDarkMode: () => void;
 }
 
@@ -77,6 +78,7 @@ export const useUIStore = create<UIState>()(
           currentLabelId: view === 'label' ? id || null : null,
         }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleDarkMode: () => set((state) => {
         const newDarkMode = !state.darkMode;
         if (newDarkMode) {

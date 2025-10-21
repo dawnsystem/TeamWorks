@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
+import MobileBottomNav from '@/components/MobileBottomNav';
 import ProjectView from '@/components/ProjectView';
 import TodayView from '@/components/TodayView';
 import WeekView from '@/components/WeekView';
@@ -42,7 +43,8 @@ export default function Dashboard() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar />
         
-        <main className="flex-1 overflow-y-auto">
+        {/* Main content area with bottom padding on mobile for bottom nav */}
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           <Routes>
             <Route path="/" element={<ProjectView />} />
             <Route path="/today" element={<TodayView />} />
@@ -51,6 +53,9 @@ export default function Dashboard() {
             <Route path="/label/:id" element={<LabelView />} />
           </Routes>
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav />
       </div>
 
       {/* Task Editor Modal */}

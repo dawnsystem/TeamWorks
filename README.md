@@ -1,8 +1,8 @@
 # TeamWorks - Gestión de Tareas con IA
 
-> ⭐ **ACTUALIZACIÓN v2.1.0**: Nuevas características implementadas! Command Palette con búsqueda fuzzy, gestión avanzada de etiquetas, y más. [Ver características nuevas →](./FEATURES_IMPLEMENTED.md)
+> ⭐ **ACTUALIZACIÓN v2.2.0**: ¡Nueva interfaz responsive optimizada para móviles y tablets! Diseño adaptativo que detecta automáticamente tu dispositivo y ajusta la UI para la mejor experiencia. [Ver documentación completa →](./DOCUMENTATION.md)
 
-Aplicación web de gestión de tareas inspirada en Todoist, con un potente asistente de IA integrado que permite crear, modificar y gestionar tareas usando lenguaje natural.
+Aplicación web de gestión de tareas inspirada en Todoist, con un potente asistente de IA integrado que permite crear, modificar y gestionar tareas usando lenguaje natural. **Ahora completamente optimizada para dispositivos móviles, tablets y escritorio.**
 
 ## 🚀 Características
 
@@ -50,6 +50,9 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 🌓 **Tema oscuro/claro** - Cambia entre temas según tu preferencia
 - ⌨️ **Atajos de teclado** - Cmd/Ctrl+K (nueva tarea), Cmd/Ctrl+P (búsqueda), Cmd/Ctrl+/ (IA)
 - ✨ **Animaciones suaves** - Interfaz fluida y agradable
+- 📱 **Diseño Responsive** - ⭐ NUEVO: Optimizado para móvil, tablet y escritorio
+- 📱 **Detección automática de dispositivo** - ⭐ NUEVO: Se adapta automáticamente al tipo de dispositivo
+- 📱 **Navegación móvil optimizada** - ⭐ NUEVO: Barra inferior en móviles, sidebar deslizable
 - 📱 **PWA** - Instálala como app en tu dispositivo
 - 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
 
@@ -187,26 +190,37 @@ Para instrucciones detalladas, ver [NETWORK_SETUP.md](NETWORK_SETUP.md).
 
 ## 📚 Documentación
 
-### Para Usuarios
-- **[QUICK_START.md](QUICK_START.md)** - Guía de inicio rápido
+**📖 [Documentación Completa](./DOCUMENTATION.md)** - ¡TODO en un solo lugar!
+
+La documentación unificada incluye:
+- 🚀 Inicio rápido e instalación completa
+- 📱 Guía de uso en móviles y tablets
+- 🤖 Tutorial completo del asistente de IA
+- 🌐 Configuración de red local
+- 👨‍💻 Guía de desarrollo y contribución
+- 🧪 Información de testing
+- 🔧 Solución de problemas
+
+### Documentación Rápida
+
+- **[QUICK_START.md](QUICK_START.md)** - Inicio rápido (5 minutos)
+- **[DOCUMENTATION.md](DOCUMENTATION.md)** - Documentación completa
+- **[CHANGELOG.md](CHANGELOG.md)** - Historial de cambios
+
+### Documentación Específica (Opcional)
+
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
-- **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - ⭐ Configuración para acceso en red local
-- **[GUIA_IA.md](GUIA_IA.md)** - ⭐ Guía completa del asistente de IA
-- **[FEATURES_IMPLEMENTED.md](FEATURES_IMPLEMENTED.md)** - ⭐ NUEVO: Características implementadas v2.1.0
-- **Manual integrado** - Click en el botón ? dentro de la app
-
-### Para Desarrolladores
-- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - ⭐ Guía rápida para desarrolladores
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - ⭐ Cómo contribuir al proyecto
-- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Código de conducta
-- **[TESTING.md](TESTING.md)** - ⭐ Guía completa de testing
+- **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - Configuración para acceso en red local
+- **[GUIA_IA.md](GUIA_IA.md)** - Guía completa del asistente de IA
+- **[FEATURES_IMPLEMENTED.md](FEATURES_IMPLEMENTED.md)** - Características implementadas
+- **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Guía rápida para desarrolladores
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Cómo contribuir al proyecto
+- **[TESTING.md](TESTING.md)** - Guía completa de testing
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Arquitectura del proyecto
-- **[ESTADO_ACTUAL.md](ESTADO_ACTUAL.md)** - Estado actual del proyecto
-- **[PLAN_IA.md](PLAN_IA.md)** - Plan de mejoras del sistema de IA
 
-### Histórico
-- **[ESTADO_IMPLEMENTACION.md](ESTADO_IMPLEMENTACION.md)** - Estado del proyecto (histórico)
-- **[docs/sesiones/](docs/sesiones/)** - Resúmenes de sesiones de desarrollo
+### Documentación Histórica
+
+Ver `docs/archive/` para documentación histórica del desarrollo del proyecto.
 
 
 ## 🚀 Ejecución
@@ -333,6 +347,8 @@ TeamWorks/
 ## 🎨 Características de UI
 
 - **Diseño limpio** inspirado en Todoist
+- **Diseño responsive** que se adapta automáticamente a móviles, tablets y escritorio
+- **Navegación optimizada para móviles** con barra inferior y sidebar deslizable
 - **Colores de prioridad**:
   - P1 (Alta): Rojo
   - P2 (Media): Naranja
@@ -343,7 +359,7 @@ TeamWorks/
   - Hoy: Tareas de hoy
   - Próximos 7 días: Tareas de la semana
 - **Temas**: Modo claro y oscuro
-- **Responsivo**: Funciona en móviles y tablets
+- **PWA**: Instalable como aplicación nativa en cualquier dispositivo
 
 ## 🔐 Seguridad
 
