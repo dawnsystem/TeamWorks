@@ -377,6 +377,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         style={{
           userSelect: depth === 0 ? 'none' : undefined,
           WebkitUserSelect: depth === 0 ? 'none' : undefined,
+          touchAction: depth === 0 ? 'none' : undefined,
         }}
         onContextMenu={handleContextMenu}
         {...(depth === 0 ? { ...attributes, ...listeners } : {})}
