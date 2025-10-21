@@ -21,6 +21,7 @@ model User {
   projects Project[]
   labels   Label[]
   comments Comment[]
+  templates TaskTemplate[]
 
   @@map("users")
 }
@@ -130,5 +131,20 @@ model Reminder {
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@map("reminders")
+}
+
+model TaskTemplate {
+  id          String   @id @default(uuid())
+  titulo      String
+  descripcion String?
+  prioridad   Int      @default(4)
+  userId      String
+  labelIds    String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("task_templates")
 }
 

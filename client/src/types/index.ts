@@ -96,6 +96,17 @@ export interface Reminder {
   updatedAt: string;
 }
 
+export interface TaskTemplate {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  prioridad: 1 | 2 | 3 | 4;
+  userId: string;
+  labelIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AIAction {
   type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk';
   entity: 'task' | 'project' | 'label' | 'section' | 'comment' | 'reminder';

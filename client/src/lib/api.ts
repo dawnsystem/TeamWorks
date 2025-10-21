@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder } from '@/types';
+import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder, TaskTemplate } from '@/types';
 
 // Function to get API URL from settings or environment
 const getApiUrl = () => {
@@ -159,6 +159,28 @@ export const remindersAPI = {
     api.post<Reminder>(`/tasks/${taskId}/reminders`, data),
   
   delete: (id: string) => api.delete(`/reminders/${id}`),
+};
+
+// Templates
+export const templatesAPI = {
+  getAll: () => api.get<TaskTemplate[]>('/templates'),
+  
+  getOne: (id: string) => api.get<TaskTemplate>(`/templates/${id}`),
+  
+  create: (data: {
+    titulo: string;
+    descripcion?: string;
+    prioridad?: number;
+    labelIds?: string[];
+  }) => api.post<TaskTemplate>('/templates', data),
+  
+  update: (id: string, data: Partial<TaskTemplate>) =>
+    api.patch<TaskTemplate>(`/templates/${id}`, data),
+  
+  delete: (id: string) => api.delete(`/templates/${id}`),
+  
+  apply: (id: string, projectId: string, sectionId?: string) =>
+    api.post<Task>(`/templates/${id}/apply`, { projectId, sectionId }),
 };
 
 // AI
