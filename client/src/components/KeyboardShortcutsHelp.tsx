@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Keyboard, X } from 'lucide-react';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 export default function KeyboardShortcutsHelp() {
   const [isOpen, setIsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const shortcuts = [
     { keys: ['Cmd/Ctrl', 'K'], description: 'Crear nueva tarea' },
@@ -11,6 +13,11 @@ export default function KeyboardShortcutsHelp() {
     { keys: ['Esc'], description: 'Cerrar ventanas modales' },
     { keys: ['Cmd/Ctrl', 'Enter'], description: 'Enviar comentario (en campo de comentario)' },
   ];
+
+  // Don't render on mobile devices
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <>
