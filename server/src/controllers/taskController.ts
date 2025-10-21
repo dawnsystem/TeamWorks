@@ -154,7 +154,10 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
       })
     );
 
-    res.json(tasksWithAllSubtasks);
+    // Filter out any null values that might occur if a task couldn't be retrieved
+    const validTasks = tasksWithAllSubtasks.filter(task => task !== null);
+
+    res.json(validTasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
     res.status(500).json({ error: 'Error al obtener tareas' });
@@ -441,7 +444,10 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
       })
     );
 
-    res.json(tasksWithAllSubtasks);
+    // Filter out any null values that might occur if a task couldn't be retrieved
+    const validTasks = tasksWithAllSubtasks.filter(task => task !== null);
+
+    res.json(validTasks);
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });
