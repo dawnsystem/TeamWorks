@@ -9,7 +9,7 @@ import type { Task } from '@/types';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import { useTaskEditorStore, useTaskDetailStore, useTaskRelationshipStore } from '@/store/useStore';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
 
@@ -25,6 +25,16 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const openRelationshipPopup = useTaskRelationshipStore((state) => state.openPopup);
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
+  const [contextMenuTimer, setContextMenuTimer] = useState<number | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (contextMenuTimer) {
+        clearTimeout(contextMenuTimer);
+      }
+    };
+  }, [contextMenuTimer]);
 
   // Only make root tasks draggable (depth 0)
   const {
@@ -329,6 +339,33 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const completedSubTasks = task.subTasks?.filter(st => st.completada).length || 0;
   const totalSubTasks = task._count?.subTasks || task.subTasks?.length || 0;
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    // For root tasks (draggable), we need to handle context menu carefully
+    if (depth === 0) {
+      // On touch devices, prevent default context menu on long-press
+      // This allows drag to work properly
+      // Context menu can still be accessed via right-click on desktop
+      if ('ontouchstart' in window) {
+        e.preventDefault();
+        return;
+      }
+      
+      // Clear any existing timer
+      if (contextMenuTimer) {
+        clearTimeout(contextMenuTimer);
+        setContextMenuTimer(null);
+      }
+      
+      // Show context menu for actual right-clicks (desktop)
+      if (e.button === 2 || e.type === 'contextmenu') {
+        contextMenu.show(e);
+      }
+    } else {
+      // For subtasks, show context menu normally
+      contextMenu.show(e);
+    }
+  };
+
   return (
     <div className="group" ref={setNodeRef} style={style}>
       <div
@@ -337,7 +374,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
         } rounded-lg p-4 hover:shadow-md transition ${
           task.completada ? 'opacity-60' : ''
         } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
-        onContextMenu={contextMenu.show}
+        style={{
+          userSelect: depth === 0 ? 'none' : undefined,
+          WebkitUserSelect: depth === 0 ? 'none' : undefined,
+        }}
+        onContextMenu={handleContextMenu}
         {...(depth === 0 ? { ...attributes, ...listeners } : {})}
       >
         <div className="flex items-start gap-3">
@@ -364,6 +405,10 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
           <div 
             className="flex-1 cursor-pointer" 
+            style={{
+              userSelect: 'text',
+              WebkitUserSelect: 'text',
+            }}
             onClick={(e) => {
               e.stopPropagation();
               openDetail(task.id);

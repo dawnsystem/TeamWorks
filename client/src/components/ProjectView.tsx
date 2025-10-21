@@ -47,8 +47,8 @@ export default function ProjectView() {
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 250,
-        tolerance: 5,
+        delay: 200,
+        tolerance: 8,
       },
     })
   );
@@ -112,6 +112,9 @@ export default function ProjectView() {
   const handleDragStart = (event: DragStartEvent) => {
     const task = tasks?.find(t => t.id === event.active.id);
     setActiveTask(task || null);
+    // Close any open context menus when dragging starts
+    sectionContextMenu.hide();
+    projectHeaderContextMenu.hide();
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
