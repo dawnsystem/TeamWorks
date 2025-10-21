@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Plus, Edit, Trash2, Copy, Archive, ListPlus, BarChart3 } from 'lucide-react';
+import { Plus, Edit, Trash2, Copy, Archive, ListPlus, BarChart3, List, LayoutGrid } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -19,8 +19,9 @@ import {
 import TaskList from './TaskList';
 import TaskItem from './TaskItem';
 import LabelFilter from './LabelFilter';
+import BoardView from './BoardView';
 import { projectsAPI, tasksAPI } from '@/lib/api';
-import { useTaskEditorStore } from '@/store/useStore';
+import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
 import type { ContextMenuItem } from '@/types/contextMenu';
@@ -31,6 +32,8 @@ import toast from 'react-hot-toast';
 export default function ProjectView() {
   const { id } = useParams();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
+  const projectViewMode = useUIStore((state) => state.projectViewMode) as 'list' | 'board';
+  const setProjectViewMode = useUIStore((state) => state.setProjectViewMode);
   const queryClient = useQueryClient();
   const sectionContextMenu = useContextMenu();
   const projectHeaderContextMenu = useContextMenu();
@@ -158,6 +161,11 @@ export default function ProjectView() {
   const tasksWithoutSection = tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [];
   const sections = project?.sections || [];
 
+  // Si estamos en modo tablero, renderizar BoardView
+  if (projectViewMode === 'board') {
+    return <BoardView />;
+  }
+
   const getProjectHeaderContextMenuItems = (): ContextMenuItem[] => {
     if (!project) return [];
 
@@ -242,19 +250,47 @@ export default function ProjectView() {
     >
       <div className="max-w-5xl mx-auto p-6">
         <div className="mb-8">
-          <div 
-            className="flex items-center gap-3 mb-2 group w-fit"
-            onContextMenu={projectHeaderContextMenu.show}
-          >
-            {project && (
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: project.color }}
-              />
-            )}
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
-              {project?.nombre || 'Inbox'}
-            </h1>
+          <div className="flex items-center justify-between mb-2">
+            <div 
+              className="flex items-center gap-3 group w-fit"
+              onContextMenu={projectHeaderContextMenu.show}
+            >
+              {project && (
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: project.color }}
+                />
+              )}
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
+                {project?.nombre || 'Inbox'}
+              </h1>
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setProjectViewMode('list')}
+                className={`p-2 rounded transition ${
+                  projectViewMode === 'list'
+                    ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                }`}
+                title="Vista de lista"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setProjectViewMode('board')}
+                className={
+                  projectViewMode !== 'list'
+                    ? 'p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
+                    : 'p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                }
+                title="Vista de tablero"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <button

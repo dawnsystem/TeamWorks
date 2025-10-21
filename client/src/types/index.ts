@@ -114,6 +114,8 @@ export interface AIResponse {
 
 export type ViewType = 'inbox' | 'today' | 'week' | 'project' | 'label';
 
+export type ProjectViewMode = 'list' | 'board';
+
 export interface TaskFilters {
   projectId?: string;
   sectionId?: string;
