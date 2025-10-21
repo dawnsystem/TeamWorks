@@ -16,6 +16,13 @@ The application had issues with touch interaction for task dragging:
 - Added `userSelect: 'text'` and `WebkitUserSelect: 'text'` to the task content area (line 402-403)
 - This prevents text selection during drag gestures while still allowing users to select text when clicking directly on the content
 
+### 1.1 Touch Action Prevention (Critical Mobile Fix)
+**Files Modified:** `client/src/components/TaskItem.tsx`
+
+- Added `touchAction: 'none'` CSS property to the draggable task container (line 380)
+- This is **critical** for mobile devices - it prevents the browser's default touch behaviors (scrolling, zooming, etc.) from interfering with drag operations
+- Without this property, mobile browsers will not allow drag and drop to work properly
+
 ### 2. Context Menu Handling on Touch Devices
 **Files Modified:** `client/src/components/TaskItem.tsx`
 
@@ -76,6 +83,7 @@ The application had issues with touch interaction for task dragging:
 /* On draggable task container (depth 0) */
 user-select: none;
 -webkit-user-select: none;
+touch-action: none;  /* CRITICAL for mobile drag and drop */
 
 /* On task content area */
 user-select: text;
