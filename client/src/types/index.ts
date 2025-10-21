@@ -96,6 +96,17 @@ export interface Reminder {
   updatedAt: string;
 }
 
+export interface TaskTemplate {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  prioridad: 1 | 2 | 3 | 4;
+  userId: string;
+  labelIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AIAction {
   type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk';
   entity: 'task' | 'project' | 'label' | 'section' | 'comment' | 'reminder';
@@ -113,6 +124,8 @@ export interface AIResponse {
 }
 
 export type ViewType = 'inbox' | 'today' | 'week' | 'project' | 'label';
+
+export type ProjectViewMode = 'list' | 'board';
 
 export interface TaskFilters {
   projectId?: string;

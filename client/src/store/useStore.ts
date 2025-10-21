@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { User, ViewType } from '@/types';
+import type { User, ViewType, ProjectViewMode } from '@/types';
 
 interface AuthState {
   user: User | null;
@@ -15,10 +15,12 @@ interface UIState {
   currentLabelId: string | null;
   sidebarOpen: boolean;
   darkMode: boolean;
+  projectViewMode: ProjectViewMode;
   setCurrentView: (view: ViewType, id?: string) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   toggleDarkMode: () => void;
+  setProjectViewMode: (mode: ProjectViewMode) => void;
 }
 
 interface TaskEditorState {
@@ -66,11 +68,12 @@ export const useAuthStore = create<AuthState>()(
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      currentView: 'inbox',
+      currentView: 'inbox' as ViewType,
       currentProjectId: null,
       currentLabelId: null,
       sidebarOpen: true,
       darkMode: false,
+      projectViewMode: 'list' as ProjectViewMode,
       setCurrentView: (view, id) =>
         set({
           currentView: view,
@@ -88,6 +91,7 @@ export const useUIStore = create<UIState>()(
         }
         return { darkMode: newDarkMode };
       }),
+      setProjectViewMode: (mode) => set({ projectViewMode: mode }),
     }),
     {
       name: 'ui-storage',
