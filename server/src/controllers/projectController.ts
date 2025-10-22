@@ -81,17 +81,7 @@ export const createProject = async (req: any, res: Response) => {
       data: project,
     });
 
-    // Crear notificación
-    await notificationService.create({
-      userId: (req as AuthRequest).userId!,
-      type: 'project_created',
-      title: '📁 Nuevo proyecto',
-      message: `Has creado el proyecto "${nombre}"`,
-      projectId: project.id,
-      metadata: {
-        color: project.color,
-      },
-    });
+    // No crear notificación para acciones propias del usuario
 
     res.status(201).json(project);
   } catch (error) {
@@ -217,18 +207,7 @@ export const createSection = async (req: any, res: Response) => {
       data: section,
     });
 
-    // Crear notificación
-    await notificationService.create({
-      userId: (req as AuthRequest).userId!,
-      type: 'section_created',
-      title: '📑 Nueva sección',
-      message: `Has creado la sección "${nombre}" en ${project.nombre}`,
-      projectId: projectId,
-      sectionId: section.id,
-      metadata: {
-        projectName: project.nombre,
-      },
-    });
+    // No crear notificación para acciones propias del usuario
 
     res.status(201).json(section);
   } catch (error) {

@@ -46,22 +46,8 @@ export const processCommand = async (req: any, res: Response) => {
     if (autoExecute) {
       results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
       
-      // Crear notificación de resumen si se ejecutaron acciones
-      if (results && results.length > 0) {
-        const successCount = results.filter((r: any) => r.success).length;
-        await notificationService.create({
-          userId: (req as AuthRequest).userId!,
-          type: 'ai_action',
-          title: '🤖 Acciones de IA completadas',
-          message: `Se ejecutaron ${successCount} de ${results.length} acciones exitosamente`,
-          metadata: {
-            command,
-            actionsCount: results.length,
-            successCount,
-            results,
-          },
-        });
-      }
+      // No crear notificación para acciones propias del usuario
+      // El usuario ya ve el resultado directo de sus acciones en la UI
     }
 
     res.json({
@@ -86,21 +72,8 @@ export const executeActions = async (req: any, res: Response) => {
 
     const results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
     
-    // Crear notificación de resumen
-    if (results && results.length > 0) {
-      const successCount = results.filter((r: any) => r.success).length;
-      await notificationService.create({
-        userId: (req as AuthRequest).userId!,
-        type: 'ai_action',
-        title: '🤖 Acciones de IA completadas',
-        message: `Se ejecutaron ${successCount} de ${results.length} acciones exitosamente`,
-        metadata: {
-          actionsCount: results.length,
-          successCount,
-          results,
-        },
-      });
-    }
+    // No crear notificación para acciones propias del usuario
+    // El usuario ya ve el resultado directo de sus acciones en la UI
 
     res.json({ results });
   } catch (error) {
