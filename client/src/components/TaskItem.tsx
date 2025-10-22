@@ -373,16 +373,16 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           priorityColors[task.prioridad]
         } rounded-lg p-4 hover:shadow-md transition ${
           task.completada ? 'opacity-60' : ''
-        } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+        } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} w-full`}
         style={{
           userSelect: depth === 0 ? 'none' : undefined,
           WebkitUserSelect: depth === 0 ? 'none' : undefined,
-          touchAction: depth === 0 ? 'none' : undefined,
+          touchAction: 'manipulation',
         }}
         onContextMenu={handleContextMenu}
         {...(depth === 0 ? { ...attributes, ...listeners } : {})}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 min-w-0">
           {/* Drag Handle - visual indicator for depth 0 (root tasks) */}
           {depth === 0 && (
             <div className="mt-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none">
@@ -405,7 +405,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           </button>
 
           <div 
-            className="flex-1 cursor-pointer" 
+            className="flex-1 cursor-pointer min-w-0" 
             style={{
               userSelect: 'text',
               WebkitUserSelect: 'text',
@@ -416,7 +416,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             }}
           >
             <h3
-              className={`text-sm font-medium text-gray-900 dark:text-gray-100 ${
+              className={`text-sm font-medium text-gray-900 dark:text-gray-100 break-words ${
                 task.completada ? 'line-through' : ''
               }`}
             >
@@ -424,39 +424,39 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
             </h3>
 
             {task.descripcion && (
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 break-words">
                 {task.descripcion}
               </p>
             )}
 
-            <div className="flex items-center gap-3 mt-2">
+            <div className="flex items-center flex-wrap gap-2 mt-2">
               {task.fechaVencimiento && (
                 <span
-                  className={`flex items-center gap-1 text-xs ${
+                  className={`flex items-center gap-1 text-xs flex-shrink-0 ${
                     isOverdue
                       ? 'text-red-600 dark:text-red-400'
                       : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
-                  <Calendar className="w-3 h-3" />
-                  {format(new Date(task.fechaVencimiento), 'd MMM', { locale: es })}
+                  <Calendar className="w-3 h-3 flex-shrink-0" />
+                  <span className="whitespace-nowrap">{format(new Date(task.fechaVencimiento), 'd MMM', { locale: es })}</span>
                 </span>
               )}
 
               {task.labels && task.labels.length > 0 && (
-                <div className="flex items-center gap-1" title={`Etiquetas: ${task.labels.map(tl => tl.label.nombre).join(', ')}`}>
+                <div className="flex items-center gap-1 flex-wrap" title={`Etiquetas: ${task.labels.map(tl => tl.label.nombre).join(', ')}`}>
                   {task.labels.slice(0, 3).map((tl) => (
                     <span
                       key={tl.labelId}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-80 transition cursor-pointer"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-80 transition cursor-pointer flex-shrink-0"
                       style={{
                         backgroundColor: `${tl.label.color}20`,
                         color: tl.label.color,
                       }}
                       title={tl.label.nombre}
                     >
-                      <Tag className="w-3 h-3" />
-                      {tl.label.nombre}
+                      <Tag className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate max-w-[100px]">{tl.label.nombre}</span>
                     </span>
                   ))}
                   {task.labels.length > 3 && (
@@ -472,7 +472,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
 
               {priorityLabels[task.prioridad] && (
                 <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded`}
+                  className={`text-xs font-medium px-2 py-0.5 rounded flex-shrink-0`}
                   style={{ color: `var(--priority-${task.prioridad})` }}
                 >
                   {priorityLabels[task.prioridad]}
@@ -485,7 +485,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                     e.stopPropagation();
                     setSubTasksOpen(!subTasksOpen);
                   }}
-                  className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0"
                 >
                   <ChevronRight
                     className={`w-3 h-3 transition-transform ${

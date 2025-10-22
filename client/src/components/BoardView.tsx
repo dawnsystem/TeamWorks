@@ -6,7 +6,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -30,17 +30,18 @@ export default function BoardView() {
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
-  // Sensors for drag and drop - supporting both mouse and touch
+  // Sensors for drag and drop
+  // MouseSensor for desktop (no delay) and TouchSensor for mobile (with delay for scrolling)
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
-        tolerance: 8,
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -219,24 +220,24 @@ export default function BoardView() {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="h-full flex flex-col">
+      <div className="flex flex-col w-full overflow-hidden" style={{ overscrollBehavior: 'contain', height: 'calc(100% - 64px)' }}>
         {/* Header */}
-        <div className="flex-shrink-0 p-6 pb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
+        <div className="flex-shrink-0 p-4 sm:p-6 pb-4">
+          <div className="flex items-center justify-between mb-2 gap-4 flex-wrap sm:flex-nowrap min-w-0">
+            <div className="flex items-center gap-3 min-w-0">
               {project && (
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: project.color }}
                 />
               )}
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white truncate">
                 {project?.nombre || 'Inbox'}
               </h1>
             </div>
 
             {/* View Mode Switcher */}
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
               <button
                 onClick={() => setProjectViewMode('list')}
                 className="p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -271,8 +272,8 @@ export default function BoardView() {
         </div>
 
         {/* Board Columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
-          <div className="flex gap-4 h-full min-w-max">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 w-full" style={{ minHeight: 0 }}>
+          <div className="flex gap-4 h-full min-w-min">
             {isLoading ? (
               <div className="flex items-center justify-center w-full">
                 <p className="text-gray-500 dark:text-gray-400">Cargando...</p>
@@ -305,7 +306,7 @@ export default function BoardView() {
 
       <DragOverlay>
         {activeTask ? (
-          <div className="opacity-80 rotate-3">
+          <div className="opacity-90 rotate-3 scale-105 shadow-2xl">
             <TaskItem task={activeTask} />
           </div>
         ) : null}

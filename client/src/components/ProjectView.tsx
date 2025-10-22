@@ -6,7 +6,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
-  PointerSensor,
+  MouseSensor,
   TouchSensor,
   useSensor,
   useSensors,
@@ -41,17 +41,18 @@ export default function ProjectView() {
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
-  // Sensors for drag and drop - supporting both mouse and touch
+  // Sensors for drag and drop
+  // MouseSensor for desktop (no delay) and TouchSensor for mobile (with delay for scrolling)
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: {
         distance: 8,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 200,
-        tolerance: 8,
+        delay: 250,
+        tolerance: 5,
       },
     })
   );
@@ -248,26 +249,26 @@ export default function ProjectView() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 w-full" style={{ overscrollBehavior: 'contain' }}>
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-2 gap-4 flex-wrap sm:flex-nowrap">
             <div 
-              className="flex items-center gap-3 group w-fit"
+              className="flex items-center gap-3 group min-w-0"
               onContextMenu={projectHeaderContextMenu.show}
             >
               {project && (
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-3 h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: project.color }}
                 />
               )}
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu truncate">
                 {project?.nombre || 'Inbox'}
               </h1>
             </div>
 
             {/* View Mode Switcher */}
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
               <button
                 onClick={() => setProjectViewMode('list')}
                 className={`p-2 rounded transition ${
@@ -392,7 +393,7 @@ export default function ProjectView() {
 
       <DragOverlay>
         {activeTask ? (
-          <div className="opacity-80">
+          <div className="opacity-90 rotate-3 scale-105 shadow-2xl">
             <TaskItem task={activeTask} />
           </div>
         ) : null}

@@ -44,7 +44,7 @@ export default function Dashboard() {
         <TopBar />
         
         {/* Main content area with bottom padding on mobile for bottom nav */}
-        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0" style={{ overscrollBehavior: 'contain' }}>
           <Routes>
             <Route path="/" element={<ProjectView />} />
             <Route path="/today" element={<TodayView />} />
