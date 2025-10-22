@@ -22,17 +22,14 @@ const getApiUrl = () => {
 // Function to get available API URLs (for auto-detection)
 export const getAvailableApiUrls = () => {
   const urls = [
-    import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+    'http://localhost:3000/api',
+    'http://192.168.0.165:3000/api',
+    'http://davidhp.tail1c095e.ts.net:3000/api',
   ];
   
-  // Add local network URL if configured
-  if (import.meta.env.VITE_LOCAL_API_URL) {
-    urls.push(import.meta.env.VITE_LOCAL_API_URL);
-  }
-  
-  // Add Tailscale URL if configured
-  if (import.meta.env.VITE_TAILSCALE_API_URL) {
-    urls.push(import.meta.env.VITE_TAILSCALE_API_URL);
+  // Add from environment if available
+  if (import.meta.env.VITE_API_URL && !urls.includes(import.meta.env.VITE_API_URL)) {
+    urls.unshift(import.meta.env.VITE_API_URL);
   }
   
   return urls;
@@ -41,20 +38,34 @@ export const getAvailableApiUrls = () => {
 // Function to test API connectivity
 export const testApiConnection = async (url: string): Promise<boolean> => {
   try {
-    const baseUrl = url.replace(/\/api\/?$/, '');
-    const healthUrl = `${baseUrl}/health`;
-    const response = await axios.get(healthUrl, { timeout: 3000 });
+    // Try to hit the API directly first
+    const response = await axios.get(url.replace(/\/api\/?$/, '') + '/health', { 
+      timeout: 5000,
+      validateStatus: (status) => status < 500 
+    });
     return response.status === 200;
   } catch (error) {
-    return false;
+    // If health endpoint doesn't exist, try the API endpoint
+    try {
+      const response = await axios.get(url, { 
+        timeout: 5000,
+        validateStatus: (status) => status < 500 
+      });
+      return true; // If we get any response, the server is up
+    } catch (e) {
+      console.log(`❌ No se pudo conectar a: ${url}`);
+      return false;
+    }
   }
 };
 
 // Function to auto-detect best API URL
 export const autoDetectApiUrl = async (): Promise<string | null> => {
   const urls = getAvailableApiUrls();
+  console.log('🔍 Buscando servidor API en:', urls);
   
   for (const url of urls) {
+    console.log(`⏳ Probando: ${url}...`);
     const isAvailable = await testApiConnection(url);
     if (isAvailable) {
       console.log(`✅ API disponible en: ${url}`);
@@ -62,7 +73,7 @@ export const autoDetectApiUrl = async (): Promise<string | null> => {
     }
   }
   
-  console.warn('⚠️ No se pudo conectar a ninguna URL de API');
+  console.error('❌ No se pudo conectar a ninguna URL de API');
   return null;
 };
 

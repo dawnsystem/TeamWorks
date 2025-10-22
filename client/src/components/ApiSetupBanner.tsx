@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { AlertCircle, CheckCircle2, Server, X, Loader2 } from 'lucide-react';
 import { useSettingsStore } from '@/store/useStore';
-import { updateApiUrl } from '@/lib/api';
+import { updateApiUrl, getAvailableApiUrls, testApiConnection, autoDetectApiUrl } from '@/lib/api';
 import { isRemoteAccess, suggestApiUrl, isApiUrlLikelyCorrect } from '@/utils/apiUrlDetection';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -14,21 +14,59 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
   const settings = useSettingsStore();
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [autoDetecting, setAutoDetecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'failed'>('unknown');
+  const [retryCount, setRetryCount] = useState(0);
   const suggestedUrl = suggestApiUrl();
   
   // Check if we should show the banner
   const shouldShow = 
     !dismissed && 
-    isRemoteAccess() && 
-    !isApiUrlLikelyCorrect(settings.apiUrl);
+    (connectionStatus === 'failed' || connectionStatus === 'unknown');
 
   useEffect(() => {
-    // Auto-check connection status on mount
-    if (shouldShow) {
-      checkConnection(settings.apiUrl);
+    // Auto-detect and connect on mount
+    autoConnectToServer();
+  }, []);
+
+  // Auto-retry connection every 10 seconds if failed
+  useEffect(() => {
+    if (connectionStatus === 'failed' && retryCount < 10) {
+      const timer = setTimeout(() => {
+        console.log(`🔄 Reintentando conexión (intento ${retryCount + 1}/10)...`);
+        setRetryCount(prev => prev + 1);
+        autoConnectToServer();
+      }, 10000);
+      return () => clearTimeout(timer);
     }
-  }, [shouldShow, settings.apiUrl]);
+  }, [connectionStatus, retryCount]);
+
+  const autoConnectToServer = async () => {
+    setAutoDetecting(true);
+    setChecking(true);
+    
+    try {
+      const detectedUrl = await autoDetectApiUrl();
+      
+      if (detectedUrl) {
+        // Found a working URL
+        settings.setApiUrl(detectedUrl);
+        updateApiUrl(detectedUrl);
+        setConnectionStatus('connected');
+        setRetryCount(0);
+        toast.success(`✅ Conectado a ${detectedUrl}`);
+      } else {
+        // No working URL found
+        setConnectionStatus('failed');
+      }
+    } catch (error) {
+      console.error('Error en auto-detección:', error);
+      setConnectionStatus('failed');
+    } finally {
+      setAutoDetecting(false);
+      setChecking(false);
+    }
+  };
 
   const checkConnection = async (url: string) => {
     setChecking(true);
@@ -58,47 +96,8 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
   };
 
   const handleAutoFix = async () => {
-    setChecking(true);
-    
-    // First, check if the suggested URL works
-    try {
-      const baseUrl = suggestedUrl.replace(/\/api\/?$/, '');
-      const healthUrl = `${baseUrl}/health`;
-      const response = await axios.get(healthUrl, { timeout: 5000 });
-      
-      if (response.status === 200) {
-        // Verify server info endpoint as well
-        try {
-          const serverInfoUrl = `${suggestedUrl}/server-info`;
-          const serverInfo = await axios.get(serverInfoUrl, { timeout: 3000 });
-          console.log('Server info:', serverInfo.data);
-        } catch (e) {
-          // Server info is optional, health check is enough
-          console.log('Server info endpoint not available, but health check passed');
-        }
-        
-        // It works! Update the settings
-        settings.setApiUrl(suggestedUrl);
-        updateApiUrl(suggestedUrl);
-        setConnectionStatus('connected');
-        toast.success('✅ Configuración actualizada correctamente');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        toast.error('No se pudo conectar a la URL sugerida');
-        setConnectionStatus('failed');
-      }
-    } catch (error: any) {
-      console.error('Auto-fix error:', error);
-      const errorMessage = error.code === 'ERR_NETWORK' || error.message === 'Network Error'
-        ? 'No se pudo conectar al servidor. Asegúrate de que el servidor esté ejecutándose.'
-        : 'No se pudo conectar a la URL sugerida. Configura manualmente en Ajustes.';
-      toast.error(errorMessage);
-      setConnectionStatus('failed');
-    } finally {
-      setChecking(false);
-    }
+    setRetryCount(0);
+    await autoConnectToServer();
   };
 
   if (!shouldShow || connectionStatus === 'connected') {
@@ -113,18 +112,24 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
           
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-lg mb-1">
-              ⚠️ Configuración de Red Requerida
+              {autoDetecting ? '🔍 Buscando servidor...' : '⚠️ No se puede conectar al servidor'}
             </h3>
             <p className="text-sm mb-3 opacity-90">
-              Estás accediendo desde <strong>{window.location.hostname}</strong> pero la API está configurada 
-              para <strong>{new URL(settings.apiUrl).hostname}</strong>. Necesitas actualizar la configuración para que funcione.
+              {autoDetecting 
+                ? 'Intentando conectar a todas las URLs disponibles...'
+                : `No se pudo conectar al servidor. ${retryCount > 0 ? `Reintentando automáticamente (${retryCount}/10)...` : 'Verificando URLs disponibles...'}`
+              }
             </p>
             
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-3 mb-3">
-              <p className="text-xs mb-2 font-semibold">URL Sugerida:</p>
-              <code className="text-sm bg-black/20 px-2 py-1 rounded block overflow-x-auto">
-                {suggestedUrl}
-              </code>
+              <p className="text-xs mb-2 font-semibold">URLs intentadas:</p>
+              <div className="space-y-1">
+                {getAvailableApiUrls().map((url) => (
+                  <code key={url} className="text-xs bg-black/20 px-2 py-1 rounded block overflow-x-auto">
+                    {url}
+                  </code>
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">

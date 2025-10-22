@@ -5,6 +5,7 @@ import { useIsMobile } from '@/hooks/useMediaQuery';
 import Settings from './Settings';
 import HelpModal from './HelpModal';
 import LabelModal from './LabelModal';
+import NotificationButton from './NotificationButton';
 
 export default function TopBar() {
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
@@ -75,6 +76,9 @@ export default function TopBar() {
             </button>
           </>
         )}
+
+        {/* Botón de Notificaciones */}
+        <NotificationButton />
 
         <button
           onClick={toggleDarkMode}
