@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { processNaturalLanguage, executeAIActions } from '../services/aiService';
+import { notificationService } from '../services/notificationService';
 
 const prisma = new PrismaClient();
 
@@ -44,6 +45,23 @@ export const processCommand = async (req: any, res: Response) => {
     let results = null;
     if (autoExecute) {
       results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
+      
+      // Crear notificación de resumen si se ejecutaron acciones
+      if (results && results.length > 0) {
+        const successCount = results.filter((r: any) => r.success).length;
+        await notificationService.create({
+          userId: (req as AuthRequest).userId!,
+          type: 'ai_action',
+          title: '🤖 Acciones de IA completadas',
+          message: `Se ejecutaron ${successCount} de ${results.length} acciones exitosamente`,
+          metadata: {
+            command,
+            actionsCount: results.length,
+            successCount,
+            results,
+          },
+        });
+      }
     }
 
     res.json({
@@ -67,6 +85,22 @@ export const executeActions = async (req: any, res: Response) => {
     }
 
     const results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
+    
+    // Crear notificación de resumen
+    if (results && results.length > 0) {
+      const successCount = results.filter((r: any) => r.success).length;
+      await notificationService.create({
+        userId: (req as AuthRequest).userId!,
+        type: 'ai_action',
+        title: '🤖 Acciones de IA completadas',
+        message: `Se ejecutaron ${successCount} de ${results.length} acciones exitosamente`,
+        metadata: {
+          actionsCount: results.length,
+          successCount,
+          results,
+        },
+      });
+    }
 
     res.json({ results });
   } catch (error) {
