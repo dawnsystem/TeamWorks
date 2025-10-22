@@ -3,9 +3,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useSettingsStore } from '@/store/useStore';
 
 interface SSEEvent {
-  type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered' | 'connected';
+  type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered' | 'connected' |
+        'project_created' | 'project_updated' | 'project_deleted' |
+        'section_created' | 'section_updated' | 'section_deleted' |
+        'comment_created' | 'comment_updated' | 'comment_deleted' |
+        'label_created' | 'label_updated' | 'label_deleted';
   projectId?: string;
   taskId?: string;
+  sectionId?: string;
+  commentId?: string;
+  labelId?: string;
   timestamp?: string;
   data?: any;
 }
@@ -30,14 +37,35 @@ export function useSSE(options: UseSSEOptions = {}) {
   const handleTaskEvent = useCallback((event: SSEEvent) => {
     console.log('[SSE] Evento recibido:', event);
 
-    // Invalidar queries relevantes
-    if (event.projectId) {
-      queryClient.invalidateQueries({ queryKey: ['tasks', event.projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', event.projectId] });
+    // Invalidar queries relevantes según el tipo de evento
+    if (event.type.startsWith('task_')) {
+      if (event.projectId) {
+        queryClient.invalidateQueries({ queryKey: ['tasks', event.projectId] });
+        queryClient.invalidateQueries({ queryKey: ['project', event.projectId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } else if (event.type.startsWith('project_')) {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      if (event.projectId) {
+        queryClient.invalidateQueries({ queryKey: ['project', event.projectId] });
+      }
+    } else if (event.type.startsWith('section_')) {
+      if (event.projectId) {
+        queryClient.invalidateQueries({ queryKey: ['project', event.projectId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    } else if (event.type.startsWith('comment_')) {
+      if (event.taskId) {
+        queryClient.invalidateQueries({ queryKey: ['comments', event.taskId] });
+      }
+      if (event.projectId) {
+        queryClient.invalidateQueries({ queryKey: ['tasks', event.projectId] });
+      }
+    } else if (event.type.startsWith('label_')) {
+      queryClient.invalidateQueries({ queryKey: ['labels'] });
+      // Invalidar también las tareas que puedan tener esta etiqueta
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
-
-    // Invalidar todas las queries de tasks para asegurar sincronización
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
   }, [queryClient]);
 
   const connect = useCallback(() => {
@@ -86,6 +114,58 @@ export function useSSE(options: UseSSEOptions = {}) {
 
       eventSource.addEventListener('task_reordered', (e) => {
         handleTaskEvent({ ...JSON.parse(e.data), type: 'task_reordered' });
+      });
+
+      // Eventos de proyectos
+      eventSource.addEventListener('project_created', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'project_created' });
+      });
+
+      eventSource.addEventListener('project_updated', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'project_updated' });
+      });
+
+      eventSource.addEventListener('project_deleted', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'project_deleted' });
+      });
+
+      // Eventos de secciones
+      eventSource.addEventListener('section_created', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'section_created' });
+      });
+
+      eventSource.addEventListener('section_updated', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'section_updated' });
+      });
+
+      eventSource.addEventListener('section_deleted', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'section_deleted' });
+      });
+
+      // Eventos de comentarios
+      eventSource.addEventListener('comment_created', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'comment_created' });
+      });
+
+      eventSource.addEventListener('comment_updated', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'comment_updated' });
+      });
+
+      eventSource.addEventListener('comment_deleted', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'comment_deleted' });
+      });
+
+      // Eventos de etiquetas
+      eventSource.addEventListener('label_created', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'label_created' });
+      });
+
+      eventSource.addEventListener('label_updated', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'label_updated' });
+      });
+
+      eventSource.addEventListener('label_deleted', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'label_deleted' });
       });
 
       // Error en la conexión

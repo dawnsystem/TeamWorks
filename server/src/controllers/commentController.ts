@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import { sseService } from '../services/sseService';
 
 const prisma = new PrismaClient();
 
@@ -59,7 +60,23 @@ export const createComment = async (req: any, res: Response) => {
             email: true,
           },
         },
+        task: {
+          select: {
+            projectId: true,
+          },
+        },
       },
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'comment_created',
+      projectId: comment.task.projectId,
+      taskId: comment.taskId,
+      commentId: comment.id,
+      userId: userId,
+      timestamp: new Date(),
+      data: comment,
     });
 
     res.status(201).json(comment);
@@ -108,7 +125,23 @@ export const updateComment = async (req: any, res: Response) => {
             email: true,
           },
         },
+        task: {
+          select: {
+            projectId: true,
+          },
+        },
       },
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'comment_updated',
+      projectId: comment.task.projectId,
+      taskId: comment.taskId,
+      commentId: comment.id,
+      userId: userId,
+      timestamp: new Date(),
+      data: comment,
     });
 
     res.json(comment);
@@ -131,6 +164,13 @@ export const deleteComment = async (req: any, res: Response) => {
     // Verificar que el comentario pertenece al usuario
     const existingComment = await prisma.comment.findUnique({
       where: { id },
+      include: {
+        task: {
+          select: {
+            projectId: true,
+          },
+        },
+      },
     });
 
     if (!existingComment) {
@@ -143,6 +183,17 @@ export const deleteComment = async (req: any, res: Response) => {
 
     await prisma.comment.delete({
       where: { id },
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'comment_deleted',
+      projectId: existingComment.task.projectId,
+      taskId: existingComment.taskId,
+      commentId: id,
+      userId: userId,
+      timestamp: new Date(),
+      data: { id },
     });
 
     res.json({ message: 'Comentario eliminado' });

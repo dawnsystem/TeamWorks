@@ -9,9 +9,16 @@ interface SSEClient {
 }
 
 interface TaskEvent {
-  type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered';
+  type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered' | 
+        'project_created' | 'project_updated' | 'project_deleted' |
+        'section_created' | 'section_updated' | 'section_deleted' |
+        'comment_created' | 'comment_updated' | 'comment_deleted' |
+        'label_created' | 'label_updated' | 'label_deleted';
   projectId: string;
   taskId?: string;
+  sectionId?: string;
+  commentId?: string;
+  labelId?: string;
   userId: string;
   timestamp: Date;
   data?: any;

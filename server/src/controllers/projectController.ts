@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
+import { sseService } from '../services/sseService';
 
 const prisma = new PrismaClient();
 
@@ -70,6 +71,15 @@ export const createProject = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'project_created',
+      projectId: project.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: project,
+    });
+
     res.status(201).json(project);
   } catch (error) {
     console.error('Error en createProject:', error);
@@ -103,6 +113,15 @@ export const updateProject = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'project_updated',
+      projectId: project.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: project,
+    });
+
     res.json(project);
   } catch (error) {
     console.error('Error en updateProject:', error);
@@ -128,6 +147,15 @@ export const deleteProject = async (req: any, res: Response) => {
 
     await prisma.project.delete({
       where: { id }
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'project_deleted',
+      projectId: id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: { id },
     });
 
     res.status(204).send();
@@ -166,6 +194,16 @@ export const createSection = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'section_created',
+      projectId: projectId,
+      sectionId: section.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: section,
+    });
+
     res.status(201).json(section);
   } catch (error) {
     console.error('Error en createSection:', error);
@@ -196,6 +234,16 @@ export const updateSection = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'section_updated',
+      projectId: section.projectId,
+      sectionId: updatedSection.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: updatedSection,
+    });
+
     res.json(updatedSection);
   } catch (error) {
     console.error('Error en updateSection:', error);
@@ -219,6 +267,16 @@ export const deleteSection = async (req: any, res: Response) => {
 
     await prisma.section.delete({
       where: { id }
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'section_deleted',
+      projectId: section.projectId,
+      sectionId: id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: { id },
     });
 
     res.status(204).send();

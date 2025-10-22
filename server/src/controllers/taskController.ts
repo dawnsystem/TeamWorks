@@ -436,7 +436,27 @@ export const toggleTask = async (req: any, res: Response) => {
       where: { id },
       data: {
         completada: !existingTask.completada
+      },
+      include: {
+        labels: {
+          include: {
+            label: true
+          }
+        },
+        _count: {
+          select: { subTasks: true, comments: true, reminders: true }
+        }
       }
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'task_updated',
+      projectId: task.projectId,
+      taskId: task.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: task,
     });
 
     res.json(task);

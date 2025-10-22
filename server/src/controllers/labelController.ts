@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
+import { sseService } from '../services/sseService';
 
 const prisma = new PrismaClient();
 
@@ -68,6 +69,16 @@ export const createLabel = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE (sin projectId específico, se envía a todos los proyectos del usuario)
+    sseService.sendTaskEvent({
+      type: 'label_created',
+      projectId: 'global',
+      labelId: label.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: label,
+    });
+
     res.status(201).json(label);
   } catch (error) {
     console.error('Error en createLabel:', error);
@@ -100,6 +111,16 @@ export const updateLabel = async (req: any, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'label_updated',
+      projectId: 'global',
+      labelId: label.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: label,
+    });
+
     res.json(label);
   } catch (error) {
     console.error('Error en updateLabel:', error);
@@ -125,6 +146,16 @@ export const deleteLabel = async (req: any, res: Response) => {
 
     await prisma.label.delete({
       where: { id }
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'label_deleted',
+      projectId: 'global',
+      labelId: id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: { id },
     });
 
     res.status(204).send();
