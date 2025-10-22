@@ -83,6 +83,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -99,14 +100,8 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/sse', sseRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api', taskSubscriptionRoutes);
-// app.use('/api/templates', templateRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', reminderRoutes);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
 
 // Server info endpoint for auto-discovery
 app.get('/api/server-info', (req, res) => {

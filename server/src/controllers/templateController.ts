@@ -149,7 +149,7 @@ export const applyTemplate = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const userId = (req as AuthRequest).userId;
-    const { projectId, sectionId } = req.body;
+    const { projectId, sectionId } = req.body as { projectId: string; sectionId?: string };
 
     if (!projectId) {
       return res.status(400).json({ error: 'Se requiere projectId' });
@@ -194,6 +194,7 @@ export const applyTemplate = async (req: any, res: Response) => {
         projectId,
         sectionId: sectionId || null,
         orden: newOrden,
+        createdBy: userId,
         labels: {
           create: template.labelIds.map((labelId) => ({
             labelId,

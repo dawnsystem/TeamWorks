@@ -29,3 +29,6 @@ export const authMiddleware = (req: any, res: Response, next: NextFunction) => {
   }
 };
 
+// Export as 'auth' for backward compatibility
+export const auth = authMiddleware;
+
