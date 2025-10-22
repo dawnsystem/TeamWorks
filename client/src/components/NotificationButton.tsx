@@ -29,8 +29,22 @@ const NotificationButton: React.FC = () => {
 
   // Escuchar eventos SSE para actualizaciones en tiempo real
   useEffect(() => {
+    const apiUrl = localStorage.getItem('settings-storage');
+    let baseUrl = 'http://localhost:3000';
+    
+    if (apiUrl) {
+      try {
+        const settings = JSON.parse(apiUrl);
+        if (settings.state?.apiUrl) {
+          baseUrl = settings.state.apiUrl.replace(/\/api\/?$/, '');
+        }
+      } catch (e) {
+        console.error('Error parsing settings:', e);
+      }
+    }
+
     const eventSource = new EventSource(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/sse/connect`,
+      `${baseUrl}/api/sse/connect`,
       { withCredentials: true }
     );
 
