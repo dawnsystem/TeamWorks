@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
+import { notificationService } from '../services/notificationService';
 
 const prisma = new PrismaClient();
 
@@ -458,6 +459,21 @@ export const toggleTask = async (req: any, res: Response) => {
       timestamp: new Date(),
       data: task,
     });
+
+    // Crear notificación si la tarea se marcó como completada
+    if (task.completada && !existingTask.completada) {
+      await notificationService.create({
+        userId: (req as AuthRequest).userId!,
+        type: 'task_completed',
+        title: '✅ Tarea completada',
+        message: `Has completado: "${task.titulo}"`,
+        taskId: task.id,
+        projectId: task.projectId,
+        metadata: {
+          completedAt: new Date(),
+        },
+      });
+    }
 
     res.json(task);
   } catch (error) {
