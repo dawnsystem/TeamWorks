@@ -29,7 +29,7 @@ export function useSSE(options: UseSSEOptions = {}) {
   const queryClient = useQueryClient();
   const apiUrl = useSettingsStore((state) => state.apiUrl);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const baseReconnectDelay = 1000; // 1 segundo
@@ -200,7 +200,7 @@ export function useSSE(options: UseSSEOptions = {}) {
       console.error('[SSE] Error al crear EventSource:', error);
       onError?.(error as Error);
     }
-  }, [enabled, handleTaskEvent, onConnected, onError, onReconnecting]);
+  }, [apiUrl, enabled, handleTaskEvent, onConnected, onError, onReconnecting]);
 
   const disconnect = useCallback(() => {
     console.log('[SSE] Desconectando...');

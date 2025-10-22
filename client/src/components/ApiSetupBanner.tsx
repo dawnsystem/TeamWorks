@@ -1,9 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, CheckCircle2, Server, X, Loader2 } from 'lucide-react';
 import { useSettingsStore } from '@/store/useStore';
-import { updateApiUrl, getAvailableApiUrls, testApiConnection, autoDetectApiUrl } from '@/lib/api';
-import { isRemoteAccess, suggestApiUrl, isApiUrlLikelyCorrect } from '@/utils/apiUrlDetection';
-import axios from 'axios';
+import { updateApiUrl, getAvailableApiUrls, autoDetectApiUrl } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface ApiSetupBannerProps {
@@ -15,33 +13,15 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [autoDetecting, setAutoDetecting] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'failed'>('unknown');
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'failed'>('unknown');
   const [retryCount, setRetryCount] = useState(0);
-  const suggestedUrl = suggestApiUrl();
   
   // Check if we should show the banner
   const shouldShow = 
     !dismissed && 
     (connectionStatus === 'failed' || connectionStatus === 'unknown');
 
-  useEffect(() => {
-    // Auto-detect and connect on mount
-    autoConnectToServer();
-  }, []);
-
-  // Auto-retry connection every 10 seconds if failed
-  useEffect(() => {
-    if (connectionStatus === 'failed' && retryCount < 10) {
-      const timer = setTimeout(() => {
-        console.log(`🔄 Reintentando conexión (intento ${retryCount + 1}/10)...`);
-        setRetryCount(prev => prev + 1);
-        autoConnectToServer();
-      }, 10000);
-      return () => clearTimeout(timer);
-    }
-  }, [connectionStatus, retryCount]);
-
-  const autoConnectToServer = async () => {
+  const autoConnectToServer = useCallback(async () => {
     setAutoDetecting(true);
     setChecking(true);
     
@@ -52,7 +32,6 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
         // Found a working URL
         settings.setApiUrl(detectedUrl);
         updateApiUrl(detectedUrl);
-        setConnectionStatus('connected');
         setRetryCount(0);
         toast.success(`✅ Conectado a ${detectedUrl}`);
       } else {
@@ -66,41 +45,31 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
       setAutoDetecting(false);
       setChecking(false);
     }
-  };
+  }, [settings]);
 
-  const checkConnection = async (url: string) => {
-    setChecking(true);
-    try {
-      const baseUrl = url.replace(/\/api\/?$/, '');
-      // Try health endpoint first
-      const healthUrl = `${baseUrl}/health`;
-      const response = await axios.get(healthUrl, { timeout: 5000 });
-      
-      if (response.status === 200) {
-        // Also try to get server info for additional validation
-        try {
-          const serverInfoUrl = `${url}/server-info`;
-          await axios.get(serverInfoUrl, { timeout: 3000 });
-        } catch (e) {
-          // Server info endpoint is optional, health check is enough
-        }
-        setConnectionStatus('connected');
-      } else {
-        setConnectionStatus('failed');
-      }
-    } catch (error) {
-      setConnectionStatus('failed');
-    } finally {
-      setChecking(false);
+  useEffect(() => {
+    // Auto-detect and connect on mount
+    autoConnectToServer();
+  }, [autoConnectToServer]);
+
+  // Auto-retry connection every 10 seconds if failed
+  useEffect(() => {
+    if (connectionStatus === 'failed' && retryCount < 10) {
+      const timer = setTimeout(() => {
+        console.log(`🔄 Reintentando conexión (intento ${retryCount + 1}/10)...`);
+        setRetryCount(prev => prev + 1);
+        autoConnectToServer();
+      }, 10000);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [connectionStatus, retryCount, autoConnectToServer]);
 
   const handleAutoFix = async () => {
     setRetryCount(0);
     await autoConnectToServer();
   };
 
-  if (!shouldShow || connectionStatus === 'connected') {
+  if (!shouldShow) {
     return null;
   }
 
