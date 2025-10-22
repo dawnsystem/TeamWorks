@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
   Bell, 
   MessageSquare, 
@@ -11,7 +10,7 @@ import {
   Trash2,
   Reply
 } from 'lucide-react';
-import { Notification } from '../types/notification';
+import type { Notification } from '../types/notification';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -67,11 +66,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   });
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors ${
+    <div
+      className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group ${
         !notification.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
       }`}
     >
@@ -185,7 +181,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
           </div>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 };
 
