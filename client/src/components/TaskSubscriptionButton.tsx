@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { taskSubscriptionAPI } from '@/lib/taskSubscriptionApi';
