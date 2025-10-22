@@ -8,6 +8,7 @@ import CommentList from './CommentList';
 import CommentInput from './CommentInput';
 import ReminderManager from './ReminderManager';
 import TaskBreadcrumbs from './TaskBreadcrumbs';
+import TaskSubscriptionButton from './TaskSubscriptionButton';
 
 const priorityColors = {
   1: 'text-red-600 dark:text-red-400',
@@ -85,6 +86,7 @@ export default function TaskDetailView() {
                 {task.titulo}
               </h2>
               <div className="flex items-center gap-2">
+                <TaskSubscriptionButton taskId={task.id} />
                 <button
                   onClick={handleEdit}
                   className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
