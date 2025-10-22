@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { sseService } from './sseService';
+import { taskSubscriptionService } from './taskSubscriptionService';
 
 const prisma = new PrismaClient();
 
@@ -238,6 +239,46 @@ class NotificationService {
       return result;
     } catch (error) {
       console.error('[Notification] Error cleaning old notifications:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crear notificaciones para suscriptores de una tarea (excluyendo al actor)
+   */
+  async createForTaskSubscribers(
+    taskId: string,
+    actorUserId: string,
+    notificationData: Omit<CreateNotificationData, 'userId'>
+  ) {
+    try {
+      // Get all subscribers for the task
+      const subscriberIds = await taskSubscriptionService.getSubscribers(taskId);
+
+      // Filter out the actor (no auto-notifications)
+      const targetUserIds = subscriberIds.filter(userId => userId !== actorUserId);
+
+      if (targetUserIds.length === 0) {
+        console.log(`[Notification] No subscribers to notify for task ${taskId}`);
+        return [];
+      }
+
+      // Create notifications for all subscribers
+      const notifications = await Promise.all(
+        targetUserIds.map(userId =>
+          this.create({
+            ...notificationData,
+            userId,
+            taskId,
+          })
+        )
+      );
+
+      console.log(`[Notification] Created ${notifications.length} notifications for task ${taskId} subscribers`);
+
+      return notifications;
+    } catch (error) {
+      console.error('[Notification] Error creating notifications for subscribers:', error);
       throw error;
     }
   }

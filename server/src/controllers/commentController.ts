@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
+import { taskSubscriptionService } from '../services/taskSubscriptionService';
 
 const prisma = new PrismaClient();
 
@@ -87,21 +88,28 @@ export const createComment = async (req: any, res: Response) => {
       data: comment,
     });
 
-    // Crear notificación si el comentario no es del dueño del proyecto
-    if (comment.task.project.userId !== userId) {
-      await notificationService.create({
-        userId: comment.task.project.userId,
+    // Get the user who made the comment
+    const commentAuthor = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { nombre: true },
+    });
+
+    // Notificar a suscriptores de la tarea (excluyendo al autor del comentario)
+    await notificationService.createForTaskSubscribers(
+      comment.taskId,
+      userId,
+      {
         type: 'comment',
         title: '💬 Nuevo comentario',
-        message: `${comment.user.nombre} comentó en "${comment.task.titulo}"`,
-        taskId: comment.taskId,
+        message: `${commentAuthor?.nombre || 'Alguien'} comentó en "${comment.task.titulo}"`,
         commentId: comment.id,
         projectId: comment.task.projectId,
         metadata: {
           commentText: contenido.trim(),
+          authorName: commentAuthor?.nombre,
         },
-      });
-    }
+      }
+    );
 
     res.status(201).json(comment);
   } catch (error) {

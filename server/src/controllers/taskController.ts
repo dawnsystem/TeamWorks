@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
+import { taskSubscriptionService } from '../services/taskSubscriptionService';
 
 const prisma = new PrismaClient();
 
@@ -239,11 +240,13 @@ export const createTask = async (req: any, res: Response) => {
       return res.status(400).json({ error: 'El proyecto es requerido' });
     }
 
+    const userId = (req as AuthRequest).userId!;
+
     // Verificar que el proyecto pertenece al usuario
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
-        userId: (req as AuthRequest).userId
+        userId
       }
     });
 
@@ -261,6 +264,7 @@ export const createTask = async (req: any, res: Response) => {
         sectionId,
         parentTaskId,
         orden: orden || 0,
+        createdBy: userId,
         ...(labelIds && labelIds.length > 0 && {
           labels: {
             create: labelIds.map((labelId: string) => ({
@@ -278,12 +282,15 @@ export const createTask = async (req: any, res: Response) => {
       }
     });
 
+    // Auto-subscribe creator to the task
+    await taskSubscriptionService.autoSubscribeCreator(task.id, userId);
+
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_created',
       projectId,
       taskId: task.id,
-      userId: (req as AuthRequest).userId!,
+      userId,
       timestamp: new Date(),
       data: task,
     });
@@ -460,19 +467,21 @@ export const toggleTask = async (req: any, res: Response) => {
       data: task,
     });
 
-    // Crear notificación si la tarea se marcó como completada
+    // Crear notificación para suscriptores si la tarea se marcó como completada
     if (task.completada && !existingTask.completada) {
-      await notificationService.create({
-        userId: (req as AuthRequest).userId!,
-        type: 'task_completed',
-        title: '✅ Tarea completada',
-        message: `Has completado: "${task.titulo}"`,
-        taskId: task.id,
-        projectId: task.projectId,
-        metadata: {
-          completedAt: new Date(),
-        },
-      });
+      await notificationService.createForTaskSubscribers(
+        task.id,
+        (req as AuthRequest).userId!,
+        {
+          type: 'task_completed',
+          title: '✅ Tarea completada',
+          message: `Se completó la tarea: "${task.titulo}"`,
+          projectId: task.projectId,
+          metadata: {
+            completedAt: new Date(),
+          },
+        }
+      );
     }
 
     res.json(task);
