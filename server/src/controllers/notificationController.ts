@@ -16,8 +16,12 @@ export const getNotifications = async (req: Request, res: Response) => {
     };
 
     const notifications = await notificationService.getByUser(userId, filters);
+    const total = await notificationService.countUnread(userId);
 
-    res.json(notifications);
+    res.json({ 
+      notifications,
+      total 
+    });
   } catch (error) {
     console.error('Error en getNotifications:', error);
     res.status(500).json({ error: 'Error al obtener notificaciones' });

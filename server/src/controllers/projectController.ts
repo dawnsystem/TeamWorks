@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
+import { notificationService } from '../services/notificationService';
 
 const prisma = new PrismaClient();
 
@@ -78,6 +79,18 @@ export const createProject = async (req: any, res: Response) => {
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
       data: project,
+    });
+
+    // Crear notificación
+    await notificationService.create({
+      userId: (req as AuthRequest).userId!,
+      type: 'project_created',
+      title: '📁 Nuevo proyecto',
+      message: `Has creado el proyecto "${nombre}"`,
+      projectId: project.id,
+      metadata: {
+        color: project.color,
+      },
     });
 
     res.status(201).json(project);
@@ -202,6 +215,19 @@ export const createSection = async (req: any, res: Response) => {
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
       data: section,
+    });
+
+    // Crear notificación
+    await notificationService.create({
+      userId: (req as AuthRequest).userId!,
+      type: 'section_created',
+      title: '📑 Nueva sección',
+      message: `Has creado la sección "${nombre}" en ${project.nombre}`,
+      projectId: projectId,
+      sectionId: section.id,
+      metadata: {
+        projectName: project.nombre,
+      },
     });
 
     res.status(201).json(section);

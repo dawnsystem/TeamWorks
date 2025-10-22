@@ -43,9 +43,14 @@ const NotificationButton: React.FC = () => {
       }
     }
 
+    const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('[Notifications] No token found, cannot connect to SSE');
+      return;
+    }
+
     const eventSource = new EventSource(
-      `${baseUrl}/api/sse/connect`,
-      { withCredentials: true }
+      `${baseUrl}/api/sse/events?token=${token}`
     );
 
     eventSource.addEventListener('notification_created', (event) => {

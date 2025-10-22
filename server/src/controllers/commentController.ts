@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { sseService } from '../services/sseService';
+import { notificationService } from '../services/notificationService';
 
 const prisma = new PrismaClient();
 
@@ -63,6 +64,13 @@ export const createComment = async (req: any, res: Response) => {
         task: {
           select: {
             projectId: true,
+            titulo: true,
+            project: {
+              select: {
+                userId: true,
+                nombre: true,
+              },
+            },
           },
         },
       },
@@ -78,6 +86,22 @@ export const createComment = async (req: any, res: Response) => {
       timestamp: new Date(),
       data: comment,
     });
+
+    // Crear notificación si el comentario no es del dueño del proyecto
+    if (comment.task.project.userId !== userId) {
+      await notificationService.create({
+        userId: comment.task.project.userId,
+        type: 'comment',
+        title: '💬 Nuevo comentario',
+        message: `${comment.user.nombre} comentó en "${comment.task.titulo}"`,
+        taskId: comment.taskId,
+        commentId: comment.id,
+        projectId: comment.task.projectId,
+        metadata: {
+          commentText: contenido.trim(),
+        },
+      });
+    }
 
     res.status(201).json(comment);
   } catch (error) {
