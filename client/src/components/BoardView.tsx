@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Plus } from 'lucide-react';
+import { Plus, List, LayoutGrid } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -17,7 +17,7 @@ import BoardColumn from './BoardColumn';
 import TaskItem from './TaskItem';
 import LabelFilter from './LabelFilter';
 import { projectsAPI, tasksAPI } from '@/lib/api';
-import { useTaskEditorStore } from '@/store/useStore';
+import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import type { Task } from '@/types';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
@@ -25,6 +25,7 @@ import toast from 'react-hot-toast';
 export default function BoardView() {
   const { id } = useParams();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
+  const setProjectViewMode = useUIStore((state) => state.setProjectViewMode);
   const queryClient = useQueryClient();
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -221,16 +222,36 @@ export default function BoardView() {
       <div className="h-full flex flex-col">
         {/* Header */}
         <div className="flex-shrink-0 p-6 pb-4">
-          <div className="flex items-center gap-3 mb-2">
-            {project && (
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: project.color }}
-              />
-            )}
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              {project?.nombre || 'Inbox'}
-            </h1>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              {project && (
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: project.color }}
+                />
+              )}
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {project?.nombre || 'Inbox'}
+              </h1>
+            </div>
+
+            {/* View Mode Switcher */}
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+              <button
+                onClick={() => setProjectViewMode('list')}
+                className="p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                title="Vista de lista"
+              >
+                <List className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setProjectViewMode('board')}
+                className="p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow"
+                title="Vista de tablero"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
           <button
