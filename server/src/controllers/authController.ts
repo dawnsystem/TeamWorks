@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { Secret } from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
-export const register = async (req: Request, res: Response) => {
+export const register = async (req: any, res: Response) => {
   try {
     const { email, password, nombre } = req.body;
 
@@ -68,7 +69,7 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: any, res: Response) => {
   try {
     const { email, password } = req.body;
 
@@ -116,10 +117,10 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const getMe = async (req: Request & { userId?: string }, res: Response) => {
+export const getMe = async (req: any & { userId?: string }, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: req.userId },
+      where: { id: (req as AuthRequest).userId },
       select: {
         id: true,
         email: true,

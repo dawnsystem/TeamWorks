@@ -4,10 +4,10 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getProjects = async (req: AuthRequest, res: Response) => {
+export const getProjects = async (req: any, res: Response) => {
   try {
     const projects = await prisma.project.findMany({
-      where: { userId: req.userId },
+      where: { userId: (req as AuthRequest).userId },
       include: {
         sections: {
           orderBy: { orden: 'asc' }
@@ -26,14 +26,14 @@ export const getProjects = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getProject = async (req: AuthRequest, res: Response) => {
+export const getProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
     const project = await prisma.project.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       },
       include: {
         sections: {
@@ -53,7 +53,7 @@ export const getProject = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const createProject = async (req: AuthRequest, res: Response) => {
+export const createProject = async (req: any, res: Response) => {
   try {
     const { nombre, color, orden } = req.body;
 
@@ -66,7 +66,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         nombre,
         color: color || '#808080',
         orden: orden || 0,
-        userId: req.userId!
+        userId: (req as AuthRequest).userId!
       }
     });
 
@@ -77,7 +77,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateProject = async (req: AuthRequest, res: Response) => {
+export const updateProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, color, orden } = req.body;
@@ -86,7 +86,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
     const existingProject = await prisma.project.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 
@@ -110,7 +110,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteProject = async (req: AuthRequest, res: Response) => {
+export const deleteProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -118,7 +118,7 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
     const existingProject = await prisma.project.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 
@@ -137,7 +137,7 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const createSection = async (req: AuthRequest, res: Response) => {
+export const createSection = async (req: any, res: Response) => {
   try {
     const { projectId } = req.params;
     const { nombre, orden } = req.body;
@@ -146,7 +146,7 @@ export const createSection = async (req: AuthRequest, res: Response) => {
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 
@@ -173,7 +173,7 @@ export const createSection = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateSection = async (req: AuthRequest, res: Response) => {
+export const updateSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, orden } = req.body;
@@ -184,7 +184,7 @@ export const updateSection = async (req: AuthRequest, res: Response) => {
       include: { project: true }
     });
 
-    if (!section || section.project.userId !== req.userId) {
+    if (!section || section.project.userId !== (req as AuthRequest).userId) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
@@ -203,7 +203,7 @@ export const updateSection = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteSection = async (req: AuthRequest, res: Response) => {
+export const deleteSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -213,7 +213,7 @@ export const deleteSection = async (req: AuthRequest, res: Response) => {
       include: { project: true }
     });
 
-    if (!section || section.project.userId !== req.userId) {
+    if (!section || section.project.userId !== (req as AuthRequest).userId) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 

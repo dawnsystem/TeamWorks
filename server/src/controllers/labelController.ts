@@ -4,10 +4,10 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const getLabels = async (req: AuthRequest, res: Response) => {
+export const getLabels = async (req: any, res: Response) => {
   try {
     const labels = await prisma.label.findMany({
-      where: { userId: req.userId },
+      where: { userId: (req as AuthRequest).userId },
       include: {
         _count: {
           select: { tasks: true }
@@ -23,14 +23,14 @@ export const getLabels = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getLabel = async (req: AuthRequest, res: Response) => {
+export const getLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
     const label = await prisma.label.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       },
       include: {
         tasks: {
@@ -52,7 +52,7 @@ export const getLabel = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const createLabel = async (req: AuthRequest, res: Response) => {
+export const createLabel = async (req: any, res: Response) => {
   try {
     const { nombre, color } = req.body;
 
@@ -64,7 +64,7 @@ export const createLabel = async (req: AuthRequest, res: Response) => {
       data: {
         nombre,
         color: color || '#808080',
-        userId: req.userId!
+        userId: (req as AuthRequest).userId!
       }
     });
 
@@ -75,7 +75,7 @@ export const createLabel = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateLabel = async (req: AuthRequest, res: Response) => {
+export const updateLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, color } = req.body;
@@ -84,7 +84,7 @@ export const updateLabel = async (req: AuthRequest, res: Response) => {
     const existingLabel = await prisma.label.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 
@@ -107,7 +107,7 @@ export const updateLabel = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteLabel = async (req: AuthRequest, res: Response) => {
+export const deleteLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -115,7 +115,7 @@ export const deleteLabel = async (req: AuthRequest, res: Response) => {
     const existingLabel = await prisma.label.findFirst({
       where: {
         id,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 

@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // GET /api/tasks/:taskId/reminders
-export const getRemindersByTask = async (req: Request, res: Response) => {
+export const getRemindersByTask = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
 
@@ -21,7 +21,7 @@ export const getRemindersByTask = async (req: Request, res: Response) => {
 };
 
 // POST /api/tasks/:taskId/reminders
-export const createReminder = async (req: Request, res: Response) => {
+export const createReminder = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
     const { fechaHora } = req.body;
@@ -59,7 +59,7 @@ export const createReminder = async (req: Request, res: Response) => {
 };
 
 // DELETE /api/reminders/:id
-export const deleteReminder = async (req: Request, res: Response) => {
+export const deleteReminder = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 

@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { AuthRequest } from '../middleware/auth';
@@ -21,9 +21,9 @@ const updateTemplateSchema = z.object({
 });
 
 // Get all templates for the authenticated user
-export const getAllTemplates = async (req: AuthRequest, res: Response) => {
+export const getAllTemplates = async (req: any, res: Response) => {
   try {
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     const templates = await prisma.taskTemplate.findMany({
       where: { userId },
@@ -38,10 +38,10 @@ export const getAllTemplates = async (req: AuthRequest, res: Response) => {
 };
 
 // Get a single template
-export const getTemplate = async (req: AuthRequest, res: Response) => {
+export const getTemplate = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     const template = await prisma.taskTemplate.findFirst({
       where: {
@@ -62,16 +62,19 @@ export const getTemplate = async (req: AuthRequest, res: Response) => {
 };
 
 // Create a new template
-export const createTemplate = async (req: AuthRequest, res: Response) => {
+export const createTemplate = async (req: any, res: Response) => {
   try {
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
     const validatedData = createTemplateSchema.parse(req.body);
 
     const template = await prisma.taskTemplate.create({
       data: {
-        ...validatedData,
+        titulo: validatedData.titulo,
+        descripcion: validatedData.descripcion,
+        prioridad: validatedData.prioridad,
+        labelIds: validatedData.labelIds,
         userId: userId!,
-      },
+      } as any,
     });
 
     res.status(201).json(template);
@@ -85,10 +88,10 @@ export const createTemplate = async (req: AuthRequest, res: Response) => {
 };
 
 // Update a template
-export const updateTemplate = async (req: AuthRequest, res: Response) => {
+export const updateTemplate = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
     const validatedData = updateTemplateSchema.parse(req.body);
 
     // Check if template exists and belongs to user
@@ -116,10 +119,10 @@ export const updateTemplate = async (req: AuthRequest, res: Response) => {
 };
 
 // Delete a template
-export const deleteTemplate = async (req: AuthRequest, res: Response) => {
+export const deleteTemplate = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     // Check if template exists and belongs to user
     const existingTemplate = await prisma.taskTemplate.findFirst({
@@ -142,10 +145,10 @@ export const deleteTemplate = async (req: AuthRequest, res: Response) => {
 };
 
 // Apply a template (create a task from a template)
-export const applyTemplate = async (req: AuthRequest, res: Response) => {
+export const applyTemplate = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
     const { projectId, sectionId } = req.body;
 
     if (!projectId) {

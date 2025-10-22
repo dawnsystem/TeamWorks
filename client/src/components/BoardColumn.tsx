@@ -22,7 +22,7 @@ export default function BoardColumn({ sectionId, title, tasks, projectId }: Boar
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col w-[calc(100vw-2rem)] sm:w-80 flex-shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors ${
+      className={`flex flex-col w-[85vw] sm:w-80 lg:w-96 flex-shrink-0 bg-gray-100 dark:bg-gray-800 rounded-lg transition-colors snap-center ${
         isOver ? 'ring-2 ring-red-500 bg-red-50 dark:bg-red-900/20' : ''
       }`}
       style={{ height: '100%', minHeight: 0 }}

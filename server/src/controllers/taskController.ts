@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
+import { sseService } from '../services/sseService';
 
 const prisma = new PrismaClient();
 
@@ -61,13 +62,13 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
   };
 }
 
-export const getTasks = async (req: AuthRequest, res: Response) => {
+export const getTasks = async (req: any, res: Response) => {
   try {
     const { projectId, sectionId, filter, search, labelId } = req.query;
 
     // Construir filtros
     const where: any = {
-      project: { userId: req.userId }
+      project: { userId: (req as AuthRequest).userId }
     };
 
     if (projectId) {
@@ -149,7 +150,7 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
     // Recursively fetch all subtasks for each root task
     const tasksWithAllSubtasks = await Promise.all(
       rootTasks.map(async (task) => {
-        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, req.userId!);
+        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!);
         return taskWithSubtasks;
       })
     );
@@ -164,14 +165,14 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getTask = async (req: AuthRequest, res: Response) => {
+export const getTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
     const task = await prisma.task.findFirst({
       where: {
         id,
-        project: { userId: req.userId }
+        project: { userId: (req as AuthRequest).userId }
       },
       include: {
         labels: {
@@ -215,7 +216,7 @@ export const getTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const createTask = async (req: AuthRequest, res: Response) => {
+export const createTask = async (req: any, res: Response) => {
   try {
     const {
       titulo,
@@ -241,7 +242,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
     const project = await prisma.project.findFirst({
       where: {
         id: projectId,
-        userId: req.userId
+        userId: (req as AuthRequest).userId
       }
     });
 
@@ -276,6 +277,16 @@ export const createTask = async (req: AuthRequest, res: Response) => {
       }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'task_created',
+      projectId,
+      taskId: task.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: task,
+    });
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Error en createTask:', error);
@@ -283,7 +294,7 @@ export const createTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const updateTask = async (req: AuthRequest, res: Response) => {
+export const updateTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const {
@@ -301,7 +312,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
     const existingTask = await prisma.task.findFirst({
       where: {
         id,
-        project: { userId: req.userId }
+        project: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -325,26 +336,41 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
       }
     }
 
+    // Preparar datos de actualización
+    const updateData: any = {};
+    if (titulo !== undefined) updateData.titulo = titulo;
+    if (descripcion !== undefined) updateData.descripcion = descripcion;
+    if (prioridad !== undefined) updateData.prioridad = prioridad;
+    if (fechaVencimiento !== undefined) {
+      updateData.fechaVencimiento = fechaVencimiento ? new Date(fechaVencimiento) : null;
+    }
+    if (completada !== undefined) updateData.completada = completada;
+    if (sectionId !== undefined) updateData.sectionId = sectionId;
+    if (orden !== undefined) updateData.orden = orden;
+
     const task = await prisma.task.update({
       where: { id },
-      data: {
-        ...(titulo !== undefined && { titulo }),
-        ...(descripcion !== undefined && { descripcion }),
-        ...(prioridad !== undefined && { prioridad }),
-        ...(fechaVencimiento !== undefined && {
-          fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null
-        }),
-        ...(completada !== undefined && { completada }),
-        ...(sectionId !== undefined && { sectionId }),
-        ...(orden !== undefined && { orden })
-      },
+      data: updateData,
       include: {
         labels: {
           include: {
             label: true
           }
+        },
+        _count: {
+          select: { subTasks: true, comments: true, reminders: true }
         }
       }
+    });
+
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'task_updated',
+      projectId: task.projectId,
+      taskId: task.id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+      data: task,
     });
 
     res.json(task);
@@ -354,7 +380,7 @@ export const updateTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const deleteTask = async (req: AuthRequest, res: Response) => {
+export const deleteTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -362,7 +388,7 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
     const existingTask = await prisma.task.findFirst({
       where: {
         id,
-        project: { userId: req.userId }
+        project: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -374,6 +400,15 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
       where: { id }
     });
 
+    // Enviar evento SSE
+    sseService.sendTaskEvent({
+      type: 'task_deleted',
+      projectId: existingTask.projectId,
+      taskId: id,
+      userId: (req as AuthRequest).userId!,
+      timestamp: new Date(),
+    });
+
     res.status(204).send();
   } catch (error) {
     console.error('Error en deleteTask:', error);
@@ -381,7 +416,7 @@ export const deleteTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const toggleTask = async (req: AuthRequest, res: Response) => {
+export const toggleTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -389,7 +424,7 @@ export const toggleTask = async (req: AuthRequest, res: Response) => {
     const existingTask = await prisma.task.findFirst({
       where: {
         id,
-        project: { userId: req.userId }
+        project: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -411,13 +446,13 @@ export const toggleTask = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
+export const getTasksByLabel = async (req: any, res: Response) => {
   try {
     const { labelId } = req.params;
 
     const rootTasks = await prisma.task.findMany({
       where: {
-        project: { userId: req.userId },
+        project: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
         labels: {
           some: { labelId }
@@ -439,7 +474,7 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
     // Recursively fetch all subtasks for each root task
     const tasksWithAllSubtasks = await Promise.all(
       rootTasks.map(async (task) => {
-        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, req.userId!);
+        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!);
         return taskWithSubtasks;
       })
     );
@@ -454,7 +489,7 @@ export const getTasksByLabel = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const reorderTasks = async (req: AuthRequest, res: Response) => {
+export const reorderTasks = async (req: any, res: Response) => {
   try {
     const { taskUpdates } = req.body;
 
@@ -467,7 +502,7 @@ export const reorderTasks = async (req: AuthRequest, res: Response) => {
     const tasks = await prisma.task.findMany({
       where: {
         id: { in: taskIds },
-        project: { userId: req.userId }
+        project: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -489,6 +524,17 @@ export const reorderTasks = async (req: AuthRequest, res: Response) => {
         })
       )
     );
+
+    // Enviar evento SSE (usar projectId de la primera tarea)
+    if (tasks.length > 0) {
+      sseService.sendTaskEvent({
+        type: 'task_reordered',
+        projectId: tasks[0].projectId,
+        userId: (req as AuthRequest).userId!,
+        timestamp: new Date(),
+        data: { taskIds },
+      });
+    }
 
     res.json({ success: true });
   } catch (error) {

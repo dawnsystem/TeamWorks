@@ -5,7 +5,7 @@ import { AuthRequest } from '../middleware/auth';
 const prisma = new PrismaClient();
 
 // GET /api/tasks/:taskId/comments
-export const getCommentsByTask = async (req: AuthRequest, res: Response) => {
+export const getCommentsByTask = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
 
@@ -31,11 +31,11 @@ export const getCommentsByTask = async (req: AuthRequest, res: Response) => {
 };
 
 // POST /api/tasks/:taskId/comments
-export const createComment = async (req: AuthRequest, res: Response) => {
+export const createComment = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
     const { contenido } = req.body;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     if (!userId) {
       return res.status(401).json({ message: 'No autenticado' });
@@ -70,11 +70,11 @@ export const createComment = async (req: AuthRequest, res: Response) => {
 };
 
 // PATCH /api/comments/:id
-export const updateComment = async (req: AuthRequest, res: Response) => {
+export const updateComment = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { contenido } = req.body;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     if (!userId) {
       return res.status(401).json({ message: 'No autenticado' });
@@ -119,10 +119,10 @@ export const updateComment = async (req: AuthRequest, res: Response) => {
 };
 
 // DELETE /api/comments/:id
-export const deleteComment = async (req: AuthRequest, res: Response) => {
+export const deleteComment = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.userId;
+    const userId = (req as AuthRequest).userId;
 
     if (!userId) {
       return res.status(401).json({ message: 'No autenticado' });

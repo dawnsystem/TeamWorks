@@ -5,7 +5,7 @@ import { processNaturalLanguage, executeAIActions } from '../services/aiService'
 
 const prisma = new PrismaClient();
 
-export const processCommand = async (req: AuthRequest, res: Response) => {
+export const processCommand = async (req: any, res: Response) => {
   try {
     const { command, autoExecute = false, context } = req.body;
 
@@ -17,13 +17,13 @@ export const processCommand = async (req: AuthRequest, res: Response) => {
     let userContext = context;
     if (!userContext) {
       const projects = await prisma.project.findMany({
-        where: { userId: req.userId },
+        where: { userId: (req as AuthRequest).userId },
         select: { id: true, nombre: true }
       });
 
       const recentTasks = await prisma.task.findMany({
         where: {
-          project: { userId: req.userId },
+          project: { userId: (req as AuthRequest).userId },
           completada: false
         },
         take: 10,
@@ -43,7 +43,7 @@ export const processCommand = async (req: AuthRequest, res: Response) => {
     // Si autoExecute es true, ejecutar las acciones
     let results = null;
     if (autoExecute) {
-      results = await executeAIActions(actions, req.userId!, prisma);
+      results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
     }
 
     res.json({
@@ -58,7 +58,7 @@ export const processCommand = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const executeActions = async (req: AuthRequest, res: Response) => {
+export const executeActions = async (req: any, res: Response) => {
   try {
     const { actions } = req.body;
 
@@ -66,7 +66,7 @@ export const executeActions = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Las acciones son requeridas' });
     }
 
-    const results = await executeAIActions(actions, req.userId!, prisma);
+    const results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
 
     res.json({ results });
   } catch (error) {

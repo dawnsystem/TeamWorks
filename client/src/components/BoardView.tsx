@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Plus, List, LayoutGrid } from 'lucide-react';
+import { Plus, List, LayoutGrid, ListPlus } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -16,6 +16,7 @@ import {
 import BoardColumn from './BoardColumn';
 import TaskItem from './TaskItem';
 import LabelFilter from './LabelFilter';
+import SectionManager from './SectionManager';
 import { projectsAPI, tasksAPI } from '@/lib/api';
 import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import type { Task } from '@/types';
@@ -29,6 +30,7 @@ export default function BoardView() {
   const queryClient = useQueryClient();
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isSectionManagerOpen, setIsSectionManagerOpen] = useState(false);
 
   // Sensors for drag and drop
   // MouseSensor for desktop (no delay) and TouchSensor for mobile (with delay for scrolling)
@@ -68,13 +70,15 @@ export default function BoardView() {
       labelId: selectedLabelId || undefined
     }).then(res => res.data),
     enabled: !!projectId,
+    refetchOnWindowFocus: true, // Refrescar cuando el usuario vuelve a la pestaña
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => tasksAPI.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) => tasksAPI.update(id, data).then(res => res.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Invalidar solo las queries específicas del proyecto
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
     onError: () => {
       toast.error('Error al mover tarea');
@@ -84,8 +88,9 @@ export default function BoardView() {
   const reorderMutation = useMutation({
     mutationFn: tasksAPI.reorder,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      // Invalidar solo las queries específicas del proyecto
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
     onError: () => {
       toast.error('Error al reordenar tareas');
@@ -98,41 +103,8 @@ export default function BoardView() {
   };
 
   const handleDragOver = (event: DragOverEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-
-    const activeTask = tasks?.find(t => t.id === active.id);
-    const overTask = tasks?.find(t => t.id === over.id);
-
-    if (!activeTask) return;
-
-    // Si estamos sobre una columna (sección)
-    if (over.id.toString().startsWith('section-')) {
-      const sectionId = over.id.toString().replace('section-', '');
-      if (activeTask.sectionId !== sectionId) {
-        // Actualizar optimísticamente
-        queryClient.setQueryData(['tasks', projectId, selectedLabelId], (old: Task[] | undefined) => {
-          if (!old) return old;
-          return old.map(t => 
-            t.id === activeTask.id 
-              ? { ...t, sectionId }
-              : t
-          );
-        });
-      }
-    }
-    // Si estamos sobre una tarea
-    else if (overTask && overTask.sectionId !== activeTask.sectionId) {
-      // Mover a la misma sección que la tarea sobre la que estamos
-      queryClient.setQueryData(['tasks', projectId, selectedLabelId], (old: Task[] | undefined) => {
-        if (!old) return old;
-        return old.map(t => 
-          t.id === activeTask.id 
-            ? { ...t, sectionId: overTask.sectionId }
-            : t
-        );
-      });
-    }
+    // Deshabilitado para evitar conflictos con el drag end
+    // La actualización optimista se hará solo en handleDragEnd
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -149,7 +121,8 @@ export default function BoardView() {
     
     if (over.id.toString().startsWith('section-')) {
       // Se soltó sobre una columna
-      targetSectionId = over.id.toString().replace('section-', '') || null;
+      const sectionIdString = over.id.toString().replace('section-', '');
+      targetSectionId = sectionIdString === 'no-section' ? null : sectionIdString;
     } else {
       // Se soltó sobre una tarea
       const overTask = tasks?.find(t => t.id === over.id);
@@ -158,10 +131,33 @@ export default function BoardView() {
 
     // Si cambió de sección, actualizar
     if (activeTask.sectionId !== targetSectionId) {
+      // Actualización optimista - actualizar la query actual
+      const currentQueryKey = ['tasks', projectId, selectedLabelId];
+      
+      queryClient.setQueryData(currentQueryKey, (old: Task[] | undefined) => {
+        if (!old) return old;
+        return old.map(t => 
+          t.id === activeTask.id 
+            ? { ...t, sectionId: targetSectionId }
+            : t
+        );
+      });
+
+      // Hacer la mutación en el servidor
       updateTaskMutation.mutate({
         id: activeTask.id,
         data: { sectionId: targetSectionId }
+      }, {
+        onSuccess: () => {
+          // Refrescar todas las queries de tasks para mantener consistencia
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        },
+        onError: () => {
+          // Si hay error, revertir el cambio optimista
+          queryClient.invalidateQueries({ queryKey: currentQueryKey });
+        }
       });
+      return; // Salir aquí para evitar conflictos con reordenamiento
     }
 
     // Si no cambió de sección pero cambió de posición, reordenar
@@ -180,13 +176,37 @@ export default function BoardView() {
       const [movedTask] = reorderedTasks.splice(oldIndex, 1);
       reorderedTasks.splice(newIndex, 0, movedTask);
 
+      // Actualización optimista - actualizar la query actual
+      const currentQueryKey = ['tasks', projectId, selectedLabelId];
+      
+      queryClient.setQueryData(currentQueryKey, (old: Task[] | undefined) => {
+        if (!old) return old;
+        
+        // Crear un mapa de las nuevas posiciones
+        const orderMap = new Map(reorderedTasks.map((task, index) => [task.id, index]));
+        
+        return old.map(t => {
+          const newOrder = orderMap.get(t.id);
+          return newOrder !== undefined ? { ...t, orden: newOrder } : t;
+        });
+      });
+
       // Crear array de actualizaciones
       const taskUpdates = reorderedTasks.map((task, index) => ({
         id: task.id,
         orden: index,
       }));
 
-      reorderMutation.mutate(taskUpdates);
+      reorderMutation.mutate(taskUpdates, {
+        onSuccess: () => {
+          // Refrescar todas las queries de tasks para mantener consistencia
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        },
+        onError: () => {
+          // Si hay error, revertir el cambio optimista
+          queryClient.invalidateQueries({ queryKey: ['tasks', projectId, selectedLabelId] });
+        }
+      });
     }
   };
 
@@ -236,22 +256,35 @@ export default function BoardView() {
               </h1>
             </div>
 
-            {/* View Mode Switcher */}
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
+            {/* View Mode Switcher + Add Section Button */}
+            <div className="flex gap-2 items-center flex-shrink-0">
+              {/* Add Section Button (Mobile) */}
               <button
-                onClick={() => setProjectViewMode('list')}
-                className="p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                title="Vista de lista"
+                onClick={() => setIsSectionManagerOpen(true)}
+                className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm font-medium"
+                title="Agregar sección"
               >
-                <List className="w-4 h-4" />
+                <ListPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Sección</span>
               </button>
-              <button
-                onClick={() => setProjectViewMode('board')}
-                className="p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow"
-                title="Vista de tablero"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
+
+              {/* View Switcher */}
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setProjectViewMode('list')}
+                  className="p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  title="Vista de lista"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setProjectViewMode('board')}
+                  className="p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow"
+                  title="Vista de tablero"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
           
@@ -272,7 +305,10 @@ export default function BoardView() {
         </div>
 
         {/* Board Columns */}
-        <div className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 w-full" style={{ minHeight: 0 }}>
+        <div 
+          className="flex-1 overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 w-full scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 dark:hover:scrollbar-thumb-gray-500 snap-x snap-mandatory scroll-smooth lg:snap-none" 
+          style={{ minHeight: 0 }}
+        >
           <div className="flex gap-4 h-full min-w-min">
             {isLoading ? (
               <div className="flex items-center justify-center w-full">
@@ -284,21 +320,41 @@ export default function BoardView() {
                   <p className="text-gray-500 dark:text-gray-400 mb-4">
                     No hay secciones en este proyecto
                   </p>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
                     Agrega secciones para organizar tus tareas en columnas
                   </p>
+                  <button
+                    onClick={() => setIsSectionManagerOpen(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Crear primera sección
+                  </button>
                 </div>
               </div>
             ) : (
-              columns.map((column) => (
-                <BoardColumn
-                  key={column.id}
-                  sectionId={column.id === 'no-section' ? null : column.id}
-                  title={column.nombre}
-                  tasks={column.tasks}
-                  projectId={projectId || ''}
-                />
-              ))
+              <>
+                {columns.map((column) => (
+                  <BoardColumn
+                    key={column.id}
+                    sectionId={column.id === 'no-section' ? null : column.id}
+                    title={column.nombre}
+                    tasks={column.tasks}
+                    projectId={projectId || ''}
+                  />
+                ))}
+                
+                {/* Botón para agregar nueva sección */}
+                <div className="flex-shrink-0 w-[85vw] sm:w-80 lg:w-96 snap-center">
+                  <button
+                    onClick={() => setIsSectionManagerOpen(true)}
+                    className="w-full h-full min-h-[200px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-red-500 dark:hover:border-red-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                  >
+                    <Plus className="w-8 h-8" />
+                    <span className="text-sm font-medium">Agregar Sección</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -311,6 +367,13 @@ export default function BoardView() {
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Section Manager Modal */}
+      <SectionManager
+        isOpen={isSectionManagerOpen}
+        onClose={() => setIsSectionManagerOpen(false)}
+        projectId={projectId || ''}
+      />
     </DndContext>
   );
 }

@@ -8,6 +8,8 @@ import labelRoutes from './routes/labelRoutes';
 import aiRoutes from './routes/aiRoutes';
 import commentRoutes from './routes/commentRoutes';
 import reminderRoutes from './routes/reminderRoutes';
+import sseRoutes from './routes/sseRoutes';
+import { sseService } from './services/sseService';
 // import templateRoutes from './routes/templateRoutes';
 
 dotenv.config();
@@ -82,6 +84,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/sse', sseRoutes);
 // app.use('/api/templates', templateRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', reminderRoutes);
@@ -112,8 +115,28 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Escuchar en 0.0.0.0 para acceso en red local
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
   console.log(`📡 Accessible on local network`);
+  console.log(`🔌 SSE enabled for real-time updates`);
+});
+
+// Manejar cierre graceful
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    sseService.cleanup();
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('\n🛑 SIGINT received, closing server gracefully...');
+  server.close(() => {
+    console.log('✅ Server closed');
+    sseService.cleanup();
+    process.exit(0);
+  });
 });
 
