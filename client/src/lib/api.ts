@@ -47,7 +47,7 @@ export const testApiConnection = async (url: string): Promise<boolean> => {
   } catch (error) {
     // If health endpoint doesn't exist, try the API endpoint
     try {
-      const response = await axios.get(url, { 
+      await axios.get(url, { 
         timeout: 5000,
         validateStatus: (status) => status < 500 
       });

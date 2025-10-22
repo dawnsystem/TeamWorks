@@ -11,7 +11,6 @@ import {
   useSensor,
   useSensors,
   closestCorners,
-  DragOverEvent,
 } from '@dnd-kit/core';
 import BoardColumn from './BoardColumn';
 import TaskItem from './TaskItem';
@@ -102,7 +101,7 @@ export default function BoardView() {
     setActiveTask(task || null);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  const handleDragOver = () => {
     // Deshabilitado para evitar conflictos con el drag end
     // La actualización optimista se hará solo en handleDragEnd
   };

@@ -117,11 +117,13 @@ export const useNotifications = () => {
 
     eventSource.addEventListener('notification_deleted', (event) => {
       const { id } = JSON.parse(event.data);
-      const wasUnread = notifications.find(n => n.id === id)?.read === false;
-      setNotifications(prev => prev.filter(n => n.id !== id));
-      if (wasUnread) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
+      setNotifications(prev => {
+        const wasUnread = prev.find(n => n.id === id)?.read === false;
+        if (wasUnread) {
+          setUnreadCount(curr => Math.max(0, curr - 1));
+        }
+        return prev.filter(n => n.id !== id);
+      });
     });
 
     return () => {
