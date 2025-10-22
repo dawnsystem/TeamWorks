@@ -87,7 +87,7 @@ class SSEService extends EventEmitter {
     let sentCount = 0;
 
     this.clients.forEach((client) => {
-      // Solo enviar a clientes del mismo usuario (o podrías filtrar por proyecto)
+      // Enviar a TODOS los clientes del mismo usuario (incluyendo otros dispositivos)
       if (client.userId === event.userId) {
         const success = this.sendToClient(client, event.type, {
           projectId: event.projectId,
@@ -102,7 +102,7 @@ class SSEService extends EventEmitter {
       }
     });
 
-    console.log(`[SSE] Evento ${event.type} enviado a ${sentCount} clientes`);
+    console.log(`[SSE] Evento ${event.type} enviado a ${sentCount} cliente(s) del usuario ${event.userId}`);
   }
 
   // Enviar heartbeat para mantener conexión activa

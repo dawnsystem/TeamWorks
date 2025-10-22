@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSettingsStore } from '@/store/useStore';
 
 interface SSEEvent {
   type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered' | 'connected';
@@ -19,6 +20,7 @@ interface UseSSEOptions {
 export function useSSE(options: UseSSEOptions = {}) {
   const { enabled = true, onConnected, onError, onReconnecting } = options;
   const queryClient = useQueryClient();
+  const apiUrl = useSettingsStore((state) => state.apiUrl);
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -53,8 +55,8 @@ export function useSSE(options: UseSSEOptions = {}) {
         eventSourceRef.current.close();
       }
 
-      const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const url = `${baseURL}/api/sse/events?token=${token}`;
+      const baseURL = apiUrl || import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+      const url = `${baseURL}/sse/events?token=${token}`;
 
       console.log('[SSE] Conectando a:', url.replace(token, 'TOKEN_HIDDEN'));
 
@@ -138,7 +140,7 @@ export function useSSE(options: UseSSEOptions = {}) {
     reconnectAttemptsRef.current = 0;
   }, []);
 
-  // Conectar cuando el componente se monta
+  // Conectar cuando el componente se monta o cuando cambia la URL del API
   useEffect(() => {
     if (enabled) {
       connect();
@@ -147,7 +149,7 @@ export function useSSE(options: UseSSEOptions = {}) {
     return () => {
       disconnect();
     };
-  }, [enabled, connect, disconnect]);
+  }, [enabled, apiUrl, connect, disconnect]);
 
   // Reconectar cuando la ventana vuelve a estar visible
   useEffect(() => {
