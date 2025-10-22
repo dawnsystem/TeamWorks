@@ -8,6 +8,7 @@ const NotificationButton: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNewNotification, setHasNewNotification] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Cargar contador inicial
   useEffect(() => {
@@ -17,9 +18,12 @@ const NotificationButton: React.FC = () => {
   const loadUnreadCount = async () => {
     try {
       const count = await notificationApi.getUnreadCount();
-      setUnreadCount(count);
+      setUnreadCount(count || 0);
+      setIsLoaded(true);
     } catch (error) {
       console.error('Error loading unread count:', error);
+      setUnreadCount(0);
+      setIsLoaded(true);
     }
   };
 
@@ -90,7 +94,7 @@ const NotificationButton: React.FC = () => {
         
         {/* Badge de contador */}
         <AnimatePresence>
-          {unreadCount > 0 && (
+          {isLoaded && unreadCount > 0 && (
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
