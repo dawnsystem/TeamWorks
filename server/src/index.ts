@@ -8,7 +8,7 @@ import labelRoutes from './routes/labelRoutes';
 import aiRoutes from './routes/aiRoutes';
 import commentRoutes from './routes/commentRoutes';
 import reminderRoutes from './routes/reminderRoutes';
-import templateRoutes from './routes/templateRoutes';
+// import templateRoutes from './routes/templateRoutes';
 
 dotenv.config();
 
@@ -82,7 +82,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/ai', aiRoutes);
-app.use('/api/templates', templateRoutes);
+// app.use('/api/templates', templateRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', reminderRoutes);
 
