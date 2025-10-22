@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { X, Save, RotateCcw, Server, Key, Palette, Image, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Save, RotateCcw, Server, Key, Palette, Image, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettingsStore } from '@/store/useStore';
-import { updateApiUrl } from '@/lib/api';
+import { updateApiUrl, getAvailableApiUrls, testApiConnection } from '@/lib/api';
 import { useApiStatus } from '@/hooks/useApiStatus';
 
 interface SettingsProps {
@@ -19,6 +19,10 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [primaryColor, setPrimaryColor] = useState(settings.theme.primaryColor);
   const [accentColor, setAccentColor] = useState(settings.theme.accentColor);
   const [logoUrl, setLogoUrl] = useState(settings.theme.logoUrl);
+  const [testingUrls, setTestingUrls] = useState<Record<string, boolean>>({});
+  const [urlStatuses, setUrlStatuses] = useState<Record<string, boolean | null>>({});
+
+  const availableUrls = getAvailableApiUrls();
 
   useEffect(() => {
     // Reset form when settings change externally
@@ -79,6 +83,24 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     document.documentElement.style.setProperty('--color-accent', accentColor);
   };
 
+  const testUrl = async (url: string) => {
+    setTestingUrls(prev => ({ ...prev, [url]: true }));
+    const isAvailable = await testApiConnection(url);
+    setUrlStatuses(prev => ({ ...prev, [url]: isAvailable }));
+    setTestingUrls(prev => ({ ...prev, [url]: false }));
+    
+    if (isAvailable) {
+      toast.success(`✅ ${url} está disponible`);
+    } else {
+      toast.error(`❌ ${url} no está disponible`);
+    }
+  };
+
+  const selectUrl = (url: string) => {
+    setApiUrl(url);
+    toast.success('URL seleccionada. Haz clic en Guardar para aplicar los cambios.');
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -104,9 +126,81 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configuración del Servidor</h3>
             </div>
             <div className="space-y-4 ml-7">
+              {/* URLs Disponibles */}
+              {availableUrls.length > 1 && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    URLs Detectadas:
+                  </p>
+                  {availableUrls.map((url) => {
+                    const isTesting = testingUrls[url];
+                    const status = urlStatuses[url];
+                    const isSelected = apiUrl === url;
+                    
+                    return (
+                      <div
+                        key={url}
+                        className={`flex items-center justify-between p-3 rounded-lg transition ${
+                          isSelected 
+                            ? 'bg-blue-100 dark:bg-blue-800 border-2 border-blue-500' 
+                            : 'bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <code className="text-sm text-gray-900 dark:text-white block truncate">
+                            {url}
+                          </code>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {url.includes('localhost') 
+                              ? '🏠 Localhost (desarrollo local - solo en esta PC)' 
+                              : url.includes('192.168.') || url.includes('10.') || url.includes('172.')
+                              ? '📱 Red Local (WiFi - móvil y otros dispositivos)' 
+                              : '🌐 Tailscale (acceso remoto - cualquier lugar)'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          {status !== null && !isTesting && (
+                            status ? (
+                              <Wifi className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <WifiOff className="w-4 h-4 text-red-600 dark:text-red-400" />
+                            )
+                          )}
+                          <button
+                            onClick={() => testUrl(url)}
+                            disabled={isTesting}
+                            className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-600 transition disabled:opacity-50"
+                            title="Probar conexión"
+                          >
+                            {isTesting ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              'Probar'
+                            )}
+                          </button>
+                          {!isSelected && (
+                            <button
+                              onClick={() => selectUrl(url)}
+                              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                            >
+                              Usar
+                            </button>
+                          )}
+                          {isSelected && (
+                            <span className="px-3 py-1.5 text-sm bg-green-600 text-white rounded">
+                              ✓ Activa
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
               <div>
                 <label htmlFor="apiUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  URL de la API
+                  URL de la API {availableUrls.length > 1 && '(o introduce una personalizada)'}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -132,7 +226,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Ej: http://192.168.0.165:3000/api (para acceso en red local)
+                    URL actual conectándose al servidor backend
                   </p>
                   {isConnected !== null && (
                     <div className="flex items-center gap-1 text-xs">

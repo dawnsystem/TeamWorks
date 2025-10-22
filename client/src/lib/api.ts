@@ -19,6 +19,53 @@ const getApiUrl = () => {
   return import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 };
 
+// Function to get available API URLs (for auto-detection)
+export const getAvailableApiUrls = () => {
+  const urls = [
+    import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  ];
+  
+  // Add local network URL if configured
+  if (import.meta.env.VITE_LOCAL_API_URL) {
+    urls.push(import.meta.env.VITE_LOCAL_API_URL);
+  }
+  
+  // Add Tailscale URL if configured
+  if (import.meta.env.VITE_TAILSCALE_API_URL) {
+    urls.push(import.meta.env.VITE_TAILSCALE_API_URL);
+  }
+  
+  return urls;
+};
+
+// Function to test API connectivity
+export const testApiConnection = async (url: string): Promise<boolean> => {
+  try {
+    const baseUrl = url.replace(/\/api\/?$/, '');
+    const healthUrl = `${baseUrl}/health`;
+    const response = await axios.get(healthUrl, { timeout: 3000 });
+    return response.status === 200;
+  } catch (error) {
+    return false;
+  }
+};
+
+// Function to auto-detect best API URL
+export const autoDetectApiUrl = async (): Promise<string | null> => {
+  const urls = getAvailableApiUrls();
+  
+  for (const url of urls) {
+    const isAvailable = await testApiConnection(url);
+    if (isAvailable) {
+      console.log(`✅ API disponible en: ${url}`);
+      return url;
+    }
+  }
+  
+  console.warn('⚠️ No se pudo conectar a ninguna URL de API');
+  return null;
+};
+
 const api = axios.create({
   baseURL: getApiUrl(),
   headers: {
