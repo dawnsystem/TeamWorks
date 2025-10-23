@@ -38,25 +38,36 @@ export const getAvailableApiUrls = () => {
 // Function to test API connectivity
 export const testApiConnection = async (url: string): Promise<boolean> => {
   try {
-    // Try to hit the API directly first
-    const response = await axios.get(url.replace(/\/api\/?$/, '') + '/health', { 
+    // Try to hit the health endpoint first
+    const healthUrl = url.replace(/\/api\/?$/, '') + '/health';
+    const response = await axios.get(healthUrl, { 
       timeout: 5000,
       validateStatus: (status) => status < 500 
     });
-    return response.status === 200;
-  } catch (error) {
-    // If health endpoint doesn't exist, try the API endpoint
+    if (response.status === 200) {
+      return true;
+    }
+  } catch (error: any) {
+    // If health endpoint doesn't exist or fails, try the API endpoint
     try {
       await axios.get(url, { 
         timeout: 5000,
         validateStatus: (status) => status < 500 
       });
-      return true; // If we get any response, the server is up
-    } catch (e) {
-      console.log(`❌ No se pudo conectar a: ${url}`);
+      return true; // If we get any response (even 401), the server is up
+    } catch (e: any) {
+      // Log more detailed error information
+      if (e.code === 'ERR_NETWORK' || e.code === 'ECONNREFUSED') {
+        console.log(`❌ No se pudo conectar a: ${url} (servidor no responde)`);
+      } else if (e.code === 'ECONNABORTED') {
+        console.log(`❌ Timeout al conectar a: ${url}`);
+      } else {
+        console.log(`❌ No se pudo conectar a: ${url} (${e.message || 'error desconocido'})`);
+      }
       return false;
     }
   }
+  return false;
 };
 
 // Function to auto-detect best API URL

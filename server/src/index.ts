@@ -81,9 +81,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', authRoutes);
-
+// Public endpoints (no auth required) - must be before protected routes
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -92,16 +90,6 @@ app.get('/health', (req, res) => {
     service: 'TeamWorks API'
   });
 });
-
-app.use('/api/projects', projectRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/labels', labelRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/sse', sseRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api', taskSubscriptionRoutes);
-app.use('/api', commentRoutes);
-app.use('/api', reminderRoutes);
 
 // Server info endpoint for auto-discovery
 app.get('/api/server-info', (req, res) => {
@@ -114,6 +102,18 @@ app.get('/api/server-info', (req, res) => {
   };
   res.json(serverInfo);
 });
+
+// Protected routes (require auth)
+app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/labels', labelRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/sse', sseRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api', taskSubscriptionRoutes);
+app.use('/api', commentRoutes);
+app.use('/api', reminderRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -133,6 +133,21 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   // Iniciar checker de recordatorios
   reminderService.startReminderChecker();
   reminderService.startDueDateChecker();
+});
+
+// Handle server startup errors
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Error: Port ${PORT} is already in use`);
+    console.error(`   Please stop the other server or use a different port`);
+    console.error(`   You can set PORT in the .env file`);
+  } else if (error.code === 'EACCES') {
+    console.error(`❌ Error: Permission denied to bind to port ${PORT}`);
+    console.error(`   Try using a port number above 1024`);
+  } else {
+    console.error(`❌ Server error:`, error.message);
+  }
+  process.exit(1);
 });
 
 // Manejar cierre graceful
