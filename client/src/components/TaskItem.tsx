@@ -121,8 +121,10 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Tarea duplicada');
     },
-    onError: () => {
-      toast.error('Error al duplicar tarea');
+    onError: (error: any) => {
+      console.error('Error duplicating task:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error al duplicar tarea';
+      toast.error(errorMessage);
     },
   });
 
