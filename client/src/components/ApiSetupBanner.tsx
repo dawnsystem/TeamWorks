@@ -13,13 +13,13 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [autoDetecting, setAutoDetecting] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'failed'>('unknown');
+  const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'failed' | 'connected'>('unknown');
   const [retryCount, setRetryCount] = useState(0);
   
   // Check if we should show the banner
   const shouldShow = 
     !dismissed && 
-    (connectionStatus === 'failed' || connectionStatus === 'unknown');
+    connectionStatus !== 'connected';
 
   const autoConnectToServer = useCallback(async () => {
     setAutoDetecting(true);
@@ -33,6 +33,7 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
         settings.setApiUrl(detectedUrl);
         updateApiUrl(detectedUrl);
         setRetryCount(0);
+        setConnectionStatus('connected');
         toast.success(`✅ Conectado a ${detectedUrl}`);
       } else {
         // No working URL found
@@ -52,7 +53,7 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
     autoConnectToServer();
   }, [autoConnectToServer]);
 
-  // Auto-retry connection every 10 seconds if failed
+  // Auto-retry connection every 10 seconds if failed (but not if connected)
   useEffect(() => {
     if (connectionStatus === 'failed' && retryCount < 10) {
       const timer = setTimeout(() => {

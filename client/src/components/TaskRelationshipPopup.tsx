@@ -64,8 +64,10 @@ export default function TaskRelationshipPopup({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       onClose();
     },
-    onError: () => {
-      toast.error('Error al crear subtarea');
+    onError: (error: any) => {
+      console.error('Error creating subtask:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error al crear subtarea';
+      toast.error(errorMessage);
     }
   });
 

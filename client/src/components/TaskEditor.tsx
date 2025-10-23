@@ -61,8 +61,10 @@ export default function TaskEditor() {
       toast.success('Tarea creada');
       closeEditor();
     },
-    onError: () => {
-      toast.error('Error al crear tarea');
+    onError: (error: any) => {
+      console.error('Error creating task:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error al crear tarea';
+      toast.error(errorMessage);
     },
   });
 
@@ -75,8 +77,10 @@ export default function TaskEditor() {
       toast.success('Tarea actualizada');
       closeEditor();
     },
-    onError: () => {
-      toast.error('Error al actualizar tarea');
+    onError: (error: any) => {
+      console.error('Error updating task:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error al actualizar tarea';
+      toast.error(errorMessage);
     },
   });
 
@@ -88,8 +92,10 @@ export default function TaskEditor() {
       toast.success('Tarea eliminada');
       closeEditor();
     },
-    onError: () => {
-      toast.error('Error al eliminar tarea');
+    onError: (error: any) => {
+      console.error('Error deleting task:', error);
+      const errorMessage = error?.response?.data?.error || error?.message || 'Error al eliminar tarea';
+      toast.error(errorMessage);
     },
   });
 
