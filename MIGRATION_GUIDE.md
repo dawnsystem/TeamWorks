@@ -258,8 +258,8 @@ git reset --hard <commit-anterior>
 
 - **Schema Prisma**: `server/prisma/schema.prisma`
 - **SQL Migración**: `server/migrations/add_task_subscriptions.sql`
-- **Documentación completa**: `TASK_SUBSCRIPTION_SYSTEM.md`
-- **Análisis de funcionalidades**: `ANALISIS_FUNCIONALIDADES_COMPLETO.md`
+- **Documentación completa**: `DOCUMENTATION.md`
+- **Guía de testing**: `TESTING.md`
 
 ## 🆘 Ayuda
 
@@ -267,7 +267,7 @@ Si encuentras problemas:
 
 1. **Revisa los logs del servidor**: `server/logs` o consola
 2. **Revisa los logs de PostgreSQL**: `docker logs teamworks-db`
-3. **Consulta la documentación**: `TASK_SUBSCRIPTION_SYSTEM.md`
+3. **Consulta la documentación**: `DOCUMENTATION.md`
 4. **Abre un issue** en GitHub con:
    - Descripción del problema
    - Logs relevantes

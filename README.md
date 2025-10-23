@@ -211,16 +211,13 @@ La documentación unificada incluye:
 
 - **[SETUP.md](SETUP.md)** - Instalación detallada paso a paso
 - **[NETWORK_SETUP.md](NETWORK_SETUP.md)** - Configuración para acceso en red local
-- **[GUIA_IA.md](GUIA_IA.md)** - Guía completa del asistente de IA
-- **[FEATURES_IMPLEMENTED.md](FEATURES_IMPLEMENTED.md)** - Características implementadas
+- **[MOBILE_USER_GUIDE.md](MOBILE_USER_GUIDE.md)** - Guía de uso en dispositivos móviles
+- **[PWA_INSTALLATION_GUIDE.md](PWA_INSTALLATION_GUIDE.md)** - Instalación como aplicación PWA
 - **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Guía rápida para desarrolladores
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Cómo contribuir al proyecto
 - **[TESTING.md](TESTING.md)** - Guía completa de testing
 - **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Arquitectura del proyecto
-
-### Documentación Histórica
-
-Ver `docs/archive/` para documentación histórica del desarrollo del proyecto.
+- **[MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)** - Guía de migración entre versiones
 
 
 ## 🚀 Ejecución
