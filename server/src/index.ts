@@ -81,9 +81,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', authRoutes);
-
+// Public endpoints (no auth required) - must be before protected routes
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
@@ -92,16 +90,6 @@ app.get('/health', (req, res) => {
     service: 'TeamWorks API'
   });
 });
-
-app.use('/api/projects', projectRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/labels', labelRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/sse', sseRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api', taskSubscriptionRoutes);
-app.use('/api', commentRoutes);
-app.use('/api', reminderRoutes);
 
 // Server info endpoint for auto-discovery
 app.get('/api/server-info', (req, res) => {
@@ -114,6 +102,18 @@ app.get('/api/server-info', (req, res) => {
   };
   res.json(serverInfo);
 });
+
+// Protected routes (require auth)
+app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/labels', labelRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/sse', sseRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api', taskSubscriptionRoutes);
+app.use('/api', commentRoutes);
+app.use('/api', reminderRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
