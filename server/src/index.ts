@@ -135,6 +135,21 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   reminderService.startDueDateChecker();
 });
 
+// Handle server startup errors
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`❌ Error: Port ${PORT} is already in use`);
+    console.error(`   Please stop the other server or use a different port`);
+    console.error(`   You can set PORT in the .env file`);
+  } else if (error.code === 'EACCES') {
+    console.error(`❌ Error: Permission denied to bind to port ${PORT}`);
+    console.error(`   Try using a port number above 1024`);
+  } else {
+    console.error(`❌ Server error:`, error.message);
+  }
+  process.exit(1);
+});
+
 // Manejar cierre graceful
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, closing server gracefully...');
