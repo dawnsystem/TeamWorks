@@ -10,6 +10,8 @@ import {
   reorderTasks
 } from '../controllers/taskController';
 import { authMiddleware } from '../middleware/auth';
+import { validateBody } from '../middleware/validation';
+import { createTaskSchema, updateTaskSchema, reorderTasksSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -19,9 +21,9 @@ router.use(authMiddleware);
 router.get('/', getTasks);
 router.get('/by-label/:labelId', getTasksByLabel);
 router.get('/:id', getTask);
-router.post('/', createTask);
-router.post('/reorder', reorderTasks);
-router.patch('/:id', updateTask);
+router.post('/', validateBody(createTaskSchema), createTask);
+router.post('/reorder', validateBody(reorderTasksSchema), reorderTasks);
+router.patch('/:id', validateBody(updateTaskSchema), updateTask);
 router.delete('/:id', deleteTask);
 router.post('/:id/toggle', toggleTask);
 

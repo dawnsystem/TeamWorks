@@ -10,11 +10,7 @@ export const register = async (req: any, res: Response) => {
   try {
     const { email, password, nombre } = req.body;
 
-    // Validaciones
-    if (!email || !password || !nombre) {
-      return res.status(400).json({ error: 'Todos los campos son requeridos' });
-    }
-
+    // Validación de formato ya realizada por middleware
     // Verificar si el usuario ya existe
     const existingUser = await prisma.user.findUnique({
       where: { email }
@@ -73,11 +69,7 @@ export const login = async (req: any, res: Response) => {
   try {
     const { email, password } = req.body;
 
-    // Validaciones
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email y contraseña son requeridos' });
-    }
-
+    // Validación de formato ya realizada por middleware
     // Buscar usuario
     const user = await prisma.user.findUnique({
       where: { email }
@@ -125,7 +117,8 @@ export const getMe = async (req: any & { userId?: string }, res: Response) => {
         id: true,
         email: true,
         nombre: true,
-        createdAt: true
+        createdAt: true,
+        updatedAt: true
       }
     });
 

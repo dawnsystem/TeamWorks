@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { AuthRequest } from '../middleware/auth';
 
 const prisma = new PrismaClient();
 
@@ -7,9 +8,27 @@ const prisma = new PrismaClient();
 export const getRemindersByTask = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
+    const userId = (req as AuthRequest).userId;
+
+    // Verificar que la tarea pertenece al usuario
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        project: { userId }
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Tarea no encontrada' });
+    }
 
     const reminders = await prisma.reminder.findMany({
-      where: { taskId },
+      where: {
+        taskId,
+        task: {
+          project: { userId }
+        }
+      },
       orderBy: { fechaHora: 'asc' },
     });
 
@@ -25,24 +44,24 @@ export const createReminder = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
     const { fechaHora } = req.body;
+    const userId = (req as AuthRequest).userId;
 
-    if (!fechaHora) {
-      return res.status(400).json({ message: 'La fecha y hora son requeridas' });
-    }
+    // Validación de formato ya realizada por middleware
 
-    const reminderDate = new Date(fechaHora);
-    if (isNaN(reminderDate.getTime())) {
-      return res.status(400).json({ message: 'Fecha inválida' });
-    }
-
-    // Verificar que la tarea existe
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
+    // Verificar que la tarea pertenece al usuario
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        project: { userId }
+      }
     });
 
     if (!task) {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
+
+    // fechaHora viene como string ISO del middleware, convertir a Date
+    const reminderDate = new Date(fechaHora);
 
     const reminder = await prisma.reminder.create({
       data: {
@@ -62,9 +81,16 @@ export const createReminder = async (req: any, res: Response) => {
 export const deleteReminder = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as AuthRequest).userId;
 
-    const reminder = await prisma.reminder.findUnique({
-      where: { id },
+    // Verificar que el recordatorio pertenece a una tarea del usuario
+    const reminder = await prisma.reminder.findFirst({
+      where: {
+        id,
+        task: {
+          project: { userId }
+        }
+      }
     });
 
     if (!reminder) {

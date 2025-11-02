@@ -10,6 +10,7 @@ export const createTaskSchema = z.object({
   sectionId: z.string().uuid('ID de sección inválido').optional().nullable(),
   parentTaskId: z.string().uuid('ID de tarea padre inválido').optional().nullable(),
   orden: z.number().int().min(0).default(0),
+  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional().default([]),
 });
 
 export const updateTaskSchema = z.object({
@@ -17,16 +18,20 @@ export const updateTaskSchema = z.object({
   descripcion: z.string().max(5000).optional().nullable(),
   prioridad: z.number().int().min(1).max(4).optional(),
   fechaVencimiento: z.string().datetime().optional().nullable(),
-  projectId: z.string().uuid().optional(),
+  // projectId removido: cambiar proyecto requiere lógica especial y no se implementa en el controlador
   sectionId: z.string().uuid().optional().nullable(),
   completada: z.boolean().optional(),
   orden: z.number().int().min(0).optional(),
+  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional(),
 });
 
 export const reorderTasksSchema = z.object({
-  updates: z.array(z.object({
+  taskUpdates: z.array(z.object({
     id: z.string().uuid(),
     orden: z.number().int().min(0),
+    projectId: z.string().uuid().optional(),
+    sectionId: z.string().uuid().optional().nullable(),
+    parentTaskId: z.string().uuid().optional().nullable(),
   })).min(1, 'Debe proporcionar al menos una actualización'),
 });
 
@@ -93,7 +98,8 @@ export const loginSchema = z.object({
 
 // Esquema de validación para IA
 export const aiProcessSchema = z.object({
-  input: z.string().min(1, 'El comando no puede estar vacío').max(1000, 'El comando es demasiado largo'),
+  command: z.string().min(1, 'El comando no puede estar vacío').max(1000, 'El comando es demasiado largo'),
+  autoExecute: z.boolean().optional().default(false),
   context: z.any().optional(),
 });
 
@@ -138,3 +144,28 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AIProcessInput = z.infer<typeof aiProcessSchema>;
 export type AIExecuteInput = z.infer<typeof aiExecuteSchema>;
+
+// Esquemas de validación para plantillas
+export const createTemplateSchema = z.object({
+  titulo: z.string().min(1).max(255, 'El título es demasiado largo'),
+  descripcion: z.string().optional(),
+  prioridad: z.number().int().min(1).max(4).default(4),
+  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).default([]),
+});
+
+export const updateTemplateSchema = z.object({
+  titulo: z.string().min(1).max(255).optional(),
+  descripcion: z.string().optional().nullable(),
+  prioridad: z.number().int().min(1).max(4).optional(),
+  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional(),
+});
+
+export const applyTemplateSchema = z.object({
+  projectId: z.string().uuid('ID de proyecto inválido'),
+  sectionId: z.string().uuid('ID de sección inválido').optional(),
+});
+
+// Tipos inferidos
+export type CreateTemplateInput = z.infer<typeof createTemplateSchema>;
+export type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;
+export type ApplyTemplateInput = z.infer<typeof applyTemplateSchema>;

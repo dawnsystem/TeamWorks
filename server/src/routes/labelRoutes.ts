@@ -7,6 +7,8 @@ import {
   deleteLabel
 } from '../controllers/labelController';
 import { authMiddleware } from '../middleware/auth';
+import { validateBody } from '../middleware/validation';
+import { createLabelSchema, updateLabelSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -15,8 +17,8 @@ router.use(authMiddleware);
 
 router.get('/', getLabels);
 router.get('/:id', getLabel);
-router.post('/', createLabel);
-router.patch('/:id', updateLabel);
+router.post('/', validateBody(createLabelSchema), createLabel);
+router.patch('/:id', validateBody(updateLabelSchema), updateLabel);
 router.delete('/:id', deleteLabel);
 
 export default router;

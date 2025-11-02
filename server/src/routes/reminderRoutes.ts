@@ -5,6 +5,8 @@ import {
   deleteReminder,
 } from '../controllers/reminderController';
 import { authMiddleware } from '../middleware/auth';
+import { validateBody } from '../middleware/validation';
+import { createReminderSchema } from '../validation/schemas';
 
 const router = express.Router();
 
@@ -15,7 +17,7 @@ router.use(authMiddleware);
 router.get('/tasks/:taskId/reminders', getRemindersByTask);
 
 // POST /api/tasks/:taskId/reminders
-router.post('/tasks/:taskId/reminders', createReminder);
+router.post('/tasks/:taskId/reminders', validateBody(createReminderSchema), createReminder);
 
 // DELETE /api/reminders/:id
 router.delete('/reminders/:id', deleteReminder);
