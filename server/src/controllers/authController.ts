@@ -29,6 +29,13 @@ export const register = async (req: any, res: Response) => {
         email,
         password: hashedPassword,
         nombre
+      },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
 
@@ -61,9 +68,20 @@ export const register = async (req: any, res: Response) => {
         updatedAt: user.updatedAt.toISOString()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en register:', error);
-    res.status(500).json({ error: 'Error al registrar usuario' });
+    console.error('Error stack:', error?.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
+    // Devolver más detalles en desarrollo
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error al registrar usuario: ${error?.message || 'Error desconocido'}`
+      : 'Error al registrar usuario';
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+    });
   }
 };
 
@@ -115,9 +133,20 @@ export const login = async (req: any, res: Response) => {
         updatedAt: user.updatedAt.toISOString()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    console.error('Error stack:', error?.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
+    // Devolver más detalles en desarrollo
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error al iniciar sesión: ${error?.message || 'Error desconocido'}`
+      : 'Error al iniciar sesión';
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+    });
   }
 };
 
