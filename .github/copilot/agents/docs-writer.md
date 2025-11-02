@@ -1,6 +1,6 @@
 ---
 name: docs-writer
-description: Redactor técnico: genera guías de usuario, documentación de API y notas de release basadas en el ROADMAP.
+description: "Redactor técnico: genera guías de usuario, documentación de API y notas de release basadas en el ROADMAP."
 tags:
   - docs
   - writing

@@ -1,6 +1,6 @@
 ---
 name: product-strategist
-description: Agente de estrategia de producto y UX: define objetivos, personas, historias de usuario y actualiza el ROADMAP.
+description: "Agente de estrategia de producto y UX: define objetivos, personas, historias de usuario y actualiza el ROADMAP."
 tags:
   - product
   - ux

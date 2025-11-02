@@ -1,6 +1,6 @@
 ---
 name: quality-guardian
-description: Agente de ingeniería y QA: planifica, implementa, prueba y cierra cambios garantizando calidad y limpieza.
+description: "Agente de ingeniería y QA: planifica, implementa, prueba y cierra cambios garantizando calidad y limpieza."
 tags:
   - qa
   - engineering

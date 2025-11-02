@@ -1,6 +1,6 @@
 ---
 name: project-manager
-description: Orquestador del flujo de trabajo: dirige product-strategist, quality-guardian y al resto del equipo en el orden lógico.
+description: "Orquestador del flujo de trabajo: dirige product-strategist, quality-guardian y al resto del equipo en el orden lógico."
 tags:
   - manager
   - orchestrator

@@ -1,6 +1,6 @@
 ---
 name: security-auditor
-description: Auditor de seguridad: revisa código, dependencias y configuraciones; informa y propone mitigaciones.
+description: "Auditor de seguridad: revisa código, dependencias y configuraciones; informa y propone mitigaciones."
 tags:
   - security
   - sast
