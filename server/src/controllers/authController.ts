@@ -56,7 +56,9 @@ export const register = async (req: any, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        nombre: user.nombre
+        nombre: user.nombre,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
       }
     });
   } catch (error) {
@@ -72,7 +74,15 @@ export const login = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
     // Buscar usuario
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        password: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
     if (!user) {
@@ -100,7 +110,9 @@ export const login = async (req: any, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        nombre: user.nombre
+        nombre: user.nombre,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
       }
     });
   } catch (error) {

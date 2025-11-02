@@ -13,7 +13,7 @@ import taskSubscriptionRoutes from './routes/taskSubscriptionRoutes';
 import sseRoutes from './routes/sseRoutes';
 import { sseService } from './services/sseService';
 import { reminderService } from './services/reminderService';
-// import templateRoutes from './routes/templateRoutes';
+import templateRoutes from './routes/templateRoutes';
 
 dotenv.config();
 
@@ -114,6 +114,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api', taskSubscriptionRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', reminderRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

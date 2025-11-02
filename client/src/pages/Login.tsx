@@ -31,6 +31,16 @@ export default function Login() {
         toast.error('No se puede conectar al servidor. Verifica la configuración de red y la URL del API en Configuración.');
       } else if (error.response?.status === 401) {
         toast.error('Credenciales inválidas. Verifica tu email y contraseña.');
+      } else if (error.response?.status === 400) {
+        // Manejar errores de validación
+        if (error.response?.data?.details) {
+          const validationErrors = error.response.data.details.map((err: any) => err.message).join(', ');
+          toast.error(`Error de validación: ${validationErrors}`);
+        } else if (error.response?.data?.error) {
+          toast.error(error.response.data.error);
+        } else {
+          toast.error('Error de validación. Verifica los datos ingresados.');
+        }
       } else if (error.response?.data?.error) {
         toast.error(error.response.data.error);
       } else {

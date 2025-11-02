@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder, TaskTemplate } from '@/types';
+import { useAuthStore } from '@/store/useStore';
 
 // Function to get API URL from settings or environment
 const getApiUrl = () => {
@@ -114,8 +115,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Solo limpiar si no es una petición de login/register (para evitar bucles)
+      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
+      
+      if (!isAuthRequest) {
+        // Limpiar el estado de auth usando el store
+        useAuthStore.getState().logout();
+        
+        // Solo redirigir si no estamos ya en una página pública
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          // Usar replace para evitar agregar al historial y evitar bucles
+          window.location.replace('/login');
+        }
+      }
     }
     return Promise.reject(error);
   }

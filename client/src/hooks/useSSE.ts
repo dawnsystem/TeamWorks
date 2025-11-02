@@ -174,6 +174,13 @@ export function useSSE(options: UseSSEOptions = {}) {
         eventSource.close();
         eventSourceRef.current = null;
 
+        // Verificar si el token todavía existe antes de reconectar
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.warn('[SSE] No hay token, no se intentará reconectar');
+          return;
+        }
+
         // Intentar reconectar con backoff exponencial
         if (reconnectAttemptsRef.current < maxReconnectAttempts) {
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttemptsRef.current);
@@ -183,7 +190,10 @@ export function useSSE(options: UseSSEOptions = {}) {
           reconnectAttemptsRef.current++;
 
           reconnectTimeoutRef.current = setTimeout(() => {
-            connect();
+            // Verificar nuevamente que el token exista antes de reconectar
+            if (localStorage.getItem('token')) {
+              connect();
+            }
           }, delay);
         } else {
           console.error('[SSE] Se alcanzó el número máximo de intentos de reconexión');
@@ -229,7 +239,8 @@ export function useSSE(options: UseSSEOptions = {}) {
     return () => {
       disconnect();
     };
-  }, [enabled, apiUrl, connect, disconnect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, apiUrl]); // No incluir connect y disconnect para evitar bucles
 
   // Reconectar cuando la ventana vuelve a estar visible
   useEffect(() => {
