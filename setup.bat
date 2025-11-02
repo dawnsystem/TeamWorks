@@ -53,7 +53,7 @@ echo.
 echo 1. Crea el archivo server\.env con:
 echo    DATABASE_URL="postgresql://postgres:password@localhost:5432/teamworks?schema=public"
 echo    JWT_SECRET="tu-secreto-aqui"
-echo    GEMINI_API_KEY="tu-api-key-aqui"
+echo    GROQ_API_KEY="tu-api-key-aqui"
 echo.
 echo 2. Crea el archivo client\.env con:
 echo    VITE_API_URL=http://localhost:3000/api
