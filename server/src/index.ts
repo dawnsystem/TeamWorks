@@ -17,6 +17,9 @@ import templateRoutes from './routes/templateRoutes';
 
 dotenv.config();
 
+// Log para verificar DATABASE_URL después de cargar .env
+console.log('📊 DATABASE_URL configurada:', process.env.DATABASE_URL?.replace(/password@[^/]+/, 'password@***') || 'NO CONFIGURADA');
+
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
