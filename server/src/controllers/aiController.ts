@@ -10,9 +10,7 @@ export const processCommand = async (req: any, res: Response) => {
   try {
     const { command, autoExecute = false, context } = req.body;
 
-    if (!command) {
-      return res.status(400).json({ error: 'El comando es requerido' });
-    }
+    // Validación de formato ya realizada por middleware
 
     // Obtener contexto del usuario si no se proporciona
     let userContext = context;
@@ -66,9 +64,7 @@ export const executeActions = async (req: any, res: Response) => {
   try {
     const { actions } = req.body;
 
-    if (!actions || !Array.isArray(actions)) {
-      return res.status(400).json({ error: 'Las acciones son requeridas' });
-    }
+    // Validación de formato ya realizada por middleware
 
     const results = await executeAIActions(actions, (req as AuthRequest).userId!, prisma);
     

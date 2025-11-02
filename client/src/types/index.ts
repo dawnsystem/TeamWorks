@@ -3,6 +3,7 @@ export interface User {
   email: string;
   nombre: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface Project {
@@ -40,6 +41,7 @@ export interface Task {
   projectId: string;
   sectionId: string | null;
   parentTaskId: string | null;
+  createdBy: string; // User ID of the creator
   createdAt: string;
   updatedAt: string;
   labels?: TaskLabel[];
@@ -103,6 +105,14 @@ export interface TaskTemplate {
   prioridad: 1 | 2 | 3 | 4;
   userId: string;
   labelIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskSubscription {
+  id: string;
+  taskId: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
 }

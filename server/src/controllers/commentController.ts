@@ -11,9 +11,27 @@ const prisma = new PrismaClient();
 export const getCommentsByTask = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
+    const userId = (req as AuthRequest).userId;
+
+    // Verificar que la tarea pertenece al usuario
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        project: { userId }
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Tarea no encontrada' });
+    }
 
     const comments = await prisma.comment.findMany({
-      where: { taskId },
+      where: {
+        taskId,
+        task: {
+          project: { userId }
+        }
+      },
       include: {
         user: {
           select: {
@@ -44,8 +62,27 @@ export const createComment = async (req: any, res: Response) => {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
-    if (!contenido || !contenido.trim()) {
-      return res.status(400).json({ message: 'El contenido es requerido' });
+    // Validación de formato ya realizada por middleware
+
+    // Verificar que la tarea pertenece al usuario ANTES de crear comentario
+    const task = await prisma.task.findFirst({
+      where: {
+        id: taskId,
+        project: { userId }
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            nombre: true,
+            userId: true
+          }
+        }
+      }
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
     const comment = await prisma.comment.create({
@@ -129,22 +166,24 @@ export const updateComment = async (req: any, res: Response) => {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
-    if (!contenido || !contenido.trim()) {
-      return res.status(400).json({ message: 'El contenido es requerido' });
-    }
+    // Validación de formato ya realizada por middleware
 
-    // Verificar que el comentario pertenece al usuario
-    const existingComment = await prisma.comment.findUnique({
-      where: { id },
+    // Verificar que el comentario pertenece al usuario Y que la tarea pertenece al usuario
+    const existingComment = await prisma.comment.findFirst({
+      where: {
+        id,
+        userId,
+        task: {
+          project: { userId }
+        }
+      },
     });
 
     if (!existingComment) {
       return res.status(404).json({ message: 'Comentario no encontrado' });
     }
 
-    if (existingComment.userId !== userId) {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
+    // Verificación de ownership ya incluida en la query findFirst
 
     const comment = await prisma.comment.update({
       where: { id },
@@ -193,9 +232,15 @@ export const deleteComment = async (req: any, res: Response) => {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
-    // Verificar que el comentario pertenece al usuario
-    const existingComment = await prisma.comment.findUnique({
-      where: { id },
+    // Verificar que el comentario pertenece al usuario Y que la tarea pertenece al usuario
+    const existingComment = await prisma.comment.findFirst({
+      where: {
+        id,
+        userId,
+        task: {
+          project: { userId }
+        }
+      },
       include: {
         task: {
           select: {
@@ -209,9 +254,7 @@ export const deleteComment = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Comentario no encontrado' });
     }
 
-    if (existingComment.userId !== userId) {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
+    // Verificación de ownership ya incluida en la query findFirst
 
     await prisma.comment.delete({
       where: { id },

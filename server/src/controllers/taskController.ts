@@ -232,14 +232,8 @@ export const createTask = async (req: any, res: Response) => {
       labelIds
     } = req.body;
 
-    if (!titulo) {
-      return res.status(400).json({ error: 'El título es requerido' });
-    }
-
-    if (!projectId) {
-      return res.status(400).json({ error: 'El proyecto es requerido' });
-    }
-
+    // Validación de formato ya realizada por middleware
+    // Verificación de existencia del proyecto (validación de negocio)
     const userId = (req as AuthRequest).userId!;
 
     // Verificar que el proyecto pertenece al usuario

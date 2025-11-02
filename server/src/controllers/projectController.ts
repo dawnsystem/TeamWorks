@@ -59,10 +59,7 @@ export const createProject = async (req: any, res: Response) => {
   try {
     const { nombre, color, orden } = req.body;
 
-    if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
-    }
-
+    // Validación de formato ya realizada por middleware
     const project = await prisma.project.create({
       data: {
         nombre,
@@ -185,10 +182,7 @@ export const createSection = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
-    }
-
+    // Validación de formato ya realizada por middleware
     const section = await prisma.section.create({
       data: {
         nombre,
