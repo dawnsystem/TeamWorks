@@ -15,7 +15,13 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
   const queryClient = useQueryClient();
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState('#3b82f6');
-  const [pos, setPos] = useState<{x:number;y:number}>({ x: 0, y: 0 });
+  const [pos, setPos] = useState<{x:number;y:number}>(() => {
+    const saved = localStorage.getItem('label-modal-pos');
+    if (saved) {
+      try { return JSON.parse(saved); } catch {}
+    }
+    return { x: 0, y: 0 };
+  });
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({ x: 0, y: 0 });
 
@@ -38,7 +44,7 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
       setNombre('');
       setColor('#3b82f6');
     }
-    setPos({ x: 0, y: 0 });
+    // Mantener posición previa entre aperturas
   }, [editLabel, isOpen]);
 
   useEffect(() => {
@@ -47,14 +53,17 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
       if (!dragging) return;
       setPos({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
     };
-    const onUp = () => setDragging(false);
+    const onUp = () => {
+      setDragging(false);
+      try { localStorage.setItem('label-modal-pos', JSON.stringify(pos)); } catch {}
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [dragging, dragOffset, isOpen]);
+  }, [dragging, dragOffset, isOpen, pos]);
 
   const createMutation = useMutation({
     mutationFn: (data: { nombre: string; color: string }) => labelsAPI.create(data),

@@ -215,7 +215,7 @@ export default function BoardView() {
   // Crear una sección "Sin sección" para las tareas sin sección
   const noSectionColumn = {
     id: 'no-section',
-    nombre: 'Sin sección',
+    nombre: 'Sin asignar',
     tasks: tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [],
   };
 

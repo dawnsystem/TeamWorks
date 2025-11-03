@@ -30,16 +30,12 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
   const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
-      project: { userId }
+      projects: { userId }
     },
     include: {
-      labels: {
-        include: {
-          label: true
-        }
-      },
+      task_labels: { include: { labels: true } },
       _count: {
-        select: { subTasks: true, comments: true, reminders: true }
+        select: { other_tasks: true, comments: true, reminders: true }
       }
     }
   });
@@ -50,16 +46,12 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
   const subTasks = await prisma.tasks.findMany({
     where: {
       parentTaskId: taskId,
-      project: { userId }
+      projects: { userId }
     },
     include: {
-      labels: {
-        include: {
-          label: true
-        }
-      },
+      task_labels: { include: { labels: true } },
       _count: {
-        select: { subTasks: true, comments: true, reminders: true }
+        select: { other_tasks: true, comments: true, reminders: true }
       }
     },
     orderBy: { orden: 'asc' }
@@ -88,7 +80,7 @@ export const getTasks = async (req: any, res: Response) => {
 
     // Construir filtros
     const where: any = {
-      project: { userId: (req as AuthRequest).userId }
+      projects: { userId: (req as AuthRequest).userId }
     };
 
     if (projectId) {
@@ -100,11 +92,7 @@ export const getTasks = async (req: any, res: Response) => {
     }
 
     if (labelId) {
-      where.labels = {
-        some: {
-          labelId: labelId as string
-        }
-      };
+      where.task_labels = { some: { labelId: labelId as string } };
     }
 
     if (search) {
@@ -155,13 +143,9 @@ export const getTasks = async (req: any, res: Response) => {
     const rootTasks = await prisma.tasks.findMany({
       where,
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
+        task_labels: { include: { labels: true } },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       },
       orderBy: { orden: 'asc' }
@@ -192,21 +176,17 @@ export const getTask = async (req: any, res: Response) => {
     const task = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        projects: { userId: (req as AuthRequest).userId }
       },
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        subTasks: {
+        task_labels: { include: { labels: true } },
+        other_tasks: {
           orderBy: { orden: 'asc' }
         },
-        parentTask: true,
+        tasks: true,
         comments: {
           include: {
-            user: {
+            users: {
               select: {
                 id: true,
                 nombre: true,
@@ -220,7 +200,7 @@ export const getTask = async (req: any, res: Response) => {
           orderBy: { fechaHora: 'asc' }
         },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       }
     });
@@ -328,7 +308,7 @@ export const updateTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        projects: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -338,12 +318,12 @@ export const updateTask = async (req: any, res: Response) => {
 
     // Si se proporcionan labelIds, actualizar las relaciones
     if (labelIds !== undefined) {
-      await prisma.taskLabel.deleteMany({
+      await prisma.task_labels.deleteMany({
         where: { taskId: id }
       });
 
       if (labelIds.length > 0) {
-        await prisma.taskLabel.createMany({
+        await prisma.task_labels.createMany({
           data: labelIds.map((labelId: string) => ({
             taskId: id,
             labelId
@@ -368,13 +348,9 @@ export const updateTask = async (req: any, res: Response) => {
       where: { id },
       data: updateData,
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
+        task_labels: { include: { labels: true } },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       }
     });
@@ -404,7 +380,7 @@ export const deleteTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        projects: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -440,7 +416,7 @@ export const toggleTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        projects: { userId: (req as AuthRequest).userId }
       }
     });
 
@@ -454,13 +430,9 @@ export const toggleTask = async (req: any, res: Response) => {
         completada: !existingTask.completada
       },
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
+        task_labels: { include: { labels: true } },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       }
     });
@@ -505,20 +477,16 @@ export const getTasksByLabel = async (req: any, res: Response) => {
 
     const rootTasks = await prisma.tasks.findMany({
       where: {
-        project: { userId: (req as AuthRequest).userId },
+        projects: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
-        labels: {
+        task_labels: {
           some: { labelId }
         }
       },
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
+        task_labels: { include: { labels: true } },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       },
       orderBy: { orden: 'asc' }
@@ -555,7 +523,7 @@ export const reorderTasks = async (req: any, res: Response) => {
     const tasks = await prisma.tasks.findMany({
       where: {
         id: { in: taskIds },
-        project: { userId: (req as AuthRequest).userId }
+        projects: { userId: (req as AuthRequest).userId }
       }
     });
 
