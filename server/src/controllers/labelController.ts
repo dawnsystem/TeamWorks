@@ -17,7 +17,15 @@ export const getLabels = async (req: any, res: Response) => {
       orderBy: { nombre: 'asc' }
     });
 
-    res.json(labels);
+    // Normalizar contador para mantener compatibilidad con el frontend (tasks)
+    const normalized = labels.map(label => ({
+      ...label,
+      _count: {
+        tasks: label._count?.task_labels || 0
+      }
+    }));
+
+    res.json(normalized);
   } catch (error) {
     console.error('Error en getLabels:', error);
     res.status(500).json({ error: 'Error al obtener etiquetas' });
@@ -34,9 +42,19 @@ export const getLabel = async (req: any, res: Response) => {
         userId: (req as AuthRequest).userId
       },
       include: {
-        tasks: {
+        task_labels: {
           include: {
-            task: true
+            tasks: {
+              include: {
+                projects: {
+                  select: {
+                    id: true,
+                    nombre: true,
+                    color: true,
+                  }
+                }
+              }
+            }
           }
         }
       }
