@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export const processCommand = async (req: any, res: Response) => {
   try {
-    const { command, autoExecute = false, context } = req.body;
+    const { command, autoExecute = false, context, provider } = req.body;
 
     // Validación de formato ya realizada por middleware
 
@@ -22,7 +22,7 @@ export const processCommand = async (req: any, res: Response) => {
 
       const recentTasks = await prisma.tasks.findMany({
         where: {
-          project: { userId: (req as AuthRequest).userId },
+          projects: { userId: (req as AuthRequest).userId },
           completada: false
         },
         take: 10,
@@ -37,7 +37,7 @@ export const processCommand = async (req: any, res: Response) => {
     }
 
     // Procesar comando con IA
-    const actions = await processNaturalLanguage(command, userContext);
+    const actions = await processNaturalLanguage(command, userContext, provider);
 
     // Si autoExecute es true, ejecutar las acciones
     let results = null;
@@ -54,9 +54,11 @@ export const processCommand = async (req: any, res: Response) => {
       ...(results && { results }),
       autoExecuted: autoExecute
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en processCommand:', error);
-    res.status(500).json({ error: 'Error al procesar comando' });
+    const message = error instanceof Error ? error.message : 'Error al procesar comando';
+    const status = /no está configurada|no soportado/i.test(message) ? 400 : 500;
+    res.status(status).json({ error: message });
   }
 };
 

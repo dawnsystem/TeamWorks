@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X, Send, Sparkles, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAIStore } from '@/store/useStore';
+import { useAIStore, useSettingsStore } from '@/store/useStore';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { aiAPI } from '@/lib/api';
 import type { AIAction } from '@/types';
@@ -10,13 +10,14 @@ import type { AIAction } from '@/types';
 export default function AIAssistant() {
   const queryClient = useQueryClient();
   const { isOpen, autoExecute, toggleAI, setAutoExecute } = useAIStore();
+  const aiProvider = useSettingsStore((state) => state.aiProvider);
   const isMobile = useIsMobile();
   const [command, setCommand] = useState('');
   const [actions, setActions] = useState<AIAction[]>([]);
   const [results, setResults] = useState<any[]>([]);
 
   const processMutation = useMutation({
-    mutationFn: (cmd: string) => aiAPI.process(cmd, autoExecute),
+    mutationFn: (cmd: string) => aiAPI.process(cmd, autoExecute, aiProvider),
     onSuccess: (response) => {
       setActions(response.data.actions);
       if (response.data.results) {
@@ -82,6 +83,9 @@ export default function AIAssistant() {
           <div className="flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-white" />
             <h3 className="text-lg font-semibold text-white">Asistente IA</h3>
+            <span className="text-xs text-white/80 uppercase tracking-wide">
+              {aiProvider === 'gemini' ? 'Gemini' : 'Groq'}
+            </span>
           </div>
           <button
             onClick={toggleAI}

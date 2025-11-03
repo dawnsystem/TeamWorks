@@ -10,7 +10,7 @@ class TaskSubscriptionService {
   async subscribe(taskId: string, userId: string) {
     try {
       // Check if already subscribed
-      const existing = await prisma.taskSubscription.findUnique({
+      const existing = await prisma.task_subscriptions.findUnique({
         where: {
           taskId_userId: {
             taskId,
@@ -23,7 +23,7 @@ class TaskSubscriptionService {
         return existing;
       }
 
-      const subscription = await prisma.taskSubscription.create({
+      const subscription = await prisma.task_subscriptions.create({
         data: {
           taskId,
           userId,
@@ -54,7 +54,7 @@ class TaskSubscriptionService {
    */
   async unsubscribe(taskId: string, userId: string) {
     try {
-      const subscription = await prisma.taskSubscription.deleteMany({
+      const subscription = await prisma.task_subscriptions.deleteMany({
         where: {
           taskId,
           userId,
@@ -85,7 +85,7 @@ class TaskSubscriptionService {
    */
   async isSubscribed(taskId: string, userId: string): Promise<boolean> {
     try {
-      const subscription = await prisma.taskSubscription.findUnique({
+      const subscription = await prisma.task_subscriptions.findUnique({
         where: {
           taskId_userId: {
             taskId,
@@ -106,7 +106,7 @@ class TaskSubscriptionService {
    */
   async getSubscribers(taskId: string): Promise<string[]> {
     try {
-      const subscriptions = await prisma.taskSubscription.findMany({
+      const subscriptions = await prisma.task_subscriptions.findMany({
         where: { taskId },
         select: { userId: true },
       });
@@ -123,10 +123,10 @@ class TaskSubscriptionService {
    */
   async getUserSubscriptions(userId: string) {
     try {
-      const subscriptions = await prisma.taskSubscription.findMany({
+      const subscriptions = await prisma.task_subscriptions.findMany({
         where: { userId },
         include: {
-          task: {
+          tasks: {
             select: {
               id: true,
               titulo: true,

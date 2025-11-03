@@ -113,6 +113,7 @@ export const aiProcessSchema = z.object({
   command: z.string().min(1, 'El comando no puede estar vacío').max(1000, 'El comando es demasiado largo'),
   autoExecute: z.boolean().optional().default(false),
   context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
 });
 
 export const aiExecuteSchema = z.object({

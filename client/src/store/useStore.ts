@@ -160,6 +160,7 @@ interface SettingsState {
   apiUrl: string;
   geminiApiKey: string;
   groqApiKey: string;
+  aiProvider: 'groq' | 'gemini';
   theme: {
     primaryColor: string;
     accentColor: string;
@@ -168,6 +169,7 @@ interface SettingsState {
   setApiUrl: (url: string) => void;
   setGeminiApiKey: (key: string) => void;
   setGroqApiKey: (key: string) => void;
+  setAiProvider: (provider: 'groq' | 'gemini') => void;
   setTheme: (theme: Partial<SettingsState['theme']>) => void;
   resetToDefaults: () => void;
 }
@@ -176,6 +178,7 @@ const defaultSettings = {
   apiUrl: 'http://localhost:3000/api',
   geminiApiKey: '',
   groqApiKey: '',
+  aiProvider: 'groq' as const,
   theme: {
     primaryColor: '#dc2626', // red-600
     accentColor: '#ec4899', // pink-500
@@ -190,6 +193,7 @@ export const useSettingsStore = create<SettingsState>()(
       setApiUrl: (url) => set({ apiUrl: url }),
       setGeminiApiKey: (key) => set({ geminiApiKey: key }),
       setGroqApiKey: (key) => set({ groqApiKey: key }),
+      setAiProvider: (provider) => set({ aiProvider: provider }),
       setTheme: (theme) => set((state) => ({ theme: { ...state.theme, ...theme } })),
       resetToDefaults: () => set(defaultSettings),
     }),

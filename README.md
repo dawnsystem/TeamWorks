@@ -34,6 +34,7 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
   - Ejemplo: *"añadir comentario en tarea comprar leche: verificar si queda algo"*
 - ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
   - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
+- 🧠 **Motores IA seleccionables** - Cambia entre Groq (LLaMA 3.1) y Google Gemini 1.5 según tu caso de uso
 
 ### Gestión Inteligente de Relaciones 🧠 (Próximamente)
 - 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
@@ -125,17 +126,26 @@ JWT_SECRET="cambia-este-secreto-por-algo-seguro"
 JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
+AI_PROVIDER="groq" # groq (por defecto) o gemini
 GROQ_API_KEY="tu-groq-api-key-aqui"
+GEMINI_API_KEY="tu-gemini-api-key-aqui"
 FRONTEND_URL="http://localhost:5173"
 ```
 
-**Obtener API Key de Groq (para IA):**
+**Obtener API Keys (para IA):**
+
+**Groq** (LLaMA 3.1 Instant)
 1. Ve a [Groq Console](https://console.groq.com)
 2. Crea una cuenta gratuita
 3. Ve a API Keys y crea una nueva key
 4. Copia la key al archivo `.env` como `GROQ_API_KEY`
 
-**Nota**: Groq ofrece acceso gratuito a modelos potentes como Llama 3.1 8B Instant, ideal para procesamiento de lenguaje natural.
+**Google Gemini** (1.5 Flash)
+1. Abre [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Genera una nueva API key
+3. Añádela al `.env` como `GEMINI_API_KEY`
+
+> Nota: puedes alternar el proveedor por defecto ajustando `AI_PROVIDER` en `.env` o desde la pantalla de configuración (cliente). Si eliges Gemini, asegúrate de definir la variable en el backend.
 
 Configurar base de datos:
 ```bash

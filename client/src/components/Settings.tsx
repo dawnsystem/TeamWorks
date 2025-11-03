@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Save, RotateCcw, Server, Key, Palette, Image, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff } from 'lucide-react';
+import { X, Save, RotateCcw, Server, Key, Palette, Image, AlertCircle, CheckCircle2, Loader2, Wifi, WifiOff, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettingsStore } from '@/store/useStore';
 import { updateApiUrl, getAvailableApiUrls, testApiConnection } from '@/lib/api';
@@ -16,6 +16,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
   const [apiUrl, setApiUrl] = useState(settings.apiUrl);
   const [geminiApiKey, setGeminiApiKey] = useState(settings.geminiApiKey);
   const [groqApiKey, setGroqApiKey] = useState(settings.groqApiKey);
+  const [aiProvider, setAiProvider] = useState<'groq' | 'gemini'>(settings.aiProvider);
   const [primaryColor, setPrimaryColor] = useState(settings.theme.primaryColor);
   const [accentColor, setAccentColor] = useState(settings.theme.accentColor);
   const [logoUrl, setLogoUrl] = useState(settings.theme.logoUrl);
@@ -29,6 +30,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     setApiUrl(settings.apiUrl);
     setGeminiApiKey(settings.geminiApiKey);
     setGroqApiKey(settings.groqApiKey);
+    setAiProvider(settings.aiProvider);
     setPrimaryColor(settings.theme.primaryColor);
     setAccentColor(settings.theme.accentColor);
     setLogoUrl(settings.theme.logoUrl);
@@ -47,6 +49,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
     settings.setApiUrl(apiUrl);
     settings.setGeminiApiKey(geminiApiKey);
     settings.setGroqApiKey(groqApiKey);
+    settings.setAiProvider(aiProvider);
     settings.setTheme({
       primaryColor,
       accentColor,
@@ -69,6 +72,7 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
       setApiUrl('http://localhost:3000/api');
       setGeminiApiKey('');
       setGroqApiKey('');
+      setAiProvider('groq');
       setPrimaryColor('#dc2626');
       setAccentColor('#ec4899');
       setLogoUrl('');
@@ -255,6 +259,25 @@ export default function Settings({ isOpen, onClose }: SettingsProps) {
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Claves API</h3>
             </div>
             <div className="space-y-4 ml-7">
+              <div>
+                <label htmlFor="aiProvider" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-500" />
+                  Proveedor de IA
+                </label>
+                <select
+                  id="aiProvider"
+                  value={aiProvider}
+                  onChange={(e) => setAiProvider(e.target.value as 'groq' | 'gemini')}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                >
+                  <option value="groq">Groq · Llama 3.1 Instant</option>
+                  <option value="gemini">Google Gemini 1.5 Flash</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Elige el motor principal. Configura las claves API correspondientes en el backend para habilitarlo.
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="geminiApiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Google Gemini API Key

@@ -17,7 +17,7 @@ export const getCommentsByTask = async (req: any, res: Response) => {
     const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
-        project: { userId }
+        projects: { userId }
       }
     });
 
@@ -28,12 +28,12 @@ export const getCommentsByTask = async (req: any, res: Response) => {
     const comments = await prisma.comments.findMany({
       where: {
         taskId,
-        task: {
-          project: { userId }
+        tasks: {
+          projects: { userId }
         }
       },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             nombre: true,
@@ -68,10 +68,10 @@ export const createComment = async (req: any, res: Response) => {
     const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
-        project: { userId }
+        projects: { userId }
       },
       include: {
-        project: {
+        projects: {
           select: {
             id: true,
             nombre: true,
@@ -92,18 +92,18 @@ export const createComment = async (req: any, res: Response) => {
         userId,
       },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             nombre: true,
             email: true,
           },
         },
-        task: {
+        tasks: {
           select: {
             projectId: true,
             titulo: true,
-            project: {
+            projects: {
               select: {
                 userId: true,
                 nombre: true,
@@ -117,7 +117,7 @@ export const createComment = async (req: any, res: Response) => {
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'comment_created',
-      projectId: comment.task.projectId,
+      projectId: comment.tasks.projectId,
       taskId: comment.taskId,
       commentId: comment.id,
       userId: userId,
@@ -138,9 +138,9 @@ export const createComment = async (req: any, res: Response) => {
       {
         type: 'comment',
         title: '💬 Nuevo comentario',
-        message: `${commentAuthor?.nombre || 'Alguien'} comentó en "${comment.task.titulo}"`,
+        message: `${commentAuthor?.nombre || 'Alguien'} comentó en "${comment.tasks.titulo}"`,
         commentId: comment.id,
-        projectId: comment.task.projectId,
+        projectId: comment.tasks.projectId,
         metadata: {
           commentText: contenido.trim(),
           authorName: commentAuthor?.nombre,
@@ -173,8 +173,8 @@ export const updateComment = async (req: any, res: Response) => {
       where: {
         id,
         userId,
-        task: {
-          project: { userId }
+        tasks: {
+          projects: { userId }
         }
       },
     });
@@ -189,14 +189,14 @@ export const updateComment = async (req: any, res: Response) => {
       where: { id },
       data: { contenido: contenido.trim() },
       include: {
-        user: {
+        users: {
           select: {
             id: true,
             nombre: true,
             email: true,
           },
         },
-        task: {
+        tasks: {
           select: {
             projectId: true,
           },
@@ -207,7 +207,7 @@ export const updateComment = async (req: any, res: Response) => {
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'comment_updated',
-      projectId: comment.task.projectId,
+      projectId: comment.tasks.projectId,
       taskId: comment.taskId,
       commentId: comment.id,
       userId: userId,
@@ -237,12 +237,12 @@ export const deleteComment = async (req: any, res: Response) => {
       where: {
         id,
         userId,
-        task: {
-          project: { userId }
+        tasks: {
+          projects: { userId }
         }
       },
       include: {
-        task: {
+        tasks: {
           select: {
             projectId: true,
           },
@@ -263,7 +263,7 @@ export const deleteComment = async (req: any, res: Response) => {
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'comment_deleted',
-      projectId: existingComment.task.projectId,
+      projectId: existingComment.tasks.projectId,
       taskId: existingComment.taskId,
       commentId: id,
       userId: userId,

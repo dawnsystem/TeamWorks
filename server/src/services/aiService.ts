@@ -1,14 +1,44 @@
 import Groq from 'groq-sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || ''
-});
+const SUPPORTED_AI_PROVIDERS = ['groq', 'gemini'] as const;
+type SupportedAIProvider = (typeof SUPPORTED_AI_PROVIDERS)[number];
 
-// Función para verificar API Key
-const checkApiKey = () => {
-  if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-    throw new Error('GROQ_API_KEY no está configurada. Obtén una gratis en https://console.groq.com');
+const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+let groqClient: Groq | null = null;
+let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+
+const getGroqClient = () => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
+    throw new Error('El proveedor Groq está seleccionado pero GROQ_API_KEY no está configurada. Obtén una en https://console.groq.com');
   }
+  if (!groqClient) {
+    groqClient = new Groq({ apiKey });
+  }
+  return groqClient;
+};
+
+const getGeminiModel = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+    throw new Error('El proveedor Gemini está seleccionado pero GEMINI_API_KEY no está configurada. Genera una en https://makersuite.google.com/app/apikey');
+  }
+  if (!geminiModel) {
+    const client = new GoogleGenerativeAI(apiKey);
+    geminiModel = client.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+  }
+  return geminiModel;
+};
+
+const resolveProvider = (provider?: string): SupportedAIProvider => {
+  const selected = (provider || process.env.AI_PROVIDER || 'groq').toLowerCase();
+  if (!SUPPORTED_AI_PROVIDERS.includes(selected as SupportedAIProvider)) {
+    throw new Error(`Proveedor IA '${selected}' no soportado. Usa uno de: ${SUPPORTED_AI_PROVIDERS.join(', ')}`);
+  }
+  return selected as SupportedAIProvider;
 };
 
 // Función para parsear fechas en lenguaje natural
@@ -112,11 +142,67 @@ export interface AIAction {
   explanation: string;
 }
 
-export const processNaturalLanguage = async (input: string, context?: any): Promise<AIAction[]> => {
-  try {
-    checkApiKey();
+// Funciones helper para procesamiento de IA
+const parseActionsFromText = (text: string): AIAction[] => {
+  let jsonText = text.trim();
 
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.substring(7);
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.substring(3);
+  }
+
+  if (jsonText.endsWith('```')) {
+    jsonText = jsonText.substring(0, jsonText.length - 3);
+  }
+
+  jsonText = jsonText.trim();
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    return parsed.actions || [];
+  } catch (error) {
+    console.error('Error parseando respuesta de IA:', error);
+    return [];
+  }
+};
+
+const generateWithProvider = async (prompt: string, provider: SupportedAIProvider): Promise<string> => {
+  if (provider === 'gemini') {
+    const model = getGeminiModel();
+    const result = await model.generateContent(prompt);
+    return result.response.text() || '';
+  }
+
+  const client = getGroqClient();
+  const completion = await client.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    model: DEFAULT_GROQ_MODEL,
+    temperature: 0.7,
+    max_tokens: 1000
+  });
+
+  return completion.choices[0]?.message?.content || '';
+};
+
+const createFallbackAction = (input: string): AIAction => ({
+  type: 'create',
+  entity: 'task',
+  data: {
+    titulo: input
+  },
+  confidence: 0.5,
+  explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
+});
+
+export const processNaturalLanguage = async (
+  input: string,
+  context?: any,
+  providerOverride?: string
+): Promise<AIAction[]> => {
+  try {
     const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
+    const provider = resolveProvider(providerOverride);
 
     const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
 Tu trabajo es interpretar comandos en lenguaje natural y convertirlos en acciones estructuradas.
@@ -412,52 +498,17 @@ Colores disponibles:
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      model: 'llama-3.1-8b-instant', // Llama 3.1 8B Instant - rápido, gratis y actualizado
-      temperature: 0.7,
-      max_tokens: 1000
-    });
+    const text = await generateWithProvider(prompt, provider);
+    const actions = parseActionsFromText(text);
 
-    const text = chatCompletion.choices[0]?.message?.content || '';
-
-    // Extraer JSON del texto
-    let jsonText = text.trim();
-    
-    // Eliminar markdown code blocks si existen
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.substring(7);
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.substring(3);
+    if (!actions.length) {
+      throw new Error('La respuesta de la IA no contenía acciones válidas');
     }
-    
-    if (jsonText.endsWith('```')) {
-      jsonText = jsonText.substring(0, jsonText.length - 3);
-    }
-    
-    jsonText = jsonText.trim();
 
-    const parsed = JSON.parse(jsonText);
-    
-    return parsed.actions || [];
+    return actions;
   } catch (error) {
     console.error('Error en processNaturalLanguage:', error);
-    
-    // Fallback: intentar parsear el comando de forma básica
-    return [{
-      type: 'create',
-      entity: 'task',
-      data: {
-        titulo: input
-      },
-      confidence: 0.5,
-      explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
-    }];
+    return [createFallbackAction(input)];
   }
 };
 
@@ -588,7 +639,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 }
 
                 labelConnections.push({
-                  label: { connect: { id: label.id } }
+                  labels: { connect: { id: label.id } }
                 });
               }
             }
@@ -625,15 +676,15 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 parentTaskId,
                 orden: 0,
                 ...(labelConnections.length > 0 && {
-                  labels: {
+                  task_labels: {
                     create: labelConnections
                   }
                 })
               },
               include: {
-                labels: {
+                task_labels: {
                   include: {
-                    label: true
+                    labels: true
                   }
                 }
               }
@@ -696,7 +747,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
           if (action.entity === 'task' && action.data?.filter && action.data?.updates) {
             // Construir filtro de búsqueda
             const where: any = {
-              project: { userId }
+              projects: { userId }
             };
 
             // Filtrar por proyecto
@@ -715,7 +766,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               const section = await prisma.sections.findFirst({
                 where: {
                   nombre: { equals: action.data.filter.sectionName, mode: 'insensitive' },
-                  project: { userId }
+                  projects: { userId }
                 }
               });
               if (section) where.sectionId = section.id;
@@ -723,9 +774,9 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Filtrar por etiqueta
             if (action.data.filter.labelName) {
-              where.labels = {
+              where.task_labels = {
                 some: {
-                  label: {
+                  labels: {
                     nombre: { equals: action.data.filter.labelName, mode: 'insensitive' },
                     userId
                   }
@@ -830,7 +881,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   }
 
                   // Verificar si la tarea ya tiene esta etiqueta
-                  const existing = await prisma.taskLabel.findFirst({
+                  const existing = await prisma.task_labels.findFirst({
                     where: {
                       taskId: task.id,
                       labelId: label.id
@@ -838,7 +889,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   });
 
                   if (!existing) {
-                    await prisma.taskLabel.create({
+                    await prisma.task_labels.create({
                       data: {
                         taskId: task.id,
                         labelId: label.id
@@ -864,7 +915,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar tarea por título
             const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
+                projects: { userId },
                 titulo: { contains: action.data.search, mode: 'insensitive' }
               }
             });
@@ -882,7 +933,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
           if (action.entity === 'task') {
             result = await prisma.tasks.deleteMany({
               where: {
-                project: { userId },
+                projects: { userId },
                 ...action.data.filter
               }
             });
@@ -892,7 +943,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'query':
           if (action.entity === 'task') {
             const where: any = {
-              project: { userId }
+              projects: { userId }
             };
 
             if (action.data?.filter === 'week') {
@@ -914,9 +965,9 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             result = await prisma.tasks.findMany({
               where,
               include: {
-                labels: {
+                task_labels: {
                   include: {
-                    label: true
+                    labels: true
                   }
                 }
               },
@@ -998,7 +1049,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar tarea por título
             const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
+                projects: { userId },
                 titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
               }
             });
@@ -1020,7 +1071,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar tarea por título
             const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
+                projects: { userId },
                 titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
               }
             });

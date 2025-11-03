@@ -268,8 +268,8 @@ export const templatesAPI = {
 
 // AI
 export const aiAPI = {
-  process: (command: string, autoExecute = false, context?: any) =>
-    api.post('/ai/process', { command, autoExecute, context }),
+  process: (command: string, autoExecute = false, provider?: string, context?: any) =>
+    api.post('/ai/process', { command, autoExecute, provider, context }),
   
   execute: (actions: AIAction[]) =>
     api.post('/ai/execute', { actions }),

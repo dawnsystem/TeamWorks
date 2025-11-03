@@ -14,7 +14,7 @@ export const getRemindersByTask = async (req: any, res: Response) => {
     const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
-        project: { userId }
+        projects: { userId }
       }
     });
 
@@ -25,8 +25,8 @@ export const getRemindersByTask = async (req: any, res: Response) => {
     const reminders = await prisma.reminders.findMany({
       where: {
         taskId,
-        task: {
-          project: { userId }
+        tasks: {
+          projects: { userId }
         }
       },
       orderBy: { fechaHora: 'asc' },
@@ -52,7 +52,7 @@ export const createReminder = async (req: any, res: Response) => {
     const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
-        project: { userId }
+        projects: { userId }
       }
     });
 
@@ -87,8 +87,8 @@ export const deleteReminder = async (req: any, res: Response) => {
     const reminder = await prisma.reminders.findFirst({
       where: {
         id,
-        task: {
-          project: { userId }
+        tasks: {
+          projects: { userId }
         }
       }
     });
