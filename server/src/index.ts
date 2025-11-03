@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
@@ -24,6 +25,7 @@ const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Middleware
+app.use(compression());
 // CORS configuration that allows access from local network devices
 app.use(cors({
   origin: (origin, callback) => {

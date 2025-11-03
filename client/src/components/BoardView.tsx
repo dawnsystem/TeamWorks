@@ -69,7 +69,8 @@ export default function BoardView() {
       labelId: selectedLabelId || undefined
     }).then(res => res.data),
     enabled: !!projectId,
-    refetchOnWindowFocus: true, // Refrescar cuando el usuario vuelve a la pestaña
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: false,
   });
 
   const updateTaskMutation = useMutation({

@@ -28,6 +28,8 @@ model labels {
   updatedAt   DateTime      @updatedAt
   users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
   task_labels task_labels[]
+
+  @@index([userId])
 }
 
 model notifications {
@@ -87,6 +89,8 @@ model sections {
   updatedAt DateTime @updatedAt
   projects  projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     tasks[]
+
+  @@index([projectId])
 }
 
 model task_labels {
@@ -147,6 +151,11 @@ model tasks {
   other_tasks        tasks[]              @relation("tasksTotasks")
   projects           projects             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   sections           sections?            @relation(fields: [sectionId], references: [id])
+
+  @@index([projectId, sectionId])
+  @@index([parentTaskId])
+  @@index([createdAt])
+  @@index([orden])
 }
 
 model users {

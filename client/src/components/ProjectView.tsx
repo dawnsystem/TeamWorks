@@ -79,6 +79,8 @@ export default function ProjectView() {
       labelId: selectedLabelId || undefined
     }).then(res => res.data),
     enabled: !!projectId,
+    staleTime: 1000 * 15,
+    refetchOnWindowFocus: false,
   });
 
   const deleteSectionMutation = useMutation({
