@@ -195,13 +195,29 @@ export const getTasks = async (req: any, res: Response) => {
       where.completada = false;
     }
 
-    // Only fetch root tasks (those without a parent)
-    where.parentTaskId = null;
+    // Only fetch root tasks (those without a parent) - but allow showing all if needed
+    // Si no se especifica projectId, mostrar solo raíz para evitar duplicados
+    if (!projectId) {
+      where.parentTaskId = null;
+    }
 
     const rootTasks = await prisma.tasks.findMany({
       where,
       include: {
         task_labels: { include: { labels: true } },
+        projects: {
+          select: {
+            id: true,
+            nombre: true,
+            color: true
+          }
+        },
+        sections: {
+          select: {
+            id: true,
+            nombre: true
+          }
+        },
         _count: {
           select: { other_tasks: true, comments: true, reminders: true }
         }
@@ -210,10 +226,14 @@ export const getTasks = async (req: any, res: Response) => {
     });
 
     // Devolver solo tareas raíz con contadores; subtareas se buscarán on-demand
+    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${rootTasks.length}`);
     res.json(rootTasks.map(toClientTask));
   } catch (error) {
     console.error('Error en getTasks:', error);
-    res.status(500).json({ error: 'Error al obtener tareas' });
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Error al obtener tareas', details: error instanceof Error ? error.message : String(error) });
   }
 };
 

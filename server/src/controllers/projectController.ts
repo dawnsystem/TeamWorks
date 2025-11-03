@@ -21,10 +21,14 @@ export const getProjects = async (req: any, res: Response) => {
       orderBy: { orden: 'asc' }
     });
 
+    console.log(`[getProjects] Usuario ${(req as AuthRequest).userId} - Proyectos encontrados: ${projects.length}`);
     res.json(projects);
   } catch (error) {
     console.error('Error en getProjects:', error);
-    res.status(500).json({ error: 'Error al obtener proyectos' });
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Error al obtener proyectos', details: error instanceof Error ? error.message : String(error) });
   }
 };
 
