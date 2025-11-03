@@ -159,39 +159,39 @@ export default function TaskEditor() {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {taskId ? 'Editar Tarea' : 'Nueva Tarea'}
-          </h2>
-          <button
-            onClick={closeEditor}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+    <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div className="glass-modal rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
+        <div className="sticky top-0 px-6 py-5 divider-soft bg-white/75 dark:bg-slate-900/70 backdrop-blur">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+              {taskId ? 'Editar Tarea' : 'Nueva Tarea'}
+            </h2>
+            <button
+              onClick={closeEditor}
+              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/70 dark:bg-slate-800/60 text-gray-500 hover:text-gray-900 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-slate-700 transition"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 overflow-y-auto">
+          <div className="space-y-3">
             <input
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               placeholder="Nombre de la tarea"
               autoFocus
-              className="w-full text-lg font-medium px-0 py-2 border-0 border-b-2 border-gray-200 dark:border-gray-700 bg-transparent focus:border-red-500 focus:ring-0 outline-none dark:text-white"
+              className="input-elevated text-lg font-semibold bg-transparent"
             />
-          </div>
 
-          <div>
             <textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Descripción"
+              placeholder="Describe los detalles, notas o próximos pasos"
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none"
+              className="input-elevated resize-none min-h-[120px]"
             />
           </div>
 
@@ -204,7 +204,7 @@ export default function TaskEditor() {
               <select
                 value={prioridad}
                 onChange={(e) => setPrioridad(Number(e.target.value) as 1 | 2 | 3 | 4)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated bg-transparent"
               >
                 {priorityOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -223,7 +223,7 @@ export default function TaskEditor() {
                 type="date"
                 value={fechaVencimiento}
                 onChange={(e) => setFechaVencimiento(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ export default function TaskEditor() {
               <select
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated bg-transparent"
                 disabled={!!taskId && !!task?.parentTaskId}
               >
                 {projects?.map((project) => (
@@ -256,7 +256,7 @@ export default function TaskEditor() {
                   <select
                     value={selectedSectionId}
                     onChange={(e) => setSelectedSectionId(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                    className="input-elevated bg-transparent"
                   >
                     <option value="">(Sin sección)</option>
                     {projectDetail?.sections?.map((s: any) => (
@@ -305,11 +305,11 @@ export default function TaskEditor() {
                     placeholder="Buscar etiquetas..."
                     value={labelSearchQuery}
                     onChange={(e) => setLabelSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    className="input-elevated pl-10"
                   />
                 </div>
                 
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto scrollbar-thin">
                   {labels
                     .filter(label => 
                       labelSearchQuery === '' || 
@@ -326,13 +326,13 @@ export default function TaskEditor() {
                             setSelectedLabels([...selectedLabels, label.id]);
                           }
                         }}
-                        className={`px-3 py-1 rounded-full text-sm transition ${
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-smooth shadow-sm backdrop-blur ${
                           selectedLabels.includes(label.id)
-                            ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
-                            : 'opacity-60 hover:opacity-100'
+                            ? 'ring-2 ring-offset-1 ring-offset-white/70 dark:ring-offset-slate-900/70'
+                            : 'opacity-70 hover:opacity-100'
                         }`}
                         style={{
-                          backgroundColor: `${label.color}20`,
+                          backgroundColor: `${label.color}22`,
                           color: label.color,
                         }}
                       >
@@ -402,14 +402,14 @@ export default function TaskEditor() {
               <button
                 type="button"
                 onClick={closeEditor}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                className="btn-secondary"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {taskId ? 'Guardar' : 'Crear'}
               </button>

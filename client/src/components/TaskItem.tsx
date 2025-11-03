@@ -166,11 +166,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   });
 
   const priorityColors = {
-    1: 'border-l-priority-1',
-    2: 'border-l-priority-2',
-    3: 'border-l-priority-3',
-    4: 'border-l-gray-300 dark:border-l-gray-600',
-  };
+    1: 'task-priority-1',
+    2: 'task-priority-2',
+    3: 'task-priority-3',
+    4: 'task-priority-4',
+  } as const;
 
   const priorityLabels = {
     1: 'P1',
@@ -371,11 +371,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   return (
     <div className="group" ref={setNodeRef} style={style}>
       <div
-        className={`bg-white dark:bg-gray-800 border-l-4 ${
-          priorityColors[task.prioridad]
-        } rounded-lg p-4 hover:shadow-md transition ${
+        className={`glass-card ${priorityColors[task.prioridad]} rounded-xl p-5 transition-smooth soft-shadow ${
           task.completada ? 'opacity-60' : ''
-        } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} w-full`}
+        } ${
+          depth === 0 ? 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5' : 'cursor-pointer'
+        } w-full`}
         style={{
           userSelect: depth === 0 ? 'none' : undefined,
           WebkitUserSelect: depth === 0 ? 'none' : undefined,
@@ -450,7 +450,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                   {task.labels.slice(0, 3).map((tl) => (
                     <span
                       key={tl.labelId}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-80 transition cursor-pointer flex-shrink-0"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-90 transition-smooth cursor-pointer flex-shrink-0 backdrop-blur-sm shadow-sm"
                       style={{
                         backgroundColor: `${tl.label.color}20`,
                         color: tl.label.color,
@@ -463,7 +463,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                   ))}
                   {task.labels.length > 3 && (
                     <span
-                      className="px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      className="px-2 py-0.5 rounded text-xs text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-slate-800/70 cursor-pointer hover:bg-white/90 dark:hover:bg-slate-700 transition-smooth backdrop-blur-sm shadow-sm"
                       title={`Más etiquetas: ${task.labels.slice(3).map(tl => tl.label.nombre).join(', ')}`}
                     >
                       +{task.labels.length - 3}

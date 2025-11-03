@@ -55,6 +55,7 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 📱 **Navegación móvil optimizada** - ⭐ NUEVO: Barra inferior en móviles, sidebar deslizable
 - 📱 **PWA** - Instálala como app en tu dispositivo
 - 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
+- 🪟 **Glass UI renovada** - Tarjetas translúcidas, degradados dinámicos y estados vacíos inspiradores ([ver detalles](docs/UX_IMPROVEMENTS.md)) ⭐ NUEVO
 
 ### Configuración y Acceso
 - 🔐 **Multi-usuario** - Sistema de autenticación y datos separados por usuario
