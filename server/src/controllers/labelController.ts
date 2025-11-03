@@ -7,11 +7,11 @@ const prisma = new PrismaClient();
 
 export const getLabels = async (req: any, res: Response) => {
   try {
-    const labels = await prisma.label.findMany({
+    const labels = await prisma.labels.findMany({
       where: { userId: (req as AuthRequest).userId },
       include: {
         _count: {
-          select: { tasks: true }
+          select: { task_labels: true }
         }
       },
       orderBy: { nombre: 'asc' }
@@ -28,7 +28,7 @@ export const getLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const label = await prisma.label.findFirst({
+    const label = await prisma.labels.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -61,7 +61,7 @@ export const createLabel = async (req: any, res: Response) => {
       return res.status(400).json({ error: 'El nombre es requerido' });
     }
 
-    const label = await prisma.label.create({
+    const label = await prisma.labels.create({
       data: {
         nombre,
         color: color || '#808080',
@@ -92,7 +92,7 @@ export const updateLabel = async (req: any, res: Response) => {
     const { nombre, color } = req.body;
 
     // Verificar que la etiqueta pertenece al usuario
-    const existingLabel = await prisma.label.findFirst({
+    const existingLabel = await prisma.labels.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -103,7 +103,7 @@ export const updateLabel = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Etiqueta no encontrada' });
     }
 
-    const label = await prisma.label.update({
+    const label = await prisma.labels.update({
       where: { id },
       data: {
         ...(nombre && { nombre }),
@@ -133,7 +133,7 @@ export const deleteLabel = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la etiqueta pertenece al usuario
-    const existingLabel = await prisma.label.findFirst({
+    const existingLabel = await prisma.labels.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -144,7 +144,7 @@ export const deleteLabel = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Etiqueta no encontrada' });
     }
 
-    await prisma.label.delete({
+    await prisma.labels.delete({
       where: { id }
     });
 

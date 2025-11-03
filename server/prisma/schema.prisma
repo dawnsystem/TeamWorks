@@ -8,30 +8,30 @@ datasource db {
 }
 
 model comments {
-  id            String          @id
+  id            String          @id @default(cuid())
   contenido     String
   taskId        String
   userId        String
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime        @updatedAt
   tasks         tasks           @relation(fields: [taskId], references: [id], onDelete: Cascade)
   users         users           @relation(fields: [userId], references: [id], onDelete: Cascade)
   notifications notifications[]
 }
 
 model labels {
-  id          String        @id
+  id          String        @id @default(cuid())
   nombre      String
   color       String        @default("#808080")
   userId      String
   createdAt   DateTime      @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime      @updatedAt
   users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
   task_labels task_labels[]
 }
 
 model notifications {
-  id        String    @id
+  id        String    @id @default(cuid())
   userId    String
   type      String
   title     String
@@ -44,7 +44,7 @@ model notifications {
   labelId   String?
   metadata  Json?
   createdAt DateTime  @default(now())
-  updatedAt DateTime
+  updatedAt DateTime  @updatedAt
   comments  comments? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   projects  projects? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     tasks?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -55,13 +55,13 @@ model notifications {
 }
 
 model projects {
-  id            String          @id
+  id            String          @id @default(cuid())
   nombre        String
   color         String          @default("#808080")
   orden         Int             @default(0)
   userId        String
   createdAt     DateTime        @default(now())
-  updatedAt     DateTime
+  updatedAt     DateTime        @updatedAt
   notifications notifications[]
   users         users           @relation(fields: [userId], references: [id], onDelete: Cascade)
   sections      sections[]
@@ -69,22 +69,22 @@ model projects {
 }
 
 model reminders {
-  id        String   @id
+  id        String   @id @default(cuid())
   fechaHora DateTime
   taskId    String
   enviado   Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 model sections {
-  id        String   @id
+  id        String   @id @default(cuid())
   nombre    String
   orden     Int      @default(0)
   projectId String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   projects  projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks     tasks[]
 }
@@ -99,11 +99,11 @@ model task_labels {
 }
 
 model task_subscriptions {
-  id        String   @id
+  id        String   @id @default(cuid())
   taskId    String
   userId    String
   createdAt DateTime @default(now())
-  updatedAt DateTime
+  updatedAt DateTime @updatedAt
   tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -113,19 +113,19 @@ model task_subscriptions {
 }
 
 model task_templates {
-  id          String   @id
+  id          String   @id @default(cuid())
   titulo      String
   descripcion String?
   prioridad   Int      @default(4)
   userId      String
   labelIds    String[] @default([])
   createdAt   DateTime @default(now())
-  updatedAt   DateTime
+  updatedAt   DateTime @updatedAt
   users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model tasks {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   titulo             String
   descripcion        String?
   prioridad          Int                  @default(4)
@@ -137,7 +137,7 @@ model tasks {
   parentTaskId       String?
   createdBy          String
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   comments           comments[]
   notifications      notifications[]
   reminders          reminders[]
@@ -150,12 +150,12 @@ model tasks {
 }
 
 model users {
-  id                 String               @id
+  id                 String               @id @default(cuid())
   email              String               @unique
   password           String
   nombre             String
   createdAt          DateTime             @default(now())
-  updatedAt          DateTime
+  updatedAt          DateTime             @updatedAt
   comments           comments[]
   labels             labels[]
   notifications      notifications[]

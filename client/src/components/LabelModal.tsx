@@ -15,6 +15,9 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
   const queryClient = useQueryClient();
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState('#3b82f6');
+  const [pos, setPos] = useState<{x:number;y:number}>({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({ x: 0, y: 0 });
 
   const colors = [
     '#3b82f6', // Blue
@@ -35,7 +38,23 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
       setNombre('');
       setColor('#3b82f6');
     }
+    setPos({ x: 0, y: 0 });
   }, [editLabel, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      setPos({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging, dragOffset, isOpen]);
 
   const createMutation = useMutation({
     mutationFn: (data: { nombre: string; color: string }) => labelsAPI.create(data),
@@ -82,14 +101,18 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
+      className="fixed inset-0 bg-black/50 z-50"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96" 
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 absolute"
+        style={{ left: `calc(50% - 12rem)`, top: `25%`, transform: `translate(${pos.x}px, ${pos.y}px)` }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div
+          className="flex items-center justify-between mb-4 cursor-move select-none"
+          onMouseDown={(e) => { setDragging(true); setDragOffset({ x: e.clientX - pos.x, y: e.clientY - pos.y }); }}
+        >
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {editLabel ? 'Editar Etiqueta' : 'Nueva Etiqueta'}
           </h3>

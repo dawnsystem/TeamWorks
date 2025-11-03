@@ -1,3 +1,21 @@
+// Normaliza fechas desde 'dd/mm/yyyy' o 'yyyy-mm-dd' o ISO a Date | null
+function parseDateInput(input?: string | null): Date | null {
+  if (!input) return null;
+  const s = input.trim();
+  if (!s) return null;
+  // dd/mm/yyyy
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) {
+    const [_, dd, mm, yyyy] = m;
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+  }
+  // yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return new Date(`${s}T00:00:00.000Z`);
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
@@ -9,7 +27,7 @@ const prisma = new PrismaClient();
 
 // Helper function to recursively fetch subtasks
 async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<any> {
-  const task = await prisma.task.findFirst({
+  const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
       project: { userId }
@@ -29,7 +47,7 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
   if (!task) return null;
 
   // Fetch all direct subtasks
-  const subTasks = await prisma.task.findMany({
+  const subTasks = await prisma.tasks.findMany({
     where: {
       parentTaskId: taskId,
       project: { userId }
@@ -134,7 +152,7 @@ export const getTasks = async (req: any, res: Response) => {
     // Only fetch root tasks (those without a parent)
     where.parentTaskId = null;
 
-    const rootTasks = await prisma.task.findMany({
+    const rootTasks = await prisma.tasks.findMany({
       where,
       include: {
         labels: {
@@ -171,7 +189,7 @@ export const getTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const task = await prisma.task.findFirst({
+    const task = await prisma.tasks.findFirst({
       where: {
         id,
         project: { userId: (req as AuthRequest).userId }
@@ -237,7 +255,7 @@ export const createTask = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId!;
 
     // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
         userId
@@ -248,30 +266,26 @@ export const createTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    const task = await prisma.task.create({
+    const task = await prisma.tasks.create({
       data: {
         titulo,
         descripcion,
         prioridad: prioridad || 4,
-        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null,
+        fechaVencimiento: parseDateInput(fechaVencimiento),
         projectId,
         sectionId,
         parentTaskId,
         orden: orden || 0,
         createdBy: userId,
         ...(labelIds && labelIds.length > 0 && {
-          labels: {
-            create: labelIds.map((labelId: string) => ({
-              labelId
-            }))
+          task_labels: {
+            create: labelIds.map((labelId: string) => ({ labelId }))
           }
         })
-      },
+      } as any,
       include: {
-        labels: {
-          include: {
-            label: true
-          }
+        task_labels: {
+          include: { labels: true }
         }
       }
     });
@@ -311,7 +325,7 @@ export const updateTask = async (req: any, res: Response) => {
     } = req.body;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
         project: { userId: (req as AuthRequest).userId }
@@ -350,7 +364,7 @@ export const updateTask = async (req: any, res: Response) => {
     if (sectionId !== undefined) updateData.sectionId = sectionId;
     if (orden !== undefined) updateData.orden = orden;
 
-    const task = await prisma.task.update({
+    const task = await prisma.tasks.update({
       where: { id },
       data: updateData,
       include: {
@@ -387,7 +401,7 @@ export const deleteTask = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
         project: { userId: (req as AuthRequest).userId }
@@ -398,7 +412,7 @@ export const deleteTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    await prisma.task.delete({
+    await prisma.tasks.delete({
       where: { id }
     });
 
@@ -423,7 +437,7 @@ export const toggleTask = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
         project: { userId: (req as AuthRequest).userId }
@@ -434,7 +448,7 @@ export const toggleTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    const task = await prisma.task.update({
+    const task = await prisma.tasks.update({
       where: { id },
       data: {
         completada: !existingTask.completada
@@ -489,7 +503,7 @@ export const getTasksByLabel = async (req: any, res: Response) => {
   try {
     const { labelId } = req.params;
 
-    const rootTasks = await prisma.task.findMany({
+    const rootTasks = await prisma.tasks.findMany({
       where: {
         project: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
@@ -538,7 +552,7 @@ export const reorderTasks = async (req: any, res: Response) => {
 
     // Verificar que todas las tareas pertenecen al usuario
     const taskIds = taskUpdates.map((t: any) => t.id);
-    const tasks = await prisma.task.findMany({
+    const tasks = await prisma.tasks.findMany({
       where: {
         id: { in: taskIds },
         project: { userId: (req as AuthRequest).userId }
@@ -552,7 +566,7 @@ export const reorderTasks = async (req: any, res: Response) => {
     // Actualizar todas las tareas en una transacción
     await prisma.$transaction(
       taskUpdates.map((update: any) =>
-        prisma.task.update({
+        prisma.tasks.update({
           where: { id: update.id },
           data: {
             orden: update.orden,

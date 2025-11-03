@@ -472,7 +472,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_bulk':
           if (action.entity === 'task' && action.data?.tasks && Array.isArray(action.data.tasks)) {
             // Buscar el proyecto inbox del usuario
-            const inboxProject = await prisma.project.findFirst({
+            const inboxProject = await prisma.projects.findFirst({
               where: {
                 userId,
                 nombre: 'Inbox'
@@ -490,7 +490,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Buscar proyecto si se especifica
               let targetProject = inboxProject;
               if (taskData.projectName) {
-                const foundProject = await prisma.project.findFirst({
+                const foundProject = await prisma.projects.findFirst({
                   where: {
                     userId,
                     nombre: { equals: taskData.projectName, mode: 'insensitive' }
@@ -500,7 +500,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               }
 
               // Crear tarea
-              const task = await prisma.task.create({
+              const task = await prisma.tasks.create({
                 data: {
                   titulo: taskData.titulo,
                   descripcion: taskData.descripcion || null,
@@ -522,7 +522,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create':
           if (action.entity === 'task') {
             // Buscar el proyecto inbox del usuario
-            const inboxProject = await prisma.project.findFirst({
+            const inboxProject = await prisma.projects.findFirst({
               where: {
                 userId,
                 nombre: 'Inbox'
@@ -538,7 +538,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar proyecto por nombre si se especifica
             let targetProject = inboxProject;
             if (action.data?.projectName) {
-              const foundProject = await prisma.project.findFirst({
+              const foundProject = await prisma.projects.findFirst({
                 where: {
                   userId,
                   nombre: { equals: action.data.projectName, mode: 'insensitive' }
@@ -552,7 +552,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar sección por nombre si se especifica
             let targetSectionId = action.data.sectionId || null;
             if (action.data?.sectionName && targetProject) {
-              const foundSection = await prisma.section.findFirst({
+              const foundSection = await prisma.sections.findFirst({
                 where: {
                   projectId: targetProject.id,
                   nombre: { equals: action.data.sectionName, mode: 'insensitive' }
@@ -568,7 +568,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             if (action.data?.labelNames && Array.isArray(action.data.labelNames)) {
               for (const labelName of action.data.labelNames) {
                 // Buscar o crear etiqueta
-                let label = await prisma.label.findFirst({
+                let label = await prisma.labels.findFirst({
                   where: {
                     userId,
                     nombre: { equals: labelName, mode: 'insensitive' }
@@ -578,7 +578,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 if (!label) {
                   // Crear etiqueta con color aleatorio
                   const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-                  label = await prisma.label.create({
+                  label = await prisma.labels.create({
                     data: {
                       nombre: labelName,
                       color: colors[Math.floor(Math.random() * colors.length)],
@@ -596,7 +596,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar tarea padre si se especifica (para subtareas)
             let parentTaskId = null;
             if (action.data?.parentTaskTitle) {
-              const parentTask = await prisma.task.findFirst({
+              const parentTask = await prisma.tasks.findFirst({
                 where: {
                   project: { userId },
                   titulo: { contains: action.data.parentTaskTitle, mode: 'insensitive' }
@@ -614,7 +614,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               }
             }
 
-            result = await prisma.task.create({
+            result = await prisma.tasks.create({
               data: {
                 titulo: action.data.titulo,
                 descripcion: action.data.descripcion || null,
@@ -644,7 +644,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'update':
           if (action.entity === 'task' && action.data?.search) {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
                 project: { userId },
                 titulo: { contains: action.data.search, mode: 'insensitive' }
@@ -664,7 +664,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               
               // Actualizar proyecto
               if (action.data.projectName) {
-                const foundProject = await prisma.project.findFirst({
+                const foundProject = await prisma.projects.findFirst({
                   where: {
                     userId,
                     nombre: { equals: action.data.projectName, mode: 'insensitive' }
@@ -675,7 +675,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               
               // Actualizar sección
               if (action.data.sectionName && updateData.projectId) {
-                const foundSection = await prisma.section.findFirst({
+                const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId: updateData.projectId,
                     nombre: { equals: action.data.sectionName, mode: 'insensitive' }
@@ -684,7 +684,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 if (foundSection) updateData.sectionId = foundSection.id;
               }
 
-              result = await prisma.task.update({
+              result = await prisma.tasks.update({
                 where: { id: task.id },
                 data: updateData
               });
@@ -701,7 +701,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Filtrar por proyecto
             if (action.data.filter.projectName) {
-              const project = await prisma.project.findFirst({
+              const project = await prisma.projects.findFirst({
                 where: {
                   userId,
                   nombre: { equals: action.data.filter.projectName, mode: 'insensitive' }
@@ -712,7 +712,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Filtrar por sección
             if (action.data.filter.sectionName) {
-              const section = await prisma.section.findFirst({
+              const section = await prisma.sections.findFirst({
                 where: {
                   nombre: { equals: action.data.filter.sectionName, mode: 'insensitive' },
                   project: { userId }
@@ -775,7 +775,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Actualizar proyecto
             if (action.data.updates.projectName) {
-              const foundProject = await prisma.project.findFirst({
+              const foundProject = await prisma.projects.findFirst({
                 where: {
                   userId,
                   nombre: { equals: action.data.updates.projectName, mode: 'insensitive' }
@@ -789,7 +789,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Necesitamos el proyecto para buscar la sección
               const projectId = updateData.projectId || where.projectId;
               if (projectId) {
-                const foundSection = await prisma.section.findFirst({
+                const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId,
                     nombre: { equals: action.data.updates.sectionName, mode: 'insensitive' }
@@ -802,7 +802,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Para añadir etiquetas, necesitamos actualizar cada tarea individualmente
             if (action.data.updates.addLabelNames && Array.isArray(action.data.updates.addLabelNames)) {
               // Primero buscar todas las tareas que coinciden
-              const tasks = await prisma.task.findMany({
+              const tasks = await prisma.tasks.findMany({
                 where,
                 select: { id: true }
               });
@@ -811,7 +811,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               for (const task of tasks) {
                 for (const labelName of action.data.updates.addLabelNames) {
                   // Buscar o crear etiqueta
-                  let label = await prisma.label.findFirst({
+                  let label = await prisma.labels.findFirst({
                     where: {
                       userId,
                       nombre: { equals: labelName, mode: 'insensitive' }
@@ -820,7 +820,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
                   if (!label) {
                     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-                    label = await prisma.label.create({
+                    label = await prisma.labels.create({
                       data: {
                         nombre: labelName,
                         color: colors[Math.floor(Math.random() * colors.length)],
@@ -851,7 +851,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               result = { count: tasks.length, message: `Etiquetas añadidas a ${tasks.length} tareas` };
             } else {
               // Actualización normal sin etiquetas
-              result = await prisma.task.updateMany({
+              result = await prisma.tasks.updateMany({
                 where,
                 data: updateData
               });
@@ -862,7 +862,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'complete':
           if (action.entity === 'task' && action.data?.search) {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
                 project: { userId },
                 titulo: { contains: action.data.search, mode: 'insensitive' }
@@ -870,7 +870,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             });
 
             if (task) {
-              result = await prisma.task.update({
+              result = await prisma.tasks.update({
                 where: { id: task.id },
                 data: { completada: true }
               });
@@ -880,7 +880,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
         case 'delete':
           if (action.entity === 'task') {
-            result = await prisma.task.deleteMany({
+            result = await prisma.tasks.deleteMany({
               where: {
                 project: { userId },
                 ...action.data.filter
@@ -911,7 +911,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               where.completada = action.data.completada;
             }
 
-            result = await prisma.task.findMany({
+            result = await prisma.tasks.findMany({
               where,
               include: {
                 labels: {
@@ -928,7 +928,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_project':
           if (action.entity === 'project') {
             // Obtener el último orden
-            const lastProject = await prisma.project.findFirst({
+            const lastProject = await prisma.projects.findFirst({
               where: { userId },
               orderBy: { orden: 'desc' }
             });
@@ -936,7 +936,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
             let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
-            result = await prisma.project.create({
+            result = await prisma.projects.create({
               data: {
                 nombre: action.data.nombre,
                 color,
@@ -952,7 +952,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar proyecto por nombre
             let targetProject = null;
             if (action.data?.projectName) {
-              targetProject = await prisma.project.findFirst({
+              targetProject = await prisma.projects.findFirst({
                 where: {
                   userId,
                   nombre: { equals: action.data.projectName, mode: 'insensitive' }
@@ -962,12 +962,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             if (targetProject) {
               // Obtener el último orden
-              const lastSection = await prisma.section.findFirst({
+              const lastSection = await prisma.sections.findFirst({
                 where: { projectId: targetProject.id },
                 orderBy: { orden: 'desc' }
               });
 
-              result = await prisma.section.create({
+              result = await prisma.sections.create({
                 data: {
                   nombre: action.data.nombre,
                   projectId: targetProject.id,
@@ -983,7 +983,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
             let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
-            result = await prisma.label.create({
+            result = await prisma.labels.create({
               data: {
                 nombre: action.data.nombre,
                 color,
@@ -996,7 +996,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'add_comment':
           if (action.entity === 'comment') {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
                 project: { userId },
                 titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
@@ -1004,7 +1004,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             });
 
             if (task) {
-              result = await prisma.comment.create({
+              result = await prisma.comments.create({
                 data: {
                   contenido: action.data.contenido,
                   taskId: task.id,
@@ -1018,7 +1018,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_reminder':
           if (action.entity === 'reminder') {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
                 project: { userId },
                 titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
@@ -1034,7 +1034,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 fechaRecordatorio = new Date(action.data.fecha);
               }
 
-              result = await prisma.reminder.create({
+              result = await prisma.reminders.create({
                 data: {
                   fecha: fechaRecordatorio,
                   taskId: task.id

@@ -33,7 +33,7 @@ class NotificationService {
    */
   async create(data: CreateNotificationData) {
     try {
-      const notification = await prisma.notification.create({
+      const notification = await prisma.notifications.create({
         data: {
           userId: data.userId,
           type: data.type,
@@ -89,7 +89,7 @@ class NotificationService {
         where.type = filters.type;
       }
 
-      const notifications = await prisma.notification.findMany({
+      const notifications = await prisma.notifications.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: filters?.limit || 50,
@@ -129,7 +129,7 @@ class NotificationService {
    */
   async markAsRead(id: string, userId: string) {
     try {
-      const notification = await prisma.notification.updateMany({
+      const notification = await prisma.notifications.updateMany({
         where: { id, userId },
         data: { read: true },
       });
@@ -155,7 +155,7 @@ class NotificationService {
    */
   async markAllAsRead(userId: string) {
     try {
-      const result = await prisma.notification.updateMany({
+      const result = await prisma.notifications.updateMany({
         where: { userId, read: false },
         data: { read: true },
       });
@@ -181,7 +181,7 @@ class NotificationService {
    */
   async delete(id: string, userId: string) {
     try {
-      const notification = await prisma.notification.deleteMany({
+      const notification = await prisma.notifications.deleteMany({
         where: { id, userId },
       });
 
@@ -206,7 +206,7 @@ class NotificationService {
    */
   async countUnread(userId: string) {
     try {
-      const count = await prisma.notification.count({
+      const count = await prisma.notifications.count({
         where: { userId, read: false },
       });
 
@@ -225,7 +225,7 @@ class NotificationService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      const result = await prisma.notification.deleteMany({
+      const result = await prisma.notifications.deleteMany({
         where: {
           read: true,
           createdAt: {

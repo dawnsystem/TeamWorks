@@ -10,7 +10,7 @@ export const getAllTemplates = async (req: any, res: Response) => {
   try {
     const userId = (req as AuthRequest).userId;
 
-    const templates = await prisma.taskTemplate.findMany({
+    const templates = await prisma.task_templates.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
@@ -28,7 +28,7 @@ export const getTemplate = async (req: any, res: Response) => {
     const { id } = req.params;
     const userId = (req as AuthRequest).userId;
 
-    const template = await prisma.taskTemplate.findFirst({
+    const template = await prisma.task_templates.findFirst({
       where: {
         id,
         userId,
@@ -53,7 +53,7 @@ export const createTemplate = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
     const validatedData = req.body;
 
-    const template = await prisma.taskTemplate.create({
+    const template = await prisma.task_templates.create({
       data: {
         titulo: validatedData.titulo,
         descripcion: validatedData.descripcion,
@@ -79,7 +79,7 @@ export const updateTemplate = async (req: any, res: Response) => {
     const validatedData = req.body;
 
     // Check if template exists and belongs to user
-    const existingTemplate = await prisma.taskTemplate.findFirst({
+    const existingTemplate = await prisma.task_templates.findFirst({
       where: { id, userId },
     });
 
@@ -87,7 +87,7 @@ export const updateTemplate = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Plantilla no encontrada' });
     }
 
-    const template = await prisma.taskTemplate.update({
+    const template = await prisma.task_templates.update({
       where: { id },
       data: validatedData,
     });
@@ -106,7 +106,7 @@ export const deleteTemplate = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId;
 
     // Check if template exists and belongs to user
-    const existingTemplate = await prisma.taskTemplate.findFirst({
+    const existingTemplate = await prisma.task_templates.findFirst({
       where: { id, userId },
     });
 
@@ -114,7 +114,7 @@ export const deleteTemplate = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Plantilla no encontrada' });
     }
 
-    await prisma.taskTemplate.delete({
+    await prisma.task_templates.delete({
       where: { id },
     });
 
@@ -134,7 +134,7 @@ export const applyTemplate = async (req: any, res: Response) => {
     const { projectId, sectionId } = req.body;
 
     // Get the template
-    const template = await prisma.taskTemplate.findFirst({
+    const template = await prisma.task_templates.findFirst({
       where: { id, userId },
     });
 
@@ -143,7 +143,7 @@ export const applyTemplate = async (req: any, res: Response) => {
     }
 
     // Check if project exists and belongs to user
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: { id: projectId, userId },
     });
 
@@ -152,7 +152,7 @@ export const applyTemplate = async (req: any, res: Response) => {
     }
 
     // Get the highest orden value for tasks in the target location
-    const lastTask = await prisma.task.findFirst({
+    const lastTask = await prisma.tasks.findFirst({
       where: {
         projectId,
         sectionId: sectionId || null,
@@ -164,7 +164,7 @@ export const applyTemplate = async (req: any, res: Response) => {
     const newOrden = lastTask ? lastTask.orden + 1 : 0;
 
     // Create the task from the template
-    const task = await prisma.task.create({
+    const task = await prisma.tasks.create({
       data: {
         titulo: template.titulo,
         descripcion: template.descripcion,
@@ -173,24 +173,17 @@ export const applyTemplate = async (req: any, res: Response) => {
         sectionId: sectionId || null,
         orden: newOrden,
         createdBy: userId,
-        labels: {
-          create: template.labelIds.map((labelId) => ({
-            labelId,
-          })),
+        task_labels: {
+          create: template.labelIds.map((labelId) => ({ labelId })),
         },
-      },
+      } as any,
       include: {
-        labels: {
-          include: {
-            label: true,
-          },
-        },
-        subTasks: true,
+        task_labels: { include: { labels: true } },
         comments: true,
         reminders: true,
         _count: {
           select: {
-            subTasks: true,
+            other_tasks: true,
             comments: true,
             reminders: true,
           },

@@ -308,9 +308,26 @@ export default function ProjectView() {
           onSelectLabel={setSelectedLabelId}
         />
 
-        {/* Tareas sin sección */}
+        {/* Sección virtual: Sin asignar */}
         {tasksWithoutSection.length > 0 && (
           <div className="mb-8">
+            <div 
+              className="flex items-center justify-between mb-4 group"
+              onContextMenu={(e) => {
+                setSelectedSectionId('unassigned');
+                sectionContextMenu.show(e);
+              }}
+            >
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
+                Sin asignar
+              </h2>
+              <button
+                onClick={() => openEditor({ projectId })}
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
             <SortableContext
               items={tasksWithoutSection.map(t => t.id)}
               strategy={verticalListSortingStrategy}
@@ -318,7 +335,7 @@ export default function ProjectView() {
               <TaskList
                 tasks={tasksWithoutSection}
                 loading={isLoading}
-                emptyMessage="No hay tareas en este proyecto"
+                emptyMessage="No hay tareas sin asignar"
               />
             </SortableContext>
           </div>

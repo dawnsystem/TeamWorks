@@ -14,7 +14,7 @@ export const getCommentsByTask = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId;
 
     // Verificar que la tarea pertenece al usuario
-    const task = await prisma.task.findFirst({
+    const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
         project: { userId }
@@ -25,7 +25,7 @@ export const getCommentsByTask = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
-    const comments = await prisma.comment.findMany({
+    const comments = await prisma.comments.findMany({
       where: {
         taskId,
         task: {
@@ -65,7 +65,7 @@ export const createComment = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
 
     // Verificar que la tarea pertenece al usuario ANTES de crear comentario
-    const task = await prisma.task.findFirst({
+    const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
         project: { userId }
@@ -85,7 +85,7 @@ export const createComment = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
-    const comment = await prisma.comment.create({
+    const comment = await prisma.comments.create({
       data: {
         contenido: contenido.trim(),
         taskId,
@@ -126,7 +126,7 @@ export const createComment = async (req: any, res: Response) => {
     });
 
     // Get the user who made the comment
-    const commentAuthor = await prisma.user.findUnique({
+    const commentAuthor = await prisma.users.findUnique({
       where: { id: userId },
       select: { nombre: true },
     });
@@ -169,7 +169,7 @@ export const updateComment = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
 
     // Verificar que el comentario pertenece al usuario Y que la tarea pertenece al usuario
-    const existingComment = await prisma.comment.findFirst({
+    const existingComment = await prisma.comments.findFirst({
       where: {
         id,
         userId,
@@ -185,7 +185,7 @@ export const updateComment = async (req: any, res: Response) => {
 
     // Verificación de ownership ya incluida en la query findFirst
 
-    const comment = await prisma.comment.update({
+    const comment = await prisma.comments.update({
       where: { id },
       data: { contenido: contenido.trim() },
       include: {
@@ -233,7 +233,7 @@ export const deleteComment = async (req: any, res: Response) => {
     }
 
     // Verificar que el comentario pertenece al usuario Y que la tarea pertenece al usuario
-    const existingComment = await prisma.comment.findFirst({
+    const existingComment = await prisma.comments.findFirst({
       where: {
         id,
         userId,
@@ -256,7 +256,7 @@ export const deleteComment = async (req: any, res: Response) => {
 
     // Verificación de ownership ya incluida en la query findFirst
 
-    await prisma.comment.delete({
+    await prisma.comments.delete({
       where: { id },
     });
 

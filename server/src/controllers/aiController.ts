@@ -15,12 +15,12 @@ export const processCommand = async (req: any, res: Response) => {
     // Obtener contexto del usuario si no se proporciona
     let userContext = context;
     if (!userContext) {
-      const projects = await prisma.project.findMany({
+      const projects = await prisma.projects.findMany({
         where: { userId: (req as AuthRequest).userId },
         select: { id: true, nombre: true }
       });
 
-      const recentTasks = await prisma.task.findMany({
+      const recentTasks = await prisma.tasks.findMany({
         where: {
           project: { userId: (req as AuthRequest).userId },
           completada: false

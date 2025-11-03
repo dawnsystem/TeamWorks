@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export const getProjects = async (req: any, res: Response) => {
   try {
-    const projects = await prisma.project.findMany({
+    const projects = await prisma.projects.findMany({
       where: { userId: (req as AuthRequest).userId },
       include: {
         sections: {
@@ -32,7 +32,7 @@ export const getProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -60,7 +60,7 @@ export const createProject = async (req: any, res: Response) => {
     const { nombre, color, orden } = req.body;
 
     // Validación de formato ya realizada por middleware
-    const project = await prisma.project.create({
+    const project = await prisma.projects.create({
       data: {
         nombre,
         color: color || '#808080',
@@ -93,7 +93,7 @@ export const updateProject = async (req: any, res: Response) => {
     const { nombre, color, orden } = req.body;
 
     // Verificar que el proyecto pertenece al usuario
-    const existingProject = await prisma.project.findFirst({
+    const existingProject = await prisma.projects.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -104,7 +104,7 @@ export const updateProject = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    const project = await prisma.project.update({
+    const project = await prisma.projects.update({
       where: { id },
       data: {
         ...(nombre && { nombre }),
@@ -134,7 +134,7 @@ export const deleteProject = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que el proyecto pertenece al usuario
-    const existingProject = await prisma.project.findFirst({
+    const existingProject = await prisma.projects.findFirst({
       where: {
         id,
         userId: (req as AuthRequest).userId
@@ -145,7 +145,7 @@ export const deleteProject = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    await prisma.project.delete({
+    await prisma.projects.delete({
       where: { id }
     });
 
@@ -171,7 +171,7 @@ export const createSection = async (req: any, res: Response) => {
     const { nombre, orden } = req.body;
 
     // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
+    const project = await prisma.projects.findFirst({
       where: {
         id: projectId,
         userId: (req as AuthRequest).userId
@@ -183,7 +183,7 @@ export const createSection = async (req: any, res: Response) => {
     }
 
     // Validación de formato ya realizada por middleware
-    const section = await prisma.section.create({
+    const section = await prisma.sections.create({
       data: {
         nombre,
         orden: orden || 0,
@@ -216,7 +216,7 @@ export const updateSection = async (req: any, res: Response) => {
     const { nombre, orden } = req.body;
 
     // Verificar que la sección pertenece a un proyecto del usuario
-    const section = await prisma.section.findFirst({
+    const section = await prisma.sections.findFirst({
       where: { id },
       include: { project: true }
     });
@@ -225,7 +225,7 @@ export const updateSection = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
-    const updatedSection = await prisma.section.update({
+    const updatedSection = await prisma.sections.update({
       where: { id },
       data: {
         ...(nombre && { nombre }),
@@ -255,7 +255,7 @@ export const deleteSection = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la sección pertenece a un proyecto del usuario
-    const section = await prisma.section.findFirst({
+    const section = await prisma.sections.findFirst({
       where: { id },
       include: { project: true }
     });
@@ -264,7 +264,7 @@ export const deleteSection = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
-    await prisma.section.delete({
+    await prisma.sections.delete({
       where: { id }
     });
 

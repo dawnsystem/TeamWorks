@@ -11,7 +11,7 @@ export const getRemindersByTask = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId;
 
     // Verificar que la tarea pertenece al usuario
-    const task = await prisma.task.findFirst({
+    const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
         project: { userId }
@@ -22,7 +22,7 @@ export const getRemindersByTask = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
-    const reminders = await prisma.reminder.findMany({
+    const reminders = await prisma.reminders.findMany({
       where: {
         taskId,
         task: {
@@ -49,7 +49,7 @@ export const createReminder = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
 
     // Verificar que la tarea pertenece al usuario
-    const task = await prisma.task.findFirst({
+    const task = await prisma.tasks.findFirst({
       where: {
         id: taskId,
         project: { userId }
@@ -63,7 +63,7 @@ export const createReminder = async (req: any, res: Response) => {
     // fechaHora viene como string ISO del middleware, convertir a Date
     const reminderDate = new Date(fechaHora);
 
-    const reminder = await prisma.reminder.create({
+    const reminder = await prisma.reminders.create({
       data: {
         fechaHora: reminderDate,
         taskId,
@@ -84,7 +84,7 @@ export const deleteReminder = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId;
 
     // Verificar que el recordatorio pertenece a una tarea del usuario
-    const reminder = await prisma.reminder.findFirst({
+    const reminder = await prisma.reminders.findFirst({
       where: {
         id,
         task: {
@@ -97,7 +97,7 @@ export const deleteReminder = async (req: any, res: Response) => {
       return res.status(404).json({ message: 'Recordatorio no encontrado' });
     }
 
-    await prisma.reminder.delete({
+    await prisma.reminders.delete({
       where: { id },
     });
 

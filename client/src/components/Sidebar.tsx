@@ -35,6 +35,24 @@ export default function Sidebar() {
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [labelsExpanded, setLabelsExpanded] = useState(true);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [modalPos, setModalPos] = useState<{x:number;y:number}>({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!showNewProjectModal) return;
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return;
+      setModalPos(prev => ({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y }));
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging, dragOffset, showNewProjectModal]);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectColor, setNewProjectColor] = useState('#3b82f6');
   const [editingProject, setEditingProject] = useState<string | null>(null);
@@ -465,9 +483,16 @@ export default function Sidebar() {
 
       {/* Modal Nuevo Proyecto */}
       {showNewProjectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowNewProjectModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
+        <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowNewProjectModal(false)}>
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 absolute"
+            style={{ left: `calc(50% - 12rem)`, top: `20%`, transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="flex items-center justify-between mb-4 cursor-move select-none"
+              onMouseDown={(e) => { setDragging(true); setDragOffset({ x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }); }}
+            >
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Nuevo Proyecto</h3>
               <button
                 onClick={() => setShowNewProjectModal(false)}

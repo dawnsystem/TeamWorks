@@ -12,7 +12,7 @@ export const register = async (req: any, res: Response) => {
 
     // Validación de formato ya realizada por middleware
     // Verificar si el usuario ya existe
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -24,7 +24,7 @@ export const register = async (req: any, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Crear usuario
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email,
         password: hashedPassword,
@@ -40,7 +40,7 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Crear proyecto inbox por defecto
-    await prisma.project.create({
+    await prisma.projects.create({
       data: {
         nombre: 'Inbox',
         color: '#808080',
@@ -91,7 +91,7 @@ export const login = async (req: any, res: Response) => {
 
     // Validación de formato ya realizada por middleware
     // Buscar usuario
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { email },
       select: {
         id: true,
@@ -152,7 +152,7 @@ export const login = async (req: any, res: Response) => {
 
 export const getMe = async (req: any & { userId?: string }, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: (req as AuthRequest).userId },
       select: {
         id: true,

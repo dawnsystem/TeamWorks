@@ -15,7 +15,7 @@ class ReminderService {
       const now = new Date();
       
       // Buscar recordatorios que ya pasaron y no han sido enviados
-      const pendingReminders = await prisma.reminder.findMany({
+      const pendingReminders = await prisma.reminders.findMany({
         where: {
           enviado: false,
           fechaHora: {
@@ -71,7 +71,7 @@ class ReminderService {
       });
 
       // Marcar recordatorio como enviado
-      await prisma.reminder.update({
+      await prisma.reminders.update({
         where: { id: reminder.id },
         data: { enviado: true },
       });
@@ -125,7 +125,7 @@ class ReminderService {
       tomorrow.setDate(tomorrow.getDate() + 2);
 
       // Buscar tareas que vencen hoy o mañana y no están completadas
-      const dueTasks = await prisma.task.findMany({
+      const dueTasks = await prisma.tasks.findMany({
         where: {
           completada: false,
           fechaVencimiento: {
@@ -151,7 +151,7 @@ class ReminderService {
         const isToday = dueDate.toDateString() === today.toDateString();
         
         // Verificar si ya existe una notificación reciente para esta tarea
-        const existingNotification = await prisma.notification.findFirst({
+        const existingNotification = await prisma.notifications.findFirst({
           where: {
             userId: task.project.userId,
             taskId: task.id,
