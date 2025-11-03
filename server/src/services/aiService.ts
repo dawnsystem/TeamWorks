@@ -598,7 +598,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             if (action.data?.parentTaskTitle) {
               const parentTask = await prisma.tasks.findFirst({
                 where: {
-                  project: { userId },
+                  projects: { userId },
                   titulo: { contains: action.data.parentTaskTitle, mode: 'insensitive' }
                 }
               });
@@ -646,7 +646,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar tarea por título
             const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
+                projects: { userId },
                 titulo: { contains: action.data.search, mode: 'insensitive' }
               }
             });

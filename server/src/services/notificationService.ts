@@ -95,20 +95,20 @@ class NotificationService {
         take: filters?.limit || 50,
         skip: filters?.offset || 0,
         include: {
-          task: {
+          tasks: {
             select: {
               id: true,
               titulo: true,
               projectId: true,
             },
           },
-          comment: {
+          comments: {
             select: {
               id: true,
               contenido: true,
             },
           },
-          project: {
+          projects: {
             select: {
               id: true,
               nombre: true,

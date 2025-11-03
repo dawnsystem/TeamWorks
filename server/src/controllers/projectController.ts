@@ -218,10 +218,10 @@ export const updateSection = async (req: any, res: Response) => {
     // Verificar que la sección pertenece a un proyecto del usuario
     const section = await prisma.sections.findFirst({
       where: { id },
-      include: { project: true }
+      include: { projects: true }
     });
 
-    if (!section || section.project.userId !== (req as AuthRequest).userId) {
+    if (!section || section.projects.userId !== (req as AuthRequest).userId) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
@@ -257,10 +257,10 @@ export const deleteSection = async (req: any, res: Response) => {
     // Verificar que la sección pertenece a un proyecto del usuario
     const section = await prisma.sections.findFirst({
       where: { id },
-      include: { project: true }
+      include: { projects: true }
     });
 
-    if (!section || section.project.userId !== (req as AuthRequest).userId) {
+    if (!section || section.projects.userId !== (req as AuthRequest).userId) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 

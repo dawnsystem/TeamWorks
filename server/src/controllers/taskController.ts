@@ -25,6 +25,64 @@ import { taskSubscriptionService } from '../services/taskSubscriptionService';
 
 const prisma = new PrismaClient();
 
+function toClientTask(task: any): any {
+  if (!task) return task;
+
+  const {
+    task_labels,
+    other_tasks,
+    tasks: parentTask,
+    projects,
+    sections,
+    _count,
+    ...rest
+  } = task;
+
+  const labels = task_labels
+    ? task_labels.map((tl: any) => {
+        const { labels: label, ...tlRest } = tl;
+        return {
+          ...tlRest,
+          label,
+        };
+      })
+    : rest.labels || [];
+
+  const subTasks = other_tasks ? other_tasks.map((st: any) => toClientTask(st)) : rest.subTasks || [];
+
+  const count = _count
+    ? {
+        ..._count,
+        subTasks: _count.other_tasks ?? _count.subTasks ?? 0,
+      }
+    : rest._count;
+
+  if (count && 'other_tasks' in count) {
+    delete (count as any).other_tasks;
+  }
+
+  return {
+    ...rest,
+    project: projects
+      ? {
+          id: projects.id,
+          nombre: projects.nombre,
+          color: projects.color,
+        }
+      : rest.project,
+    section: sections
+      ? {
+          id: sections.id,
+          nombre: sections.nombre,
+        }
+      : rest.section,
+    labels,
+    subTasks,
+    parentTask: parentTask ? toClientTask(parentTask) : rest.parentTask,
+    _count: count,
+  };
+}
+
 // Helper function to recursively fetch subtasks
 async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<any> {
   const task = await prisma.tasks.findFirst({
@@ -70,7 +128,7 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
 
   return {
     ...task,
-    subTasks: subTasksWithChildren
+    other_tasks: subTasksWithChildren
   };
 }
 
@@ -152,7 +210,7 @@ export const getTasks = async (req: any, res: Response) => {
     });
 
     // Devolver solo tareas raíz con contadores; subtareas se buscarán on-demand
-    res.json(rootTasks);
+    res.json(rootTasks.map(toClientTask));
   } catch (error) {
     console.error('Error en getTasks:', error);
     res.status(500).json({ error: 'Error al obtener tareas' });
@@ -199,7 +257,7 @@ export const getTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    res.json(task);
+    res.json(toClientTask(task));
   } catch (error) {
     console.error('Error en getTask:', error);
     res.status(500).json({ error: 'Error al obtener tarea' });
@@ -263,6 +321,8 @@ export const createTask = async (req: any, res: Response) => {
     // Auto-subscribe creator to the task
     await taskSubscriptionService.autoSubscribeCreator(task.id, userId);
 
+    const clientTask = toClientTask(task);
+
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_created',
@@ -270,10 +330,10 @@ export const createTask = async (req: any, res: Response) => {
       taskId: task.id,
       userId,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
-    res.status(201).json(task);
+    res.status(201).json(clientTask);
   } catch (error) {
     console.error('Error en createTask:', error);
     res.status(500).json({ error: 'Error al crear tarea' });
@@ -345,6 +405,8 @@ export const updateTask = async (req: any, res: Response) => {
       }
     });
 
+    const clientTask = toClientTask(task);
+
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
@@ -352,10 +414,10 @@ export const updateTask = async (req: any, res: Response) => {
       taskId: task.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
-    res.json(task);
+    res.json(clientTask);
   } catch (error) {
     console.error('Error en updateTask:', error);
     res.status(500).json({ error: 'Error al actualizar tarea' });
@@ -427,6 +489,8 @@ export const toggleTask = async (req: any, res: Response) => {
       }
     });
 
+    const clientTask = toClientTask(task);
+
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
@@ -434,7 +498,7 @@ export const toggleTask = async (req: any, res: Response) => {
       taskId: task.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
     // Crear notificación para suscriptores si la tarea se marcó como completada
@@ -454,7 +518,7 @@ export const toggleTask = async (req: any, res: Response) => {
       );
     }
 
-    res.json(task);
+    res.json(clientTask);
   } catch (error) {
     console.error('Error en toggleTask:', error);
     res.status(500).json({ error: 'Error al cambiar estado de tarea' });
@@ -479,7 +543,7 @@ export const getTasksByLabel = async (req: any, res: Response) => {
       },
       orderBy: { orden: 'asc' }
     });
-    res.json(rootTasks);
+    res.json(rootTasks.map(toClientTask));
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });
