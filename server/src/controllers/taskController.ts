@@ -469,9 +469,7 @@ export const getTasksByLabel = async (req: any, res: Response) => {
       where: {
         projects: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
-        task_labels: {
-          some: { labelId }
-        }
+        task_labels: { some: { labelId } }
       },
       include: {
         task_labels: { include: { labels: true } },
@@ -481,19 +479,7 @@ export const getTasksByLabel = async (req: any, res: Response) => {
       },
       orderBy: { orden: 'asc' }
     });
-
-    // Recursively fetch all subtasks for each root task
-    const tasksWithAllSubtasks = await Promise.all(
-      rootTasks.map(async (task) => {
-        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!);
-        return taskWithSubtasks;
-      })
-    );
-
-    // Filter out any null values that might occur if a task couldn't be retrieved
-    const validTasks = tasksWithAllSubtasks.filter(task => task !== null);
-
-    res.json(validTasks);
+    res.json(rootTasks);
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });

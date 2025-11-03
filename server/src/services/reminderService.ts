@@ -23,9 +23,9 @@ class ReminderService {
           },
         },
         include: {
-          task: {
+          tasks: {
             include: {
-              project: {
+              projects: {
                 select: {
                   userId: true,
                   id: true,
@@ -53,9 +53,9 @@ class ReminderService {
    */
   async sendReminder(reminder: any) {
     try {
-      const userId = reminder.task.project.userId;
-      const taskTitle = reminder.task.titulo;
-      const projectName = reminder.task.project.nombre;
+      const userId = reminder.tasks.projects.userId;
+      const taskTitle = reminder.tasks.titulo;
+      const projectName = reminder.tasks.projects.nombre;
 
       // Crear notificación
       await notificationService.create({
@@ -64,7 +64,7 @@ class ReminderService {
         title: '🔔 Recordatorio',
         message: `Recordatorio para: "${taskTitle}" en ${projectName}`,
         taskId: reminder.taskId,
-        projectId: reminder.task.projectId,
+        projectId: reminder.tasks.projectId,
         metadata: {
           reminderDate: reminder.fechaHora,
         },
@@ -134,7 +134,7 @@ class ReminderService {
           },
         },
         include: {
-          project: {
+          projects: {
             select: {
               userId: true,
               id: true,
@@ -153,7 +153,7 @@ class ReminderService {
         // Verificar si ya existe una notificación reciente para esta tarea
         const existingNotification = await prisma.notifications.findFirst({
           where: {
-            userId: task.project.userId,
+            userId: task.projects.userId,
             taskId: task.id,
             type: 'due_date',
             createdAt: {
@@ -164,10 +164,10 @@ class ReminderService {
 
         if (!existingNotification) {
           await notificationService.create({
-            userId: task.project.userId,
+            userId: task.projects.userId,
             type: 'due_date',
             title: isToday ? '⚠️ Tarea vence hoy' : '📅 Tarea vence mañana',
-            message: `"${task.titulo}" en ${task.project.nombre}`,
+            message: `"${task.titulo}" en ${task.projects.nombre}`,
             taskId: task.id,
             projectId: task.projectId,
             metadata: {
