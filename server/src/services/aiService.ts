@@ -559,7 +559,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   fechaVencimiento,
                   projectId: targetProject?.id,
                   sectionId: null,
-                  orden: 0
+                  orden: 0,
+                  createdBy: userId
                 }
               });
 
@@ -675,6 +676,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 sectionId: targetSectionId,
                 parentTaskId,
                 orden: 0,
+                createdBy: userId,
                 ...(labelConnections.length > 0 && {
                   task_labels: {
                     create: labelConnections
