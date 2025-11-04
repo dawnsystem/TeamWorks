@@ -2,30 +2,23 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
+import { labelFactory } from '../factories/labelFactory';
+import {
+  fetchLabels,
+  fetchLabel,
+  createLabel as createLabelService,
+  updateLabel as updateLabelService,
+  deleteLabel as deleteLabelService,
+} from '../services/labelDomainService';
 
 const prisma = new PrismaClient();
 
 export const getLabels = async (req: any, res: Response) => {
   try {
-    const labels = await prisma.labels.findMany({
-      where: { userId: (req as AuthRequest).userId },
-      include: {
-        _count: {
-          select: { task_labels: true }
-        }
-      },
-      orderBy: { nombre: 'asc' }
-    });
+    const labels = await fetchLabels(prisma, (req as AuthRequest).userId!);
+    const clientLabels = labels.map(labelFactory.toClientLabel);
 
-    // Normalizar contador para mantener compatibilidad con el frontend (tasks)
-    const normalized = labels.map(label => ({
-      ...label,
-      _count: {
-        tasks: label._count?.task_labels || 0
-      }
-    }));
-
-    res.json(normalized);
+    res.json(clientLabels);
   } catch (error) {
     console.error('Error en getLabels:', error);
     res.status(500).json({ error: 'Error al obtener etiquetas' });
@@ -36,35 +29,13 @@ export const getLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const label = await prisma.labels.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      },
-      include: {
-        task_labels: {
-          include: {
-            tasks: {
-              include: {
-                projects: {
-                  select: {
-                    id: true,
-                    nombre: true,
-                    color: true,
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const label = await fetchLabel(prisma, id, (req as AuthRequest).userId!);
 
     if (!label) {
       return res.status(404).json({ error: 'Etiqueta no encontrada' });
     }
 
-    res.json(label);
+    res.json(labelFactory.toClientLabel(label));
   } catch (error) {
     console.error('Error en getLabel:', error);
     res.status(500).json({ error: 'Error al obtener etiqueta' });
@@ -75,17 +46,13 @@ export const createLabel = async (req: any, res: Response) => {
   try {
     const { nombre, color } = req.body;
 
-    if (!nombre) {
-      return res.status(400).json({ error: 'El nombre es requerido' });
-    }
-
-    const label = await prisma.labels.create({
-      data: {
-        nombre,
-        color: color || '#808080',
-        userId: (req as AuthRequest).userId!
-      }
+    const label = await createLabelService(prisma, {
+      nombre,
+      color,
+      userId: (req as AuthRequest).userId!,
     });
+
+    const clientLabel = labelFactory.toClientLabel(label);
 
     // Enviar evento SSE (sin projectId específico, se envía a todos los proyectos del usuario)
     sseService.sendTaskEvent({
@@ -94,10 +61,10 @@ export const createLabel = async (req: any, res: Response) => {
       labelId: label.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: label,
+      data: clientLabel,
     });
 
-    res.status(201).json(label);
+    res.status(201).json(clientLabel);
   } catch (error) {
     console.error('Error en createLabel:', error);
     res.status(500).json({ error: 'Error al crear etiqueta' });
@@ -109,37 +76,27 @@ export const updateLabel = async (req: any, res: Response) => {
     const { id } = req.params;
     const { nombre, color } = req.body;
 
-    // Verificar que la etiqueta pertenece al usuario
-    const existingLabel = await prisma.labels.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      }
+    const label = await updateLabelService(prisma, id, (req as AuthRequest).userId!, {
+      nombre,
+      color,
     });
 
-    if (!existingLabel) {
+    if (!label) {
       return res.status(404).json({ error: 'Etiqueta no encontrada' });
     }
 
-    const label = await prisma.labels.update({
-      where: { id },
-      data: {
-        ...(nombre && { nombre }),
-        ...(color && { color })
-      }
-    });
+    const clientLabel = labelFactory.toClientLabel(label);
 
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'label_updated',
       projectId: 'global',
       labelId: label.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: label,
+      data: clientLabel,
     });
 
-    res.json(label);
+    res.json(clientLabel);
   } catch (error) {
     console.error('Error en updateLabel:', error);
     res.status(500).json({ error: 'Error al actualizar etiqueta' });
@@ -150,23 +107,12 @@ export const deleteLabel = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Verificar que la etiqueta pertenece al usuario
-    const existingLabel = await prisma.labels.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      }
-    });
+    const existingLabel = await deleteLabelService(prisma, id, (req as AuthRequest).userId!);
 
     if (!existingLabel) {
       return res.status(404).json({ error: 'Etiqueta no encontrada' });
     }
 
-    await prisma.labels.delete({
-      where: { id }
-    });
-
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'label_deleted',
       projectId: 'global',
