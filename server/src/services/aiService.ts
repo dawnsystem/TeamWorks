@@ -550,6 +550,50 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 if (foundProject) targetProject = foundProject;
               }
 
+              // Buscar sección si se especifica
+              let targetSectionId: string | null = null;
+              if (taskData.sectionName) {
+                if (targetProject) {
+                  const sectionInProject = await prisma.sections.findFirst({
+                    where: {
+                      projectId: targetProject.id,
+                      nombre: { equals: taskData.sectionName, mode: 'insensitive' }
+                    }
+                  });
+                  if (sectionInProject) {
+                    targetSectionId = sectionInProject.id;
+                  }
+                }
+
+                if (!targetSectionId) {
+                  const anySection = await prisma.sections.findFirst({
+                    where: {
+                      nombre: { equals: taskData.sectionName, mode: 'insensitive' },
+                      projects: { userId }
+                    },
+                    select: {
+                      id: true,
+                      projectId: true
+                    }
+                  });
+
+                  if (anySection) {
+                    targetSectionId = anySection.id;
+                    if (!targetProject || targetProject.id !== anySection.projectId) {
+                      const sectionProject = await prisma.projects.findFirst({
+                        where: {
+                          id: anySection.projectId,
+                          userId
+                        }
+                      });
+                      if (sectionProject) {
+                        targetProject = sectionProject;
+                      }
+                    }
+                  }
+                }
+              }
+
               // Crear tarea
               const task = await prisma.tasks.create({
                 data: {
@@ -558,7 +602,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   prioridad: taskData.prioridad || 4,
                   fechaVencimiento,
                   projectId: targetProject?.id,
-                  sectionId: null,
+                  sectionId: targetSectionId,
                   orden: 0,
                   createdBy: userId
                 }
@@ -662,6 +706,35 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 }
                 if (!action.data.sectionName && !targetSectionId) {
                   targetSectionId = parentTask.sectionId;
+                }
+              }
+            }
+
+            // Si no se encontró sección y se especificó nombre, buscar en todo el espacio del usuario
+            if (!targetSectionId && action.data?.sectionName) {
+              const anySection = await prisma.sections.findFirst({
+                where: {
+                  nombre: { equals: action.data.sectionName, mode: 'insensitive' },
+                  projects: { userId }
+                },
+                select: {
+                  id: true,
+                  projectId: true
+                }
+              });
+
+              if (anySection) {
+                targetSectionId = anySection.id;
+                if (!targetProject || targetProject.id !== anySection.projectId) {
+                  const sectionProject = await prisma.projects.findFirst({
+                    where: {
+                      id: anySection.projectId,
+                      userId
+                    }
+                  });
+                  if (sectionProject) {
+                    targetProject = sectionProject;
+                  }
                 }
               }
             }

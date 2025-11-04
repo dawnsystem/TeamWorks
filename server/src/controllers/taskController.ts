@@ -84,14 +84,27 @@ function toClientTask(task: any): any {
 }
 
 // Helper function to recursively fetch subtasks
-async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<any> {
-  const task = await prisma.tasks.findFirst({
+async function getTaskWithAllSubtasks(taskId: string, userId: string, taskOverride?: any): Promise<any> {
+  const task = taskOverride ?? await prisma.tasks.findFirst({
     where: {
       id: taskId,
       projects: { userId }
     },
     include: {
       task_labels: { include: { labels: true } },
+      projects: {
+        select: {
+          id: true,
+          nombre: true,
+          color: true
+        }
+      },
+      sections: {
+        select: {
+          id: true,
+          nombre: true
+        }
+      },
       _count: {
         select: { other_tasks: true, comments: true, reminders: true }
       }
@@ -108,6 +121,19 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
     },
     include: {
       task_labels: { include: { labels: true } },
+      projects: {
+        select: {
+          id: true,
+          nombre: true,
+          color: true
+        }
+      },
+      sections: {
+        select: {
+          id: true,
+          nombre: true
+        }
+      },
       _count: {
         select: { other_tasks: true, comments: true, reminders: true }
       }
@@ -118,9 +144,10 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<a
   // Recursively fetch subtasks of each subtask
   const subTasksWithChildren = await Promise.all(
     subTasks.map(async (subTask) => {
-      const children = await getTaskWithAllSubtasks(subTask.id, userId);
+      const children = await getTaskWithAllSubtasks(subTask.id, userId, subTask);
       return {
         ...subTask,
+        other_tasks: children?.other_tasks || [],
         subTasks: children?.subTasks || []
       };
     })
@@ -225,9 +252,17 @@ export const getTasks = async (req: any, res: Response) => {
       orderBy: { orden: 'asc' }
     });
 
-    // Devolver solo tareas raíz con contadores; subtareas se buscarán on-demand
-    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${rootTasks.length}`);
-    res.json(rootTasks.map(toClientTask));
+    const tasksWithSubtasks = await Promise.all(
+      rootTasks.map(async (task) => {
+        const fullTask = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!, task);
+        return fullTask ? toClientTask(fullTask) : toClientTask(task);
+      })
+    );
+
+    const filteredTasks = tasksWithSubtasks.filter(Boolean);
+
+    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${filteredTasks.length}`);
+    res.json(filteredTasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
     if (error instanceof Error) {
