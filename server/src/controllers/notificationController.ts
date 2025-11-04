@@ -1,6 +1,17 @@
 import { Response, Request } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { notificationService } from '../services/notificationService';
+import { notificationFactory } from '../factories/notificationFactory';
+import {
+  fetchNotifications,
+  countUnreadNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification as deleteNotificationDomain,
+} from '../services/notificationDomainService';
+import { PrismaClient } from '@prisma/client';
+import { sseService } from '../services/sseService';
+
+const prisma = new PrismaClient();
 
 // GET /api/notifications
 export const getNotifications = async (req: Request, res: Response) => {
@@ -15,12 +26,12 @@ export const getNotifications = async (req: Request, res: Response) => {
       offset: offset ? parseInt(offset as string) : undefined,
     };
 
-    const notifications = await notificationService.getByUser(userId, filters);
-    const total = await notificationService.countUnread(userId);
+    const notifications = await fetchNotifications(prisma, userId, filters);
+    const total = await countUnreadNotifications(prisma, userId);
 
-    res.json({ 
-      notifications,
-      total 
+    res.json({
+      notifications: notifications.map(notificationFactory.toClientNotification),
+      total,
     });
   } catch (error) {
     console.error('Error en getNotifications:', error);
@@ -32,7 +43,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 export const getUnreadCount = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).userId!;
-    const count = await notificationService.countUnread(userId);
+    const count = await countUnreadNotifications(prisma, userId);
 
     res.json({ count });
   } catch (error) {
@@ -47,7 +58,15 @@ export const markAsRead = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).userId!;
     const { id } = req.params;
 
-    await notificationService.markAsRead(id, userId);
+    await markNotificationAsRead(prisma, id, userId);
+
+    sseService.sendTaskEvent({
+      type: 'notification_read',
+      projectId: 'global',
+      userId,
+      timestamp: new Date(),
+      data: { id },
+    });
 
     res.json({ message: 'Notificación marcada como leída' });
   } catch (error) {
@@ -61,7 +80,15 @@ export const markAllAsRead = async (req: Request, res: Response) => {
   try {
     const userId = (req as AuthRequest).userId!;
 
-    await notificationService.markAllAsRead(userId);
+    await markAllNotificationsAsRead(prisma, userId);
+
+    sseService.sendTaskEvent({
+      type: 'notification_read',
+      projectId: 'global',
+      userId,
+      timestamp: new Date(),
+      data: { all: true },
+    });
 
     res.json({ message: 'Todas las notificaciones marcadas como leídas' });
   } catch (error) {
@@ -76,7 +103,15 @@ export const deleteNotification = async (req: Request, res: Response) => {
     const userId = (req as AuthRequest).userId!;
     const { id } = req.params;
 
-    await notificationService.delete(id, userId);
+    await deleteNotificationDomain(prisma, id, userId);
+
+    sseService.sendTaskEvent({
+      type: 'notification_deleted',
+      projectId: 'global',
+      userId,
+      timestamp: new Date(),
+      data: { id },
+    });
 
     res.json({ message: 'Notificación eliminada' });
   } catch (error) {

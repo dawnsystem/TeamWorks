@@ -5,6 +5,7 @@
 - ✅ Creada `projectFactory` para normalizar respuestas.
 - ✅ `projectController` delega en servicios/factories y emite eventos SSE con payloads consistentes.
 - ✅ Añadidos `labelDomainService` y `labelFactory`; `labelController` usa la nueva capa y respuestas homogéneas.
+- ✅ Añadidos `notificationDomainService` + `notificationFactory`; `notificationController` delega en la nueva capa y mantiene eventos SSE.
 - ✅ Integrado con auditoría (`ARCHITECTURE_AUDIT_2025-11-04.md`) y ADR-0001.
 
 
