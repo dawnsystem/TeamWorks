@@ -9,5 +9,6 @@
 - ✅ Integrado con auditoría (`ARCHITECTURE_AUDIT_2025-11-04.md`) y ADR-0001.
 - ✅ Creada librería UI inicial (`Button`, `Card`, `Modal`, `ScrollArea`) alineada con el sistema de diseño y aplicada en `Settings`.
 - ✅ Refactor de comentarios con `commentDomainService` + `commentFactory`; controlador reducido a orquestación y normalización unificada.
+- ✅ Recordatorios alineados con la capa de dominio (`reminderDomainService` + `reminderFactory`) y respuestas serializadas.
 
 

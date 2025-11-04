@@ -1,6 +1,12 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
+import {
+  fetchRemindersByTask,
+  createReminder as createReminderDomain,
+  deleteReminder as deleteReminderDomain,
+} from '../services/reminderDomainService';
+import { reminderFactory } from '../factories/reminderFactory';
 
 const prisma = new PrismaClient();
 
@@ -10,29 +16,13 @@ export const getRemindersByTask = async (req: any, res: Response) => {
     const { taskId } = req.params;
     const userId = (req as AuthRequest).userId;
 
-    // Verificar que la tarea pertenece al usuario
-    const task = await prisma.tasks.findFirst({
-      where: {
-        id: taskId,
-        projects: { userId }
-      }
-    });
+    const reminders = await fetchRemindersByTask(prisma, taskId, userId);
 
-    if (!task) {
+    if (!reminders) {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
-    const reminders = await prisma.reminders.findMany({
-      where: {
-        taskId,
-        tasks: {
-          projects: { userId }
-        }
-      },
-      orderBy: { fechaHora: 'asc' },
-    });
-
-    res.json(reminders);
+    res.json(reminders.map(reminderFactory.toClientReminder));
   } catch (error) {
     console.error('Error en getRemindersByTask:', error);
     res.status(500).json({ message: 'Error al obtener recordatorios' });
@@ -46,31 +36,17 @@ export const createReminder = async (req: any, res: Response) => {
     const { fechaHora } = req.body;
     const userId = (req as AuthRequest).userId;
 
-    // Validación de formato ya realizada por middleware
-
-    // Verificar que la tarea pertenece al usuario
-    const task = await prisma.tasks.findFirst({
-      where: {
-        id: taskId,
-        projects: { userId }
-      }
+    const reminder = await createReminderDomain(prisma, {
+      taskId,
+      userId,
+      fechaHora,
     });
 
-    if (!task) {
+    if (!reminder) {
       return res.status(404).json({ message: 'Tarea no encontrada' });
     }
 
-    // fechaHora viene como string ISO del middleware, convertir a Date
-    const reminderDate = new Date(fechaHora);
-
-    const reminder = await prisma.reminders.create({
-      data: {
-        fechaHora: reminderDate,
-        taskId,
-      },
-    });
-
-    res.status(201).json(reminder);
+    res.status(201).json(reminderFactory.toClientReminder(reminder));
   } catch (error) {
     console.error('Error en createReminder:', error);
     res.status(500).json({ message: 'Error al crear recordatorio' });
@@ -83,23 +59,14 @@ export const deleteReminder = async (req: any, res: Response) => {
     const { id } = req.params;
     const userId = (req as AuthRequest).userId;
 
-    // Verificar que el recordatorio pertenece a una tarea del usuario
-    const reminder = await prisma.reminders.findFirst({
-      where: {
-        id,
-        tasks: {
-          projects: { userId }
-        }
-      }
+    const reminder = await deleteReminderDomain(prisma, {
+      reminderId: id,
+      userId,
     });
 
     if (!reminder) {
       return res.status(404).json({ message: 'Recordatorio no encontrado' });
     }
-
-    await prisma.reminders.delete({
-      where: { id },
-    });
 
     res.json({ message: 'Recordatorio eliminado' });
   } catch (error) {
