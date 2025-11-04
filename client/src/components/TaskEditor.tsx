@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Calendar, Flag, Tag, Trash2, Plus, Search } from 'lucide-react';
+import { Calendar, Flag, Tag, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTaskEditorStore } from '@/store/useStore';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import LabelModal from './LabelModal';
+import { Button, Modal, ScrollArea } from '@/components/ui';
 
 export default function TaskEditor() {
   const queryClient = useQueryClient();
   const { isOpen, taskId, projectId: defaultProjectId, sectionId: initialSectionId, parentTaskId, closeEditor } = useTaskEditorStore();
+
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -158,24 +161,53 @@ export default function TaskEditor() {
     { value: 4, label: 'P4 - Ninguna', color: 'bg-priority-4' },
   ];
 
-  return (
-    <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="glass-modal rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden animate-scale-in">
-        <div className="sticky top-0 px-6 py-5 divider-soft bg-white/75 dark:bg-slate-900/70 backdrop-blur">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {taskId ? 'Editar Tarea' : 'Nueva Tarea'}
-            </h2>
-            <button
-              onClick={closeEditor}
-              className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-white/70 dark:bg-slate-800/60 text-gray-500 hover:text-gray-900 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-slate-700 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+  const handleDelete = () => {
+    if (!taskId) return;
+    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
+      deleteMutation.mutate();
+    }
+  };
 
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 overflow-y-auto">
+  const submitDisabled = createMutation.isPending || updateMutation.isPending;
+
+  const modalFooter = (
+    <div className="flex w-full items-center justify-between gap-3">
+      {taskId ? (
+        <Button
+          variant="danger"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+        </Button>
+      ) : (
+        <span />
+      )}
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" onClick={closeEditor}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={() => formRef.current?.requestSubmit()}
+          disabled={submitDisabled}
+        >
+          {submitDisabled ? (taskId ? 'Guardando...' : 'Creando...') : taskId ? 'Guardar' : 'Crear'}
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={closeEditor}
+        title={taskId ? 'Editar tarea' : 'Nueva tarea'}
+        size="xl"
+        footer={modalFooter}
+      >
+        <ScrollArea className="max-h-[70vh] pr-2">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 pb-4">
           <div className="space-y-3">
             <input
               type="text"
@@ -381,46 +413,12 @@ export default function TaskEditor() {
               </div>
             )}
           </div>
+          </form>
+        </ScrollArea>
+      </Modal>
 
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            {taskId && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-                    deleteMutation.mutate();
-                  }
-                }}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-              >
-                <Trash2 className="w-4 h-4" />
-                Eliminar
-              </button>
-            )}
-
-            <div className="flex gap-3 ml-auto">
-              <button
-                type="button"
-                onClick={closeEditor}
-                className="btn-secondary"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {taskId ? 'Guardar' : 'Crear'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Label Modal */}
       <LabelModal isOpen={showLabelModal} onClose={() => setShowLabelModal(false)} />
-    </div>
+    </>
   );
 }
 

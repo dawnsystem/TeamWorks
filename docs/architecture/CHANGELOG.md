@@ -10,6 +10,6 @@
 - ✅ Creada librería UI inicial (`Button`, `Card`, `Modal`, `ScrollArea`) alineada con el sistema de diseño y aplicada en `Settings`.
 - ✅ Refactor de comentarios con `commentDomainService` + `commentFactory`; controlador reducido a orquestación y normalización unificada.
 - ✅ Recordatorios alineados con la capa de dominio (`reminderDomainService` + `reminderFactory`) y respuestas serializadas.
-- ✅ `LabelModal` y los modales de proyectos (crear/editar) migrados al kit de UI reutilizable manteniendo drag + persistencia de posición.
+- ✅ `LabelModal`, modales de proyectos y `TaskEditor` migrados al kit de UI reutilizable con acciones en el footer y scroll consistente.
 
 
