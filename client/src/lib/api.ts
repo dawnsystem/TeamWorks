@@ -273,6 +273,9 @@ export const aiAPI = {
   
   execute: (actions: AIAction[]) =>
     api.post('/ai/execute', { actions }),
+  
+  planner: (payload: { goal: string; mode: 'auto' | 'interactive'; answers?: string[]; provider?: string; context?: any; }) =>
+    api.post('/ai/planner', payload),
 };
 
 export default api;

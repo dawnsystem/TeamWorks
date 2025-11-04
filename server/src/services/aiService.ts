@@ -10,6 +10,21 @@ const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 let groqClient: Groq | null = null;
 let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
 
+const isProviderConfigured = (provider: SupportedAIProvider) => {
+  if (provider === 'groq') {
+    const apiKey = process.env.GROQ_API_KEY;
+    return Boolean(apiKey && apiKey !== 'YOUR_GROQ_API_KEY_HERE');
+  }
+  if (provider === 'gemini') {
+    const apiKey = process.env.GEMINI_API_KEY;
+    return Boolean(apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE');
+  }
+  return false;
+};
+
+const getConfiguredProviders = () =>
+  SUPPORTED_AI_PROVIDERS.filter((provider) => isProviderConfigured(provider));
+
 const getGroqClient = () => {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
@@ -39,6 +54,68 @@ const resolveProvider = (provider?: string): SupportedAIProvider => {
     throw new Error(`Proveedor IA '${selected}' no soportado. Usa uno de: ${SUPPORTED_AI_PROVIDERS.join(', ')}`);
   }
   return selected as SupportedAIProvider;
+};
+
+const getProviderOrder = (preferred: SupportedAIProvider, override?: string) => {
+  if (override) {
+    return [preferred];
+  }
+
+  const configured = getConfiguredProviders();
+  const ordered = configured.filter((p) => p === preferred);
+  for (const provider of configured) {
+    if (!ordered.includes(provider)) {
+      ordered.push(provider);
+    }
+  }
+  // Always ensure preferred first even if not configured (will throw quickly)
+  if (!ordered.includes(preferred)) {
+    ordered.unshift(preferred);
+  }
+  return ordered;
+};
+
+const generateWithProvider = async (prompt: string, provider: SupportedAIProvider): Promise<string> => {
+  if (provider === 'gemini') {
+    const model = getGeminiModel();
+    const result = await model.generateContent(prompt);
+    return result.response.text() || '';
+  }
+
+  const client = getGroqClient();
+  const completion = await client.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    model: DEFAULT_GROQ_MODEL,
+    temperature: 0.7,
+    max_tokens: 1000
+  });
+
+  return completion.choices[0]?.message?.content || '';
+};
+
+const generateWithFallback = async (
+  prompt: string,
+  preferred: SupportedAIProvider,
+  override?: string,
+): Promise<{ text: string; providerUsed: SupportedAIProvider }> => {
+  const providersToTry = getProviderOrder(preferred, override);
+  const errors: string[] = [];
+
+  for (const provider of providersToTry) {
+    try {
+      const text = await generateWithProvider(prompt, provider);
+      if (!text.trim()) {
+        throw new Error('Respuesta vacía');
+      }
+      return { text, providerUsed: provider };
+    } catch (error: any) {
+      errors.push(`${provider}: ${error?.message || error}`);
+    }
+  }
+
+  throw new Error(
+    `No se pudo generar respuesta usando los proveedores disponibles. Detalles: ${errors.join(' | ')}`,
+  );
 };
 
 // Función para parsear fechas en lenguaje natural
@@ -167,24 +244,6 @@ const parseActionsFromText = (text: string): AIAction[] => {
   }
 };
 
-const generateWithProvider = async (prompt: string, provider: SupportedAIProvider): Promise<string> => {
-  if (provider === 'gemini') {
-    const model = getGeminiModel();
-    const result = await model.generateContent(prompt);
-    return result.response.text() || '';
-  }
-
-  const client = getGroqClient();
-  const completion = await client.chat.completions.create({
-    messages: [{ role: 'user', content: prompt }],
-    model: DEFAULT_GROQ_MODEL,
-    temperature: 0.7,
-    max_tokens: 1000
-  });
-
-  return completion.choices[0]?.message?.content || '';
-};
-
 const createFallbackAction = (input: string): AIAction => ({
   type: 'create',
   entity: 'task',
@@ -195,16 +254,133 @@ const createFallbackAction = (input: string): AIAction => ({
   explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
 });
 
+export interface ProcessNaturalLanguageResult {
+  actions: AIAction[];
+  providerUsed: SupportedAIProvider;
+  raw?: string;
+  fallback?: boolean;
+  errorMessage?: string;
+}
+
+export interface AIPlanTask {
+  title: string;
+  description?: string;
+  priority?: number;
+  dueInDays?: number;
+  dependencies?: string[];
+}
+
+export interface AIPlanPhase {
+  title: string;
+  description?: string;
+  duration?: string;
+  tasks: AIPlanTask[];
+}
+
+export interface AIPlan {
+  goal: string;
+  summary: string;
+  assumptions?: string[];
+  timeline?: string[];
+  phases: AIPlanPhase[];
+}
+
+interface PlannerQuestionsResponse {
+  status: 'questions';
+  questions: string[];
+}
+
+interface PlannerPlanResponse {
+  status: 'plan';
+  plan: AIPlan;
+  notes?: string[];
+}
+
+type InternalPlannerResponse = PlannerQuestionsResponse | PlannerPlanResponse;
+
+const stripCodeFences = (text: string) => {
+  let jsonText = text.trim();
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```[a-zA-Z]*\n?/, '');
+  }
+  if (jsonText.endsWith('```')) {
+    jsonText = jsonText.slice(0, jsonText.lastIndexOf('```'));
+  }
+  return jsonText.trim();
+};
+
+const parsePlanFromText = (text: string): InternalPlannerResponse => {
+  const jsonText = stripCodeFences(text);
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (parsed.status === 'questions' && Array.isArray(parsed.questions)) {
+      return {
+        status: 'questions',
+        questions: parsed.questions.filter((q: unknown) => typeof q === 'string' && q.trim()).map((q: string) => q.trim()),
+      };
+    }
+
+    if (parsed.status === 'plan' && parsed.plan) {
+      const phases = Array.isArray(parsed.plan.phases) ? parsed.plan.phases : [];
+      const normalizedPhases: AIPlanPhase[] = phases
+        .filter((phase: any) => phase && typeof phase.title === 'string')
+        .map((phase: any) => ({
+          title: phase.title,
+          description: phase.description,
+          duration: phase.duration,
+          tasks: Array.isArray(phase.tasks)
+            ? phase.tasks
+                .filter((task: any) => task && typeof task.title === 'string')
+                .map((task: any) => ({
+                  title: task.title,
+                  description: task.description,
+                  priority: typeof task.priority === 'number' ? task.priority : undefined,
+                  dueInDays: typeof task.dueInDays === 'number' ? task.dueInDays : undefined,
+                  dependencies: Array.isArray(task.dependencies)
+                    ? task.dependencies.filter((dep: unknown) => typeof dep === 'string')
+                    : undefined,
+                }))
+            : [],
+        }));
+
+      const plan: AIPlan = {
+        goal: parsed.plan.goal || '',
+        summary: parsed.plan.summary || '',
+        assumptions: Array.isArray(parsed.plan.assumptions)
+          ? parsed.plan.assumptions.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        timeline: Array.isArray(parsed.plan.timeline)
+          ? parsed.plan.timeline.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        phases: normalizedPhases,
+      };
+
+      return {
+        status: 'plan',
+        plan,
+        notes: Array.isArray(parsed.notes)
+          ? parsed.notes.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+      };
+    }
+
+    throw new Error('Respuesta del planner con formato inesperado');
+  } catch (error) {
+    console.error('Error parseando respuesta del planner IA:', error, '\nRespuesta original:', text);
+    throw new Error('No se pudo interpretar la respuesta del planner IA');
+  }
+};
+
 export const processNaturalLanguage = async (
   input: string,
   context?: any,
   providerOverride?: string
-): Promise<AIAction[]> => {
-  try {
-    const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
-    const provider = resolveProvider(providerOverride);
+): Promise<ProcessNaturalLanguageResult> => {
+  const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
+  const preferred = resolveProvider(providerOverride);
 
-    const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
+  const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
 Tu trabajo es interpretar comandos en lenguaje natural y convertirlos en acciones estructuradas.
 
 Contexto actual del usuario:
@@ -498,18 +674,129 @@ Colores disponibles:
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
-    const text = await generateWithProvider(prompt, provider);
+  try {
+    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
     const actions = parseActionsFromText(text);
 
     if (!actions.length) {
       throw new Error('La respuesta de la IA no contenía acciones válidas');
     }
 
-    return actions;
-  } catch (error) {
+    return {
+      actions,
+      providerUsed,
+      raw: text,
+      fallback: providerUsed !== preferred,
+    };
+  } catch (error: any) {
     console.error('Error en processNaturalLanguage:', error);
-    return [createFallbackAction(input)];
+    const fallbackProvider = preferred;
+    return {
+      actions: [createFallbackAction(input)],
+      providerUsed: fallbackProvider,
+      fallback: true,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
   }
+};
+
+interface GenerateAIPlanOptions {
+  providerOverride?: string;
+  answers?: string[];
+  context?: any;
+}
+
+const buildPlannerPrompt = (
+  goal: string,
+  mode: 'auto' | 'interactive',
+  answers: string[] = [],
+  contextString: string,
+) => {
+  if (mode === 'interactive' && (!answers.length)) {
+    return `Eres un planner experto que ayuda a desglosar objetivos complejos en planes ejecutables.
+Contexto del usuario:
+${contextString}
+
+Objetivo principal: "${goal}"
+
+Primero necesitas hacer hasta 3 preguntas aclaratorias para entender mejor el objetivo. Devuelve únicamente un JSON con el formato:
+{
+  "status": "questions",
+  "questions": ["Pregunta 1", "Pregunta 2", "Pregunta 3"]
+}
+
+- Máximo 3 preguntas.
+- Las preguntas deben ser claras, concretas y enfocadas en información crítica para planificar.
+- Si crees que no necesitas más información, devuelve un array vacío.
+- No incluyas texto adicional fuera del JSON.`;
+  }
+
+  const answersBlock = answers
+    .map((answer, idx) => `Respuesta ${idx + 1}: ${answer}`)
+    .join('\n');
+
+  return `Eres un planner experto que ayuda a desglosar objetivos complejos en planes accionables.
+Objetivo principal: "${goal}"
+
+Información adicional del usuario:
+${contextString}
+
+${answers.length ? `Respuestas del usuario a preguntas anteriores:\n${answersBlock}` : 'No se proporcionaron respuestas adicionales.'}
+
+Devuelve un JSON con el siguiente formato estricto:
+{
+  "status": "plan",
+  "plan": {
+    "goal": "Resumen del objetivo",
+    "summary": "Resumen ejecutivo del plan",
+    "assumptions": ["Lista opcional de supuestos"],
+    "timeline": ["Hito 1", "Hito 2"],
+    "phases": [
+      {
+        "title": "Nombre de la fase",
+        "description": "Descripción breve",
+        "duration": "Duración estimada (ej. 2 semanas)",
+        "tasks": [
+          {
+            "title": "Tarea específica",
+            "description": "Descripción breve",
+            "priority": 1,
+            "dueInDays": 7,
+            "dependencies": ["Otra tarea"]
+          }
+        ]
+      }
+    ]
+  },
+  "notes": ["Notas opcionales para el usuario"]
+}
+
+Reglas:
+- Prioridad debe ser un número 1-4 (1=alta, 4=baja).
+- dueInDays es un número entero >= 0 indicando días desde hoy.
+- Incluye al menos 2 fases si el objetivo amerita dividirse.
+- Cada fase debe tener al menos una tarea.
+- Mantén las descripciones concisas.
+- No incluyas texto fuera del JSON.`;
+};
+
+export const generateAIPlan = async (
+  goal: string,
+  mode: 'auto' | 'interactive',
+  options: GenerateAIPlanOptions = {},
+) => {
+  const preferred = resolveProvider(options.providerOverride);
+  const contextString = options.context ? JSON.stringify(options.context, null, 2) : 'Sin contexto adicional';
+
+  const prompt = buildPlannerPrompt(goal, mode, options.answers, contextString);
+
+  const { text, providerUsed } = await generateWithFallback(prompt, preferred, options.providerOverride);
+  const parsed = parsePlanFromText(text);
+
+  return {
+    ...parsed,
+    providerUsed,
+  };
 };
 
 export const executeAIActions = async (actions: AIAction[], userId: string, prisma: any) => {

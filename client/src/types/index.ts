@@ -49,6 +49,7 @@ export interface Task {
   parentTask?: Task;
   comments?: Comment[];
   reminders?: Reminder[];
+  automationNotes?: string[];
   _count?: {
     subTasks: number;
     comments: number;
@@ -131,7 +132,49 @@ export interface AIResponse {
   actions: AIAction[];
   results?: any[];
   autoExecuted: boolean;
+  providerUsed: string;
+  fallback?: boolean;
+  message?: string;
+  raw?: string;
 }
+
+export interface AIPlanTask {
+  title: string;
+  description?: string;
+  priority?: number;
+  dueInDays?: number;
+  dependencies?: string[];
+}
+
+export interface AIPlanPhase {
+  title: string;
+  description?: string;
+  duration?: string;
+  tasks: AIPlanTask[];
+}
+
+export interface AIPlan {
+  goal: string;
+  summary: string;
+  assumptions?: string[];
+  timeline?: string[];
+  phases: AIPlanPhase[];
+}
+
+export interface AIPlannerQuestionsResponse {
+  status: 'questions';
+  questions: string[];
+  providerUsed: string;
+}
+
+export interface AIPlannerPlanResponse {
+  status: 'plan';
+  plan: AIPlan;
+  providerUsed: string;
+  notes?: string[];
+}
+
+export type AIPlannerResponse = AIPlannerQuestionsResponse | AIPlannerPlanResponse;
 
 export type ViewType = 'inbox' | 'today' | 'week' | 'project' | 'label';
 

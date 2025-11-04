@@ -77,10 +77,14 @@ export default function TaskEditor() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => tasksAPI.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Tarea creada');
+      if (response.data?.automationNotes?.length) {
+        response.data.automationNotes.forEach((note: string) => toast.success(note));
+      } else {
+        toast.success('Tarea creada');
+      }
       closeEditor();
     },
     onError: (error: any) => {
@@ -92,11 +96,15 @@ export default function TaskEditor() {
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => tasksAPI.update(taskId!, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Tarea actualizada');
+      if (response.data?.automationNotes?.length) {
+        response.data.automationNotes.forEach((note: string) => toast.success(note));
+      } else {
+        toast.success('Tarea actualizada');
+      }
       closeEditor();
     },
     onError: (error: any) => {

@@ -35,6 +35,9 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
   - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
 - 🧠 **Motores IA seleccionables** - Cambia entre Groq (LLaMA 3.1) y Google Gemini 1.5 según tu caso de uso
+- 🗺️ **AI Planner** ⭐ NUEVO: genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
+- 🔁 **Fallback automático** ⭐ NUEVO: si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
+- ⚙️ **Automatizaciones inteligentes** ⭐ NUEVO: al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
 
 ### Gestión Inteligente de Relaciones 🧠 (Próximamente)
 - 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
@@ -307,6 +310,9 @@ El asistente de IA puede interpretar comandos en lenguaje natural:
 
 "crear proyecto de trabajo"
 → Crea un nuevo proyecto llamado "trabajo"
+
+"generar plan para lanzar campaña de marketing"
+→ Abre el AI Planner; puedes elegir modo automático o responder preguntas antes de obtener el plan.
 ```
 
 ### Modos de ejecución:
@@ -379,8 +385,19 @@ TeamWorks/
 
 ## 🛠️ Comandos Útiles
 
-### Backend
+### Scripts útiles
 ```bash
+# Frontend
+npm run dev          # Desarrollo
+npm run build        # Build de producción
+npm run preview      # Preview del build
+npm run lint         # ESLint completo
+npm run lint:ui      # Valida uso del kit UI (botones, modales, etc.)
+npx tsc --noEmit      # Type-check
+npm run storybook     # Storybook interactivo
+npm run storybook:build # Build estático de Storybook
+
+# Backend
 npm run dev          # Desarrollo con hot reload
 npm run build        # Compilar TypeScript
 npm start            # Producción

@@ -140,6 +140,14 @@ export const aiExecuteSchema = z.object({
   })).min(1, 'Debe proporcionar al menos una acción'),
 });
 
+export const aiPlannerSchema = z.object({
+  goal: z.string().min(5, 'Describe un objetivo con al menos 5 caracteres').max(2000, 'El objetivo es demasiado largo'),
+  mode: z.enum(['auto', 'interactive']).default('auto'),
+  answers: z.array(z.string().min(1)).optional().default([]),
+  context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
+});
+
 // Tipo de datos inferidos de los esquemas
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -157,6 +165,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AIProcessInput = z.infer<typeof aiProcessSchema>;
 export type AIExecuteInput = z.infer<typeof aiExecuteSchema>;
+export type AIPlannerInput = z.infer<typeof aiPlannerSchema>;
 
 // Esquemas de validación para plantillas
 export const createTemplateSchema = z.object({

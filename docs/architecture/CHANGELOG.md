@@ -13,5 +13,8 @@
 - ✅ `LabelModal`, modales de proyectos y `TaskEditor` migrados al kit de UI reutilizable con acciones en el footer y scroll consistente.
 - ✅ Definidos tokens compartidos (`spacingTokens`, `radiiTokens`, `shadowTokens`) y guía de componentes UI.
 - ✅ Storybook configurado (`npm run storybook`) con historia base de `Button` y script `lint:ui` para validar uso del kit.
+- ✅ Multi-proveedor IA con fallback Groq/Gemini, planner interactivo/automático y creación masiva desde plan.
+- ✅ Automatizaciones de tareas (fecha por prioridad, sección única) con notas en UI y pruebas unitarias en domain services.
+- ✅ Workflow CI (`.github/workflows/ci.yml`) que ejecuta lint, lint:ui, tsc, storybook build y tests backend.
 
 

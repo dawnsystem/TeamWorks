@@ -24,6 +24,7 @@ import { notificationService } from '../services/notificationService';
 import { taskSubscriptionService } from '../services/taskSubscriptionService';
 import { toClientTask as buildClientTask } from '../factories/taskFactory';
 import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
+import { applyTaskAutomations } from '../services/automationService';
 
 const prisma = new PrismaClient();
 
@@ -163,14 +164,36 @@ export const createTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
+    const parsedDueDate = parseDateInput(fechaVencimiento);
+
+    const automations = await applyTaskAutomations(
+      prisma,
+      userId,
+      {
+        titulo,
+        projectId,
+        prioridad: prioridad || 4,
+        fechaVencimiento: parsedDueDate ?? null,
+        sectionId: sectionId ?? null,
+      },
+      {
+        mode: 'create',
+        hasDueDate: Boolean(fechaVencimiento),
+        hasSection: Boolean(sectionId),
+      },
+    );
+
+    const finalFechaVencimiento = automations.patches.fechaVencimiento ?? parsedDueDate;
+    const finalSectionId = automations.patches.sectionId ?? sectionId ?? null;
+
     const task = await prisma.tasks.create({
       data: {
         titulo,
         descripcion,
         prioridad: prioridad || 4,
-        fechaVencimiento: parseDateInput(fechaVencimiento),
+        fechaVencimiento: finalFechaVencimiento,
         projectId,
-        sectionId,
+        sectionId: finalSectionId,
         parentTaskId,
         orden: orden || 0,
         createdBy: userId,
@@ -190,7 +213,11 @@ export const createTask = async (req: any, res: Response) => {
     // Auto-subscribe creator to the task
     await taskSubscriptionService.autoSubscribeCreator(task.id, userId);
 
-    const clientTask = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTaskRaw = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTask = {
+      ...clientTaskRaw,
+      ...(automations.notes.length > 0 && { automationNotes: automations.notes }),
+    };
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
@@ -264,6 +291,33 @@ export const updateTask = async (req: any, res: Response) => {
     if (sectionId !== undefined) updateData.sectionId = sectionId;
     if (orden !== undefined) updateData.orden = orden;
 
+    const automations = await applyTaskAutomations(
+      prisma,
+      userId,
+      {
+        titulo: updateData.titulo ?? existingTask.titulo,
+        projectId: existingTask.projectId,
+        prioridad: updateData.prioridad ?? existingTask.prioridad,
+        fechaVencimiento:
+          updateData.fechaVencimiento !== undefined
+            ? updateData.fechaVencimiento
+            : existingTask.fechaVencimiento,
+        sectionId: updateData.sectionId ?? existingTask.sectionId,
+      },
+      {
+        mode: 'update',
+        hasDueDate: fechaVencimiento !== undefined,
+        hasSection: sectionId !== undefined,
+      },
+    );
+
+    if (automations.patches.fechaVencimiento !== undefined && fechaVencimiento === undefined) {
+      updateData.fechaVencimiento = automations.patches.fechaVencimiento;
+    }
+    if (automations.patches.sectionId !== undefined && sectionId === undefined) {
+      updateData.sectionId = automations.patches.sectionId;
+    }
+
     const task = await prisma.tasks.update({
       where: { id },
       data: updateData,
@@ -275,7 +329,11 @@ export const updateTask = async (req: any, res: Response) => {
       }
     });
 
-    const clientTask = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTaskRaw = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTask = {
+      ...clientTaskRaw,
+      ...(automations.notes.length > 0 && { automationNotes: automations.notes }),
+    };
     const eventProjectId = clientTask?.project?.id ?? task.projectId;
 
     // Enviar evento SSE
