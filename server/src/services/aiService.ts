@@ -314,14 +314,32 @@ interface PlannerPlanResponse {
 type InternalPlannerResponse = PlannerQuestionsResponse | PlannerPlanResponse;
 
 const stripCodeFences = (text: string) => {
+  if (!text) return '';
+
+  // Intentar extraer contenido dentro de un bloque ``` ```
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    return fenceMatch[1].trim();
+  }
+
   let jsonText = text.trim();
+
   if (jsonText.startsWith('```')) {
     jsonText = jsonText.replace(/^```[a-zA-Z]*\n?/, '');
   }
   if (jsonText.endsWith('```')) {
     jsonText = jsonText.slice(0, jsonText.lastIndexOf('```'));
   }
-  return jsonText.trim();
+
+  jsonText = jsonText.trim();
+
+  const firstBrace = jsonText.indexOf('{');
+  const lastBrace = jsonText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+    return jsonText.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  return jsonText;
 };
 
 const parsePlanFromText = (text: string): InternalPlannerResponse => {

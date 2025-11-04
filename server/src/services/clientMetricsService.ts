@@ -27,6 +27,10 @@ const metricsStore: ClientMetricRecord[] = [];
 export const addClientMetrics = (payload: ClientMetricInput) => {
   const receivedAt = new Date().toISOString();
 
+  if (!payload || !Array.isArray(payload.metrics)) {
+    return;
+  }
+
   payload.metrics.forEach((metric) => {
     metricsStore.push({
       sessionId: payload.sessionId,
