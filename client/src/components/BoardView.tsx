@@ -64,13 +64,11 @@ export default function BoardView() {
   });
 
   const {
-    tasks: rootTasks,
     tasksMap,
     sectionMap,
     tasksWithoutSection,
     isLoading,
   } = useTasksTree({ projectId: projectId ?? undefined, labelId: selectedLabelId });
-  const tasks = rootTasks;
 
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => tasksAPI.update(id, data).then(res => res.data),

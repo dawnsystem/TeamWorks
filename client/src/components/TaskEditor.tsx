@@ -272,9 +272,9 @@ export default function TaskEditor() {
                 📌 Se creará como subtarea
               </p>
               {/* Mostrar breadcrumb de sección si viene del contexto */}
-              {sectionId && projectDetail?.sections && (
+              {initialSectionId && projectDetail?.sections && (
                 <p className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">
-                  En sección: {projectDetail.sections.find((s: any) => s.id === sectionId)?.nombre || 'Sin sección'}
+                  En sección: {projectDetail.sections.find((s: any) => s.id === initialSectionId)?.nombre || 'Sin sección'}
                 </p>
               )}
             </div>

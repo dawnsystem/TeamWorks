@@ -43,7 +43,7 @@ export default function Sidebar() {
     if (!showNewProjectModal) return;
     const onMove = (e: MouseEvent) => {
       if (!dragging) return;
-      setModalPos(prev => ({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y }));
+      setModalPos({ x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
     };
     const onUp = () => setDragging(false);
     window.addEventListener('mousemove', onMove);

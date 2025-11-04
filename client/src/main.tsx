@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import App from './App.tsx';
 import './index.css';
+import { applyTheme, defaultLightTheme } from './design';
+
+applyTheme(defaultLightTheme);
 
 const queryClient = new QueryClient({
   defaultOptions: {
