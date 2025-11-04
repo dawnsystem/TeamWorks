@@ -78,15 +78,50 @@ import { ScrollArea } from '@/components/ui';
 </ScrollArea>
 ```
 
+### Input
+- Utiliza la clase `input-elevated` y soporta los atributos nativos (`type`, `placeholder`, etc.).
+- Usa siempre label asociado (`<label>` con `htmlFor`) para accesibilidad.
+
+```tsx
+import { Input } from '@/components/ui';
+
+<label htmlFor="project-name" className="text-sm font-medium text-gray-700">
+  Nombre del proyecto
+</label>
+<Input id="project-name" placeholder="Ej: Proyecto Alpha" />
+```
+
+### Select
+- Mantiene la estética de los inputs y soporta todas las opciones nativas.
+- Recuerda incluir una opción por defecto (`value=""`) cuando corresponda.
+
+```tsx
+import { Select } from '@/components/ui';
+
+<label htmlFor="priority" className="text-sm font-medium text-gray-700">
+  Prioridad
+</label>
+<Select id="priority" defaultValue="">
+  <option value="" disabled>
+    Selecciona prioridad
+  </option>
+  <option value="1">Alta</option>
+  <option value="2">Media</option>
+  <option value="3">Baja</option>
+</Select>
+```
+
 ## Checklist de QA visual
 - [ ] ¿El componente proviene de `components/ui`?
 - [ ] ¿Se usan spacing/radius/shadow tokens y clases consistentes?
 - [ ] ¿El modal (si aplica) mantiene accesibilidad (focus, Esc, overlay)?
+- [ ] ¿Inputs y selects tienen etiqueta, placeholder claro y contrastan con el fondo?
 - [ ] ¿Los estados `disabled`, `hover`, `focus` son visibles y accesibles?
-- [ ] ¿Se mantiene contraste mínimo AA (texto vs fondo)?
+- [ ] ¿El diseño respeta contraste mínimo AA (texto vs fondo)?
+- [ ] ¿Se documentó el componente (Storybook y/o ejemplos en esta guía)?
 
 ## Próximos componentes
-- `Tabs`, `Tooltip`, `Badge`, `Input`, `Select` (próximas iteraciones).
+- `Tabs`, `Tooltip`, `Badge` (siguientes iteraciones).
 - Documentar patrones de `Sidebar`/`Paneles` una vez migrados.
 
 

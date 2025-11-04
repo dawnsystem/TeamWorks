@@ -83,14 +83,14 @@
 - [ ] Scrollbars: usar `ScrollArea` o clases utilitarias centralizadas.
 - [ ] Modales: deben invocar el layout base y respetar `spacing/radius/shadow` definidos.
 - [ ] Modales: verificar focus trap, cierre con `Esc` y restauración de foco al cerrar.
-- [ ] Inputs/Botones: utilizar tokens y variantes documentadas.
+- [ ] Inputs/Botones/Select: utilizar tokens y variantes documentadas.
 - [ ] Nuevas pantallas: validar contraste y tipografía con tokens.
+- [ ] ¿Hay historias en Storybook para el componente (mínimo estado feliz)?
 
 ## 8. Próximas acciones
 
 - Crear los archivos `tokens.ts`, `defaultTheme.ts`, `applyTheme.ts`. ✅
-- Montar Storybook y documentar los primeros componentes. ✅ (`npm run storybook`, historia base en `UI/Button`)
+- Montar Storybook y documentar los primeros componentes. ✅ (`npm run storybook`, historias base en UI/Button, UI/Modal, UI/Card, UI/ScrollArea, UI/Input, UI/Select)
 - Definir un “lint” visual/estático opcional (ej. revisar importaciones desde `components/ui`). ✅ (`npm run lint:ui`, regla `no-restricted-imports`)
-- Documentar el patrón de `Modal` (props, accesibilidad, ejemplos) en la guía. ✅
 
 
