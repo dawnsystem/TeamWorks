@@ -88,9 +88,9 @@
 
 ## 8. Próximas acciones
 
-- Crear los archivos `tokens.ts`, `defaultTheme.ts`, `applyTheme.ts`.
-- Montar Storybook y documentar los primeros componentes.
-- Definir un “lint” visual/estático opcional (ej. revisar importaciones desde `components/ui`).
+- Crear los archivos `tokens.ts`, `defaultTheme.ts`, `applyTheme.ts`. ✅
+- Montar Storybook y documentar los primeros componentes. ✅ (`npm run storybook`, historia base en `UI/Button`)
+- Definir un “lint” visual/estático opcional (ej. revisar importaciones desde `components/ui`). ✅ (`npm run lint:ui`, regla `no-restricted-imports`)
 - Documentar el patrón de `Modal` (props, accesibilidad, ejemplos) en la guía. ✅
 
 

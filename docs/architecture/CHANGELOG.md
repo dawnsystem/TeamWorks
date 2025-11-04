@@ -11,6 +11,7 @@
 - ✅ Refactor de comentarios con `commentDomainService` + `commentFactory`; controlador reducido a orquestación y normalización unificada.
 - ✅ Recordatorios alineados con la capa de dominio (`reminderDomainService` + `reminderFactory`) y respuestas serializadas.
 - ✅ `LabelModal`, modales de proyectos y `TaskEditor` migrados al kit de UI reutilizable con acciones en el footer y scroll consistente.
-- ▶️ Pendiente: revisar accesibilidad en modales (focus inicial, cierre con Esc, tab trapping) y documentar patrón en el Design System.
+- ✅ Definidos tokens compartidos (`spacingTokens`, `radiiTokens`, `shadowTokens`) y guía de componentes UI.
+- ✅ Storybook configurado (`npm run storybook`) con historia base de `Button` y script `lint:ui` para validar uso del kit.
 
 
