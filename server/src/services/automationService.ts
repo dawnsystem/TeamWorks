@@ -43,7 +43,12 @@ export const applyTaskAutomations = async (
     const sections = await prisma.sections.findMany({
       where: {
         projectId: draft.projectId,
-        projects: { userId },
+        projects: {
+          OR: [
+            { userId },
+            { shares: { some: { sharedWithId: userId } } },
+          ],
+        },
       },
       select: { id: true },
       take: 2,

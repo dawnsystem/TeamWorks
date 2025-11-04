@@ -15,6 +15,10 @@ import sseRoutes from './routes/sseRoutes';
 import { sseService } from './services/sseService';
 import { reminderService } from './services/reminderService';
 import templateRoutes from './routes/templateRoutes';
+import projectShareRoutes from './routes/projectShareRoutes';
+import { metricsMiddleware, getMetricsSnapshot } from './middleware/metrics';
+import { addClientMetrics, getClientMetrics } from './services/clientMetricsService';
+import { authMiddleware } from './middleware/auth';
 
 dotenv.config();
 
@@ -26,6 +30,7 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Middleware
 app.use(compression());
+app.use(metricsMiddleware);
 // CORS configuration that allows access from local network devices
 app.use(cors({
   origin: (origin, callback) => {
@@ -108,9 +113,28 @@ app.get('/api/server-info', (req, res) => {
   res.json(serverInfo);
 });
 
+app.get('/metrics', (req, res) => {
+  res.status(200).json(getMetricsSnapshot());
+});
+
+app.post('/api/metrics/client', (req, res) => {
+  try {
+    addClientMetrics(req.body);
+    res.status(202).json({ status: 'accepted' });
+  } catch (error) {
+    console.error('Error guardando métricas de cliente:', error);
+    res.status(400).json({ error: 'Formato de métricas inválido' });
+  }
+});
+
+app.get('/api/metrics/client', authMiddleware, (req, res) => {
+  res.json(getClientMetrics(200));
+});
+
 // Protected routes (require auth)
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/projects', projectShareRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/ai', aiRoutes);

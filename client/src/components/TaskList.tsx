@@ -1,6 +1,6 @@
 import TaskItem from './TaskItem';
 import TaskItemSkeleton from './TaskItemSkeleton';
-import type { Task } from '@/types';
+import type { Task, ProjectRole } from '@/types';
 import { Sparkles, PlusCircle } from 'lucide-react';
 import { useTaskEditorStore } from '@/store/useStore';
 
@@ -8,11 +8,13 @@ interface TaskListProps {
   tasks: Task[];
   loading?: boolean;
   emptyMessage?: string;
+  projectRole?: ProjectRole | null;
 }
 
-export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas' }: TaskListProps) {
+export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas', projectRole }: TaskListProps) {
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const isEmpty = !loading && tasks.length === 0;
+  const canWrite = projectRole ? projectRole !== 'viewer' : true;
 
   if (loading) {
     return (
@@ -37,14 +39,16 @@ export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas
               Empieza añadiendo una tarea para mantener tu día bajo control. Puedes vincular etiquetas, fechas y secciones para una organización impecable.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => openEditor()}
-            className="btn-primary"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Crear la primera tarea
-          </button>
+          {canWrite && (
+            <button
+              type="button"
+              onClick={() => openEditor()}
+              className="btn-primary"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Crear la primera tarea
+            </button>
+          )}
         </div>
       </div>
     );
@@ -53,7 +57,7 @@ export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas
   return (
     <div className="space-y-3 w-full">
       {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} />
+        <TaskItem key={task.id} task={task} role={projectRole ?? undefined} />
       ))}
     </div>
   );

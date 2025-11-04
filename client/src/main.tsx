@@ -5,8 +5,10 @@ import { Toaster } from 'react-hot-toast';
 import App from './App.tsx';
 import './index.css';
 import { applyTheme, defaultLightTheme } from './design';
+import { initPerformanceObservers } from './utils/perfObserver';
 
 applyTheme(defaultLightTheme);
+initPerformanceObservers();
 
 const queryClient = new QueryClient({
   defaultOptions: {

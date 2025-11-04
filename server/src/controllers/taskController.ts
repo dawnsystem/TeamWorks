@@ -18,15 +18,23 @@ function parseDateInput(input?: string | null): Date | null {
 }
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
 import { taskSubscriptionService } from '../services/taskSubscriptionService';
 import { toClientTask as buildClientTask } from '../factories/taskFactory';
 import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
 import { applyTaskAutomations } from '../services/automationService';
+import { assertProjectPermission } from '../services/projectShareService';
 
 const prisma = new PrismaClient();
+
+const projectAccessWhere = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
 
 const toClientTask = buildClientTask;
 
@@ -38,11 +46,10 @@ async function getTaskWithAllSubtasks(taskId: string, userId: string, taskOverri
 export const getTasks = async (req: any, res: Response) => {
   try {
     const { projectId, sectionId, filter, search, labelId } = req.query;
+    const userId = (req as AuthRequest).userId!;
 
     // Construir filtros
-    const where: any = {
-      projects: { userId: (req as AuthRequest).userId }
-    };
+    const where: Prisma.tasksWhereInput = {};
 
     if (projectId) {
       where.projectId = projectId as string;
@@ -104,9 +111,9 @@ export const getTasks = async (req: any, res: Response) => {
       where.parentTaskId = null;
     }
 
-    const tasks = await fetchTasksForest(prisma, where, (req as AuthRequest).userId!);
+    const tasks = await fetchTasksForest(prisma, where, userId);
 
-    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${tasks.length}`);
+    console.log(`[getTasks] Usuario ${userId} - Tareas encontradas: ${tasks.length}`);
     res.json(tasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
@@ -153,15 +160,10 @@ export const createTask = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId!;
 
     // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.projects.findFirst({
-      where: {
-        id: projectId,
-        userId
-      }
-    });
-
-    if (!project) {
-      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    try {
+      await assertProjectPermission(prisma, projectId, userId, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
     const parsedDueDate = parseDateInput(fechaVencimiento);
@@ -255,12 +257,18 @@ export const updateTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        projects: { userId }
+        ...projectAccessWhere(userId),
       }
     });
 
     if (!existingTask) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, userId, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
     // Si se proporcionan labelIds, actualizar las relaciones
@@ -318,7 +326,7 @@ export const updateTask = async (req: any, res: Response) => {
       updateData.sectionId = automations.patches.sectionId;
     }
 
-    const task = await prisma.tasks.update({
+    const taskUpdated = await prisma.tasks.update({
       where: { id },
       data: updateData,
       include: {
@@ -329,18 +337,18 @@ export const updateTask = async (req: any, res: Response) => {
       }
     });
 
-    const clientTaskRaw = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTaskRaw = (await fetchSingleTask(prisma, taskUpdated.id, userId)) ?? toClientTask(taskUpdated);
     const clientTask = {
       ...clientTaskRaw,
       ...(automations.notes.length > 0 && { automationNotes: automations.notes }),
     };
-    const eventProjectId = clientTask?.project?.id ?? task.projectId;
+    const eventProjectId = clientTask?.project?.id ?? taskUpdated.projectId;
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
       projectId: eventProjectId,
-      taskId: task.id,
+      taskId: taskUpdated.id,
       userId,
       timestamp: new Date(),
       data: clientTask,
@@ -361,12 +369,18 @@ export const deleteTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        projects: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 
     if (!existingTask) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, (req as AuthRequest).userId!, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
     await prisma.tasks.delete({
@@ -397,7 +411,7 @@ export const toggleTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        projects: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 
@@ -405,7 +419,13 @@ export const toggleTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    const task = await prisma.tasks.update({
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, (req as AuthRequest).userId!, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
+    }
+
+    const taskUpdated = await prisma.tasks.update({
       where: { id },
       data: {
         completada: !existingTask.completada
@@ -418,28 +438,28 @@ export const toggleTask = async (req: any, res: Response) => {
       }
     });
 
-    const clientTask = (await fetchSingleTask(prisma, task.id, (req as AuthRequest).userId!)) ?? toClientTask(task);
-    const eventProjectId = clientTask?.project?.id ?? task.projectId;
+    const clientTask = (await fetchSingleTask(prisma, taskUpdated.id, (req as AuthRequest).userId!)) ?? toClientTask(taskUpdated);
+    const eventProjectId = clientTask?.project?.id ?? taskUpdated.projectId;
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
       projectId: eventProjectId,
-      taskId: task.id,
+      taskId: taskUpdated.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
       data: clientTask,
     });
 
     // Crear notificación para suscriptores si la tarea se marcó como completada
-    if ((clientTask?.completada ?? task.completada) && !existingTask.completada) {
+    if ((clientTask?.completada ?? taskUpdated.completada) && !existingTask.completada) {
       await notificationService.createForTaskSubscribers(
-        task.id,
+        taskUpdated.id,
         (req as AuthRequest).userId!,
         {
           type: 'task_completed',
           title: '✅ Tarea completada',
-          message: `Se completó la tarea: "${clientTask?.titulo ?? task.titulo}"`,
+          message: `Se completó la tarea: "${clientTask?.titulo ?? taskUpdated.titulo}"`,
           projectId: eventProjectId,
           metadata: {
             completedAt: new Date(),
@@ -462,7 +482,6 @@ export const getTasksByLabel = async (req: any, res: Response) => {
     const tasks = await fetchTasksForest(
       prisma,
       {
-        projects: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
         task_labels: { some: { labelId } },
       },
@@ -489,7 +508,7 @@ export const reorderTasks = async (req: any, res: Response) => {
     const tasks = await prisma.tasks.findMany({
       where: {
         id: { in: taskIds },
-        projects: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 

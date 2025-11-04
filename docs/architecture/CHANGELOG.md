@@ -16,5 +16,9 @@
 - ✅ Multi-proveedor IA con fallback Groq/Gemini, planner interactivo/automático y creación masiva desde plan.
 - ✅ Automatizaciones de tareas (fecha por prioridad, sección única) con notas en UI y pruebas unitarias en domain services.
 - ✅ Workflow CI (`.github/workflows/ci.yml`) que ejecuta lint, lint:ui, tsc, storybook build y tests backend.
+- ✅ Seguridad por proyecto: `projectShareService` + rutas REST con roles viewer/editor/manager, SSE y notificaciones al compartir o revocar.
+- ✅ UI colaborativa: modal de compartir lazy-loaded, TaskItem/Board/List bloquean edición según rol y muestran estados de solo lectura.
+- ✅ Observabilidad end-to-end: `/metrics` de servidor + ingesta `/api/metrics/client` (LCP/FID/CLS/longtask) y envío automático desde el navegador.
+- ✅ Performance: carga diferida de `BoardView`/`ProjectShareModal`, automatismos en React Query y vigilancia de long tasks en cliente.
 
 

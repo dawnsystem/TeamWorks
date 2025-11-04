@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
+import { taskSubscriptionService } from '../services/taskSubscriptionService';
+import { assertProjectPermission } from '../services/projectShareService';
 import {
   fetchCommentsByTask,
   createComment as createCommentDomain,
@@ -13,11 +15,39 @@ import { commentFactory } from '../factories/commentFactory';
 
 const prisma = new PrismaClient();
 
+const projectAccessCondition = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
+
 // GET /api/tasks/:taskId/comments
 export const getCommentsByTask = async (req: any, res: Response) => {
   try {
     const { taskId } = req.params;
     const userId = (req as AuthRequest).userId;
+
+    const task = await prisma.tasks.findFirst({
+      where: {
+        id: taskId,
+        ...projectAccessCondition(userId),
+      },
+      include: {
+        projects: {
+          select: {
+            id: true,
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Tarea no encontrada' });
+    }
+
+    await assertProjectPermission(prisma, task.projects.id, userId, 'write');
 
     const comments = await fetchCommentsByTask(prisma, taskId, userId);
 
@@ -42,6 +72,24 @@ export const createComment = async (req: any, res: Response) => {
     if (!userId) {
       return res.status(401).json({ message: 'No autenticado' });
     }
+
+    const task = await prisma.tasks.findFirst({
+      where: {
+        id: taskId,
+        ...projectAccessCondition(userId),
+      },
+      include: {
+        projects: {
+          select: { id: true, userId: true },
+        },
+      },
+    });
+
+    if (!task) {
+      return res.status(404).json({ message: 'Tarea no encontrada' });
+    }
+
+    await assertProjectPermission(prisma, task.projects.id, userId, 'write');
 
     const comment = await createCommentDomain(prisma, {
       taskId,
@@ -97,6 +145,29 @@ export const updateComment = async (req: any, res: Response) => {
       return res.status(401).json({ message: 'No autenticado' });
     }
 
+    const existingComment = await prisma.comments.findFirst({
+      where: {
+        id,
+        userId,
+        tasks: {
+          ...projectAccessCondition(userId),
+        },
+      },
+      include: {
+        tasks: {
+          select: {
+            projectId: true,
+          },
+        },
+      },
+    });
+
+    if (!existingComment) {
+      return res.status(404).json({ message: 'Comentario no encontrado' });
+    }
+
+    await assertProjectPermission(prisma, existingComment.tasks.projectId, userId, 'write');
+
     const comment = await updateCommentDomain(prisma, {
       commentId: id,
       userId,
@@ -135,6 +206,28 @@ export const deleteComment = async (req: any, res: Response) => {
     if (!userId) {
       return res.status(401).json({ message: 'No autenticado' });
     }
+
+    const existingComment = await prisma.comments.findFirst({
+      where: {
+        id,
+        tasks: {
+          ...projectAccessCondition(userId),
+        },
+      },
+      include: {
+        tasks: {
+          select: {
+            projectId: true,
+          },
+        },
+      },
+    });
+
+    if (!existingComment) {
+      return res.status(404).json({ message: 'Comentario no encontrado' });
+    }
+
+    await assertProjectPermission(prisma, existingComment.tasks.projectId, userId, 'write');
 
     const comment = await deleteCommentDomain(prisma, {
       commentId: id,

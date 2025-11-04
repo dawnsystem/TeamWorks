@@ -7,19 +7,45 @@ const baseProjectInclude = {
   _count: {
     select: { tasks: true },
   },
+  shares: {
+    select: {
+      id: true,
+      sharedWithId: true,
+      role: true,
+      createdAt: true,
+      updatedAt: true,
+      sharedWith: {
+        select: {
+          id: true,
+          nombre: true,
+          email: true,
+        },
+      },
+    },
+  },
 };
+
+const projectAccessFilter = (userId: string) => ({
+  OR: [
+    { userId },
+    { shares: { some: { sharedWithId: userId } } },
+  ],
+});
 
 export async function fetchProjects(prisma: PrismaClient, userId: string) {
   return prisma.projects.findMany({
-    where: { userId },
+    where: projectAccessFilter(userId),
     include: baseProjectInclude,
-    orderBy: { orden: 'asc' },
+    orderBy: [{ userId: 'asc' }, { orden: 'asc' }],
   });
 }
 
 export async function fetchProject(prisma: PrismaClient, projectId: string, userId: string) {
   return prisma.projects.findFirst({
-    where: { id: projectId, userId },
+    where: {
+      id: projectId,
+      ...projectAccessFilter(userId),
+    },
     include: baseProjectInclude,
   });
 }
@@ -46,7 +72,10 @@ export async function updateProject(
   data: { nombre?: string; color?: string | null; orden?: number | null },
 ) {
   const existing = await prisma.projects.findFirst({
-    where: { id: projectId, userId },
+    where: {
+      id: projectId,
+      userId,
+    },
   });
 
   if (!existing) return null;
@@ -84,7 +113,7 @@ export async function createSection(
   data: { nombre: string; orden?: number | null },
 ) {
   const project = await prisma.projects.findFirst({
-    where: { id: projectId, userId },
+    where: { id: projectId },
   });
 
   if (!project) return null;
@@ -114,7 +143,6 @@ export async function updateSection(
   const section = await prisma.sections.findFirst({
     where: {
       id: sectionId,
-      projects: { userId },
     },
   });
 
@@ -134,7 +162,6 @@ export async function deleteSection(prisma: PrismaClient, sectionId: string, use
   const section = await prisma.sections.findFirst({
     where: {
       id: sectionId,
-      projects: { userId },
     },
   });
 

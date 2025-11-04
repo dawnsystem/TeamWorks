@@ -5,6 +5,13 @@ import { processNaturalLanguage, executeAIActions, generateAIPlan } from '../ser
 
 const prisma = new PrismaClient();
 
+const projectAccessWhere = (userId: string) => ({
+  OR: [
+    { userId },
+    { shares: { some: { sharedWithId: userId } } },
+  ],
+});
+
 export const processCommand = async (req: any, res: Response) => {
   try {
     const { command, autoExecute = false, context, provider } = req.body;
@@ -15,13 +22,13 @@ export const processCommand = async (req: any, res: Response) => {
     let userContext = context;
     if (!userContext) {
       const projects = await prisma.projects.findMany({
-        where: { userId: (req as AuthRequest).userId },
+        where: projectAccessWhere((req as AuthRequest).userId!),
         select: { id: true, nombre: true }
       });
 
       const recentTasks = await prisma.tasks.findMany({
         where: {
-          projects: { userId: (req as AuthRequest).userId },
+          projects: projectAccessWhere((req as AuthRequest).userId!),
           completada: false
         },
         take: 10,
@@ -91,14 +98,14 @@ export const generatePlan = async (req: any, res: Response) => {
     let userContext = context;
     if (!userContext) {
       const projects = await prisma.projects.findMany({
-        where: { userId },
+        where: projectAccessWhere(userId),
         select: { id: true, nombre: true, color: true },
         orderBy: { orden: 'asc' },
       });
 
       const activeTasks = await prisma.tasks.findMany({
         where: {
-          projects: { userId },
+          projects: projectAccessWhere(userId),
           completada: false,
         },
         take: 5,

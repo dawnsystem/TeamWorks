@@ -8,6 +8,7 @@ const prismaMock = () => ({
     findMany: jest.fn(),
     create: jest.fn(),
     delete: jest.fn(),
+    findFirst: jest.fn(),
   },
 });
 
@@ -72,7 +73,7 @@ describe('reminderDomainService', () => {
   describe('deleteReminder', () => {
     it('devuelve null cuando no encuentra el recordatorio', async () => {
       const prisma = prismaMock();
-      prisma.reminders.findFirst = jest.fn().mockResolvedValue(null);
+      prisma.reminders.findFirst.mockResolvedValue(null);
 
       const result = await deleteReminder(prisma as any, {
         reminderId: 'rem-1',
@@ -93,7 +94,7 @@ describe('reminderDomainService', () => {
           projects: { id: 'project-1', userId },
         },
       };
-      prisma.reminders.findFirst = jest.fn().mockResolvedValue(reminderMock);
+      prisma.reminders.findFirst.mockResolvedValue(reminderMock);
       prisma.reminders.delete.mockResolvedValue({});
 
       const result = await deleteReminder(prisma as any, {

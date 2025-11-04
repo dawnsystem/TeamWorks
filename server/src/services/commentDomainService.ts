@@ -24,11 +24,18 @@ const baseCommentInclude = {
   },
 };
 
+const projectAccess = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
+
 export async function fetchCommentsByTask(prisma: PrismaClient, taskId: string, userId: string) {
   const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
-      projects: { userId },
+      ...projectAccess(userId),
     },
   });
 
@@ -39,9 +46,7 @@ export async function fetchCommentsByTask(prisma: PrismaClient, taskId: string, 
   return prisma.comments.findMany({
     where: {
       taskId,
-      tasks: {
-        projects: { userId },
-      },
+      tasks: projectAccess(userId),
     },
     include: baseCommentInclude,
     orderBy: { createdAt: 'asc' },
@@ -63,7 +68,7 @@ export async function createComment(
   const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
-      projects: { userId },
+      ...projectAccess(userId),
     },
   });
 
@@ -97,9 +102,7 @@ export async function updateComment(
     where: {
       id: commentId,
       userId,
-      tasks: {
-        projects: { userId },
-      },
+      tasks: projectAccess(userId),
     },
   });
 
@@ -128,9 +131,7 @@ export async function deleteComment(
     where: {
       id: commentId,
       userId,
-      tasks: {
-        projects: { userId },
-      },
+      tasks: projectAccess(userId),
     },
     include: baseCommentInclude,
   });

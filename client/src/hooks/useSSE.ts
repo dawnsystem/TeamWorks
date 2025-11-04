@@ -4,10 +4,11 @@ import { useSettingsStore } from '@/store/useStore';
 
 interface SSEEvent {
   type: 'task_created' | 'task_updated' | 'task_deleted' | 'task_reordered' | 'connected' |
-        'project_created' | 'project_updated' | 'project_deleted' |
+        'project_created' | 'project_updated' | 'project_deleted' | 'project_shared' | 'project_unshared' |
         'section_created' | 'section_updated' | 'section_deleted' |
         'comment_created' | 'comment_updated' | 'comment_deleted' |
-        'label_created' | 'label_updated' | 'label_deleted';
+        'label_created' | 'label_updated' | 'label_deleted' |
+        'notification_created' | 'notification_read' | 'notification_deleted';
   projectId?: string;
   taskId?: string;
   sectionId?: string;
@@ -48,6 +49,7 @@ export function useSSE(options: UseSSEOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       if (event.projectId) {
         queryClient.invalidateQueries({ queryKey: ['project', event.projectId] });
+        queryClient.invalidateQueries({ queryKey: ['project', event.projectId, 'shares'] });
       }
     } else if (event.type.startsWith('section_')) {
       if (event.projectId) {
@@ -65,6 +67,8 @@ export function useSSE(options: UseSSEOptions = {}) {
       queryClient.invalidateQueries({ queryKey: ['labels'] });
       // Invalidar también las tareas que puedan tener esta etiqueta
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    } else if (event.type.startsWith('notification_')) {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
   }, [queryClient]);
 
@@ -129,6 +133,14 @@ export function useSSE(options: UseSSEOptions = {}) {
         handleTaskEvent({ ...JSON.parse(e.data), type: 'project_deleted' });
       });
 
+      eventSource.addEventListener('project_shared', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'project_shared' });
+      });
+
+      eventSource.addEventListener('project_unshared', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'project_unshared' });
+      });
+
       // Eventos de secciones
       eventSource.addEventListener('section_created', (e) => {
         handleTaskEvent({ ...JSON.parse(e.data), type: 'section_created' });
@@ -166,6 +178,19 @@ export function useSSE(options: UseSSEOptions = {}) {
 
       eventSource.addEventListener('label_deleted', (e) => {
         handleTaskEvent({ ...JSON.parse(e.data), type: 'label_deleted' });
+      });
+
+      // Eventos de notificaciones
+      eventSource.addEventListener('notification_created', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'notification_created' });
+      });
+
+      eventSource.addEventListener('notification_read', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'notification_read' });
+      });
+
+      eventSource.addEventListener('notification_deleted', (e) => {
+        handleTaskEvent({ ...JSON.parse(e.data), type: 'notification_deleted' });
       });
 
       // Error en la conexión

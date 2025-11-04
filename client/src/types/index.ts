@@ -6,6 +6,21 @@ export interface User {
   updatedAt: string;
 }
 
+export type ProjectRole = 'owner' | 'manager' | 'editor' | 'viewer';
+
+export interface ProjectShare {
+  id: string;
+  sharedWithId: string;
+  role: 'viewer' | 'editor' | 'manager';
+  createdAt: string;
+  updatedAt: string;
+  sharedWith?: {
+    id: string;
+    nombre: string;
+    email: string;
+  };
+}
+
 export interface Project {
   id: string;
   nombre: string;
@@ -15,6 +30,8 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   sections?: Section[];
+  shares?: ProjectShare[];
+  currentUserRole?: ProjectRole;
   _count?: {
     tasks: number;
   };

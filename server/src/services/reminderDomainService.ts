@@ -9,17 +9,29 @@ const baseReminderInclude = {
         select: {
           id: true,
           userId: true,
+          shares: {
+            select: {
+              sharedWithId: true,
+            },
+          },
         },
       },
     },
   },
 };
 
+const projectAccess = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
+
 export async function fetchRemindersByTask(prisma: PrismaClient, taskId: string, userId: string) {
   const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
-      projects: { userId },
+      ...projectAccess(userId),
     },
   });
 
@@ -30,9 +42,7 @@ export async function fetchRemindersByTask(prisma: PrismaClient, taskId: string,
   return prisma.reminders.findMany({
     where: {
       taskId,
-      tasks: {
-        projects: { userId },
-      },
+      tasks: projectAccess(userId),
     },
     include: baseReminderInclude,
     orderBy: { fechaHora: 'asc' },
@@ -54,7 +64,7 @@ export async function createReminder(
   const task = await prisma.tasks.findFirst({
     where: {
       id: taskId,
-      projects: { userId },
+      ...projectAccess(userId),
     },
   });
 
@@ -86,9 +96,7 @@ export async function deleteReminder(
   const reminder = await prisma.reminders.findFirst({
     where: {
       id: reminderId,
-      tasks: {
-        projects: { userId },
-      },
+      tasks: projectAccess(userId),
     },
     include: baseReminderInclude,
   });

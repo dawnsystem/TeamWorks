@@ -22,6 +22,23 @@ const baseTaskInclude = {
   },
 } satisfies Prisma.tasksInclude;
 
+const taskAccessFilter = (userId: string): Prisma.tasksWhereInput => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
+
+const withAccess = (where: Prisma.tasksWhereInput | undefined, userId: string): Prisma.tasksWhereInput => {
+  if (!where || Object.keys(where).length === 0) {
+    return taskAccessFilter(userId);
+  }
+
+  return {
+    AND: [taskAccessFilter(userId), where],
+  };
+};
+
 export async function buildTaskTree(
   prisma: PrismaClient,
   taskId: string,
@@ -32,8 +49,10 @@ export async function buildTaskTree(
     taskOverride ??
     (await prisma.tasks.findFirst({
       where: {
-        id: taskId,
-        projects: { userId },
+        AND: [
+          { id: taskId },
+          taskAccessFilter(userId),
+        ],
       },
       include: baseTaskInclude,
     }));
@@ -42,8 +61,10 @@ export async function buildTaskTree(
 
   const subTasks = await prisma.tasks.findMany({
     where: {
-      parentTaskId: taskId,
-      projects: { userId },
+      AND: [
+        { parentTaskId: taskId },
+        taskAccessFilter(userId),
+      ],
     },
     include: baseTaskInclude,
     orderBy: { orden: 'asc' },
@@ -68,7 +89,7 @@ export async function fetchTasksForest(
   userId: string,
 ): Promise<any[]> {
   const rootTasks = await prisma.tasks.findMany({
-    where,
+    where: withAccess(where, userId),
     include: baseTaskInclude,
     orderBy: { orden: 'asc' },
   });

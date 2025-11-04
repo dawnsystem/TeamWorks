@@ -1,9 +1,20 @@
 import axios from 'axios';
-import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder, TaskTemplate } from '@/types';
+import type {
+  User,
+  Project,
+  Task,
+  Label,
+  AIAction,
+  TaskFilters,
+  Comment,
+  Reminder,
+  TaskTemplate,
+  ProjectShare,
+} from '@/types';
 import { useAuthStore } from '@/store/useStore';
 
 // Function to get API URL from settings or environment
-const getApiUrl = () => {
+export const getApiUrl = () => {
   // Try to get from localStorage settings first
   const settingsStorage = localStorage.getItem('settings-storage');
   if (settingsStorage) {
@@ -167,6 +178,14 @@ export const projectsAPI = {
     api.patch(`/projects/sections/${id}`, data),
   
   deleteSection: (id: string) => api.delete(`/projects/sections/${id}`),
+};
+
+export const projectSharesAPI = {
+  getAccess: (projectId: string) => api.get<{ role: string }>(`/projects/${projectId}/access`),
+  list: (projectId: string) => api.get<ProjectShare[]>(`/projects/${projectId}/shares`),
+  upsert: (projectId: string, data: { email: string; role: 'viewer' | 'editor' | 'manager' }) =>
+    api.post<ProjectShare[]>(`/projects/${projectId}/shares`, data),
+  remove: (projectId: string, shareId: string) => api.delete<ProjectShare[]>(`/projects/${projectId}/shares/${shareId}`),
 };
 
 // Tasks

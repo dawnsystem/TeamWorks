@@ -56,14 +56,15 @@ describe('taskDomainService', () => {
   describe('fetchTasksForest', () => {
     it('convierte cada tarea raíz usando el factory', async () => {
       const prisma = prismaMock();
-      prisma.tasks.findMany.mockResolvedValue([
-        { id: 'task-1', titulo: 'Tarea 1' },
-        { id: 'task-2', titulo: 'Tarea 2' },
-      ]);
-      prisma.tasks.findMany.mockResolvedValueOnce([]);
-      prisma.tasks.findMany.mockResolvedValueOnce([]);
+      prisma.tasks.findMany
+        .mockResolvedValueOnce([
+          { id: 'task-1', titulo: 'Tarea 1' },
+          { id: 'task-2', titulo: 'Tarea 2' },
+        ])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
 
-      const result = await fetchTasksForest(prisma as any, { projects: { userId } }, userId);
+      const result = await fetchTasksForest(prisma as any, {}, userId);
 
       expect(result).toEqual([
         { id: 'task-1', titulo: 'Tarea 1', other_tasks: [] },

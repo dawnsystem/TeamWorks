@@ -68,6 +68,7 @@ model projects {
   users         users           @relation(fields: [userId], references: [id], onDelete: Cascade)
   sections      sections[]
   tasks         tasks[]
+  shares        project_shares[]
 }
 
 model reminders {
@@ -171,4 +172,30 @@ model users {
   projects           projects[]
   task_subscriptions task_subscriptions[]
   task_templates     task_templates[]
+  ownedShares        project_shares[]     @relation("ProjectShareOwner")
+  sharedProjects     project_shares[]     @relation("ProjectShareUser")
+}
+
+enum ProjectShareRole {
+  viewer
+  editor
+  manager
+}
+
+model project_shares {
+  id           String           @id @default(cuid())
+  projectId    String
+  ownerId      String
+  sharedWithId String
+  role         ProjectShareRole @default(editor)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project    projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner      users    @relation("ProjectShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedWith users    @relation("ProjectShareUser", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sharedWithId])
+  @@index([sharedWithId])
+  @@index([ownerId])
 }

@@ -3,17 +3,19 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react';
 import TaskList from './TaskList';
 import { useTaskEditorStore } from '@/store/useStore';
-import type { Task } from '@/types';
+import type { Task, ProjectRole } from '@/types';
 
 interface BoardColumnProps {
   sectionId: string | null;
   title: string;
   tasks: Task[];
   projectId: string;
+  role?: ProjectRole | null;
 }
 
-export default function BoardColumn({ sectionId, title, tasks, projectId }: BoardColumnProps) {
+export default function BoardColumn({ sectionId, title, tasks, projectId, role }: BoardColumnProps) {
   const openEditor = useTaskEditorStore((state) => state.openEditor);
+  const canWrite = role ? role !== 'viewer' : true;
   
   const { setNodeRef, isOver } = useDroppable({
     id: sectionId ? `section-${sectionId}` : 'section-no-section',
@@ -46,7 +48,7 @@ export default function BoardColumn({ sectionId, title, tasks, projectId }: Boar
           strategy={verticalListSortingStrategy}
         >
           {tasks.length > 0 ? (
-            <TaskList tasks={tasks} />
+            <TaskList tasks={tasks} projectRole={role ?? undefined} />
           ) : (
             <div className="text-center py-8">
               <p className="text-sm text-gray-400 dark:text-gray-500">
@@ -60,8 +62,14 @@ export default function BoardColumn({ sectionId, title, tasks, projectId }: Boar
       {/* Add Task Button */}
       <div className="flex-shrink-0 p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700">
         <button
-          onClick={() => openEditor({ projectId, sectionId: sectionId || undefined })}
-          className="w-full flex items-center justify-center sm:justify-start gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition"
+          onClick={() => {
+            if (!canWrite) return;
+            openEditor({ projectId, sectionId: sectionId || undefined });
+          }}
+          className={`w-full flex items-center justify-center sm:justify-start gap-2 text-gray-600 dark:text-gray-400 transition ${
+            canWrite ? 'hover:text-gray-900 dark:hover:text-gray-100' : 'opacity-60 cursor-not-allowed'
+          }`}
+          disabled={!canWrite}
         >
           <Plus className="w-4 h-4 flex-shrink-0" />
           <span className="text-xs sm:text-sm truncate">Agregar tarea</span>

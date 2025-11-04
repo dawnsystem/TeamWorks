@@ -67,6 +67,16 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - ⚙️ **Totalmente configurable** - Configura todo desde la UI sin tocar código
 - 📖 **Manual integrado** - Ayuda y documentación accesible desde la app
 
+### Colaboración
+- 👥 **Compartir proyectos** - Invita colaboradores por email y gestiona accesos desde el modal de compartir
+- 🛡️ **Roles granulares** - Viewer (solo lectura), Editor (CRUD de tareas) y Gestor (estructura + permisos)
+- ⚡ **Revocación en caliente** - Cambios de rol y eliminaciones aplican al instante sin recargar la app
+
+### Observabilidad & Performance
+- 📊 **/metrics** - Dashboard JSON con peticiones totales, errores y tiempos medio/máximo por ruta
+- 🛰️ **Telemetría cliente** - El navegador envía LCP/FID/CLS y long-tasks a `/api/metrics/client` vía `sendBeacon`
+- 💤 **Lazy loading crítico** - Vista Kanban y modal de compartir se cargan bajo demanda para reducir el bundle inicial
+
 ## 🛠️ Tecnologías
 
 ### Backend

@@ -12,7 +12,9 @@ export type NotificationType =
   | 'mention'
   | 'ai_action'
   | 'project_created'
-  | 'section_created';
+  | 'section_created'
+  | 'project_shared'
+  | 'project_unshared';
 
 interface CreateNotificationData {
   userId: string;

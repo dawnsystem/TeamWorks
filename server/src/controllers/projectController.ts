@@ -14,13 +14,15 @@ import {
   updateSection as updateSectionService,
   deleteSection as deleteSectionService,
 } from '../services/projectDomainService';
+import { assertProjectPermission } from '../services/projectShareService';
 
 const prisma = new PrismaClient();
 
 export const getProjects = async (req: any, res: Response) => {
   try {
-    const projects = await fetchProjects(prisma, (req as AuthRequest).userId!);
-    const clientProjects = projects.map(projectFactory.toClientProject);
+    const userId = (req as AuthRequest).userId!;
+    const projects = await fetchProjects(prisma, userId);
+    const clientProjects = projects.map((project) => projectFactory.toClientProject(project, userId));
 
     console.log(`[getProjects] Usuario ${(req as AuthRequest).userId} - Proyectos encontrados: ${clientProjects.length}`);
     res.json(clientProjects);
@@ -43,7 +45,7 @@ export const getProject = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    res.json(projectFactory.toClientProject(project));
+    res.json(projectFactory.toClientProject(project, (req as AuthRequest).userId!));
   } catch (error) {
     console.error('Error en getProject:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -61,7 +63,7 @@ export const createProject = async (req: any, res: Response) => {
       userId: (req as AuthRequest).userId!,
     });
 
-    const clientProject = projectFactory.toClientProject(project);
+    const clientProject = projectFactory.toClientProject(project, (req as AuthRequest).userId!);
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
@@ -96,7 +98,7 @@ export const updateProject = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    const clientProject = projectFactory.toClientProject(project);
+    const clientProject = projectFactory.toClientProject(project, (req as AuthRequest).userId!);
 
     sseService.sendTaskEvent({
       type: 'project_updated',
@@ -142,6 +144,13 @@ export const createSection = async (req: any, res: Response) => {
   try {
     const { projectId } = req.params;
     const { nombre, orden } = req.body;
+    const userId = (req as AuthRequest).userId!;
+
+    try {
+      await assertProjectPermission(prisma, projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
 
     const section = await createSectionService(prisma, projectId, (req as AuthRequest).userId!, {
       nombre,
@@ -174,6 +183,22 @@ export const updateSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, orden } = req.body;
+    const userId = (req as AuthRequest).userId!;
+
+    const existingSection = await prisma.sections.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+
+    if (!existingSection) {
+      return res.status(404).json({ error: 'Sección no encontrada' });
+    }
+
+    try {
+      await assertProjectPermission(prisma, existingSection.projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
 
     const updatedSection = await updateSectionService(prisma, id, (req as AuthRequest).userId!, {
       nombre,
@@ -205,6 +230,22 @@ export const updateSection = async (req: any, res: Response) => {
 export const deleteSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as AuthRequest).userId!;
+
+    const existingSection = await prisma.sections.findUnique({
+      where: { id },
+      select: { projectId: true },
+    });
+
+    if (!existingSection) {
+      return res.status(404).json({ error: 'Sección no encontrada' });
+    }
+
+    try {
+      await assertProjectPermission(prisma, existingSection.projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
 
     const section = await deleteSectionService(prisma, id, (req as AuthRequest).userId!);
 
