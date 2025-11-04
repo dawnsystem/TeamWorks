@@ -91,7 +91,6 @@
 - Crear los archivos `tokens.ts`, `defaultTheme.ts`, `applyTheme.ts`.
 - Montar Storybook y documentar los primeros componentes.
 - Definir un “lint” visual/estático opcional (ej. revisar importaciones desde `components/ui`).
-- Convertir `Settings` a `Modal` base como piloto.
-- Documentar el patrón de `Modal` (props, accesibilidad, ejemplos) en la guía.
+- Documentar el patrón de `Modal` (props, accesibilidad, ejemplos) en la guía. ✅
 
 
