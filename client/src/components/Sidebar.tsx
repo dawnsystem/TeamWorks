@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '@/store/useStore';
 import { projectsAPI, labelsAPI } from '@/lib/api';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import ContextMenu from './ContextMenu';
@@ -26,6 +26,9 @@ import LabelManager from './LabelManager';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import type { Label } from '@/types';
 import toast from 'react-hot-toast';
+import { Button, Modal } from '@/components/ui';
+
+const PROJECT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'];
 
 export default function Sidebar() {
   const location = useLocation();
@@ -38,6 +41,7 @@ export default function Sidebar() {
   const [modalPos, setModalPos] = useState<{x:number;y:number}>({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<{x:number;y:number}>({ x: 0, y: 0 });
+  const newProjectFormRef = useRef<HTMLFormElement | null>(null);
 
   useEffect(() => {
     if (!showNewProjectModal) return;
@@ -85,6 +89,7 @@ export default function Sidebar() {
       setShowNewProjectModal(false);
       setNewProjectName('');
       setNewProjectColor('#3b82f6');
+      setDragging(false);
     },
   });
 
@@ -444,7 +449,7 @@ export default function Sidebar() {
                   Color
                 </label>
                 <div className="flex gap-2">
-                  {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'].map(
+                  {PROJECT_COLORS.map(
                     (color) => (
                       <button
                         key={color}
@@ -481,94 +486,104 @@ export default function Sidebar() {
         </div>
       )}
 
-      {/* Modal Nuevo Proyecto */}
-      {showNewProjectModal && (
-        <div className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowNewProjectModal(false)}>
-          <div
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96 absolute"
-            style={{ left: `calc(50% - 12rem)`, top: `20%`, transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="flex items-center justify-between mb-4 cursor-move select-none"
-              onMouseDown={(e) => { setDragging(true); setDragOffset({ x: e.clientX - modalPos.x, y: e.clientY - modalPos.y }); }}
-            >
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Nuevo Proyecto</h3>
-              <button
-                onClick={() => setShowNewProjectModal(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (newProjectName.trim()) {
-                  createProjectMutation.mutate({
-                    nombre: newProjectName.trim(),
-                    color: newProjectColor,
-                  });
-                }
+      <Modal
+        isOpen={showNewProjectModal}
+        onClose={() => {
+          setShowNewProjectModal(false);
+          setDragging(false);
+        }}
+        title="Nuevo proyecto"
+        hideCloseButton
+        size="sm"
+        style={{ transform: `translate(${modalPos.x}px, ${modalPos.y}px)` }}
+        footer={(
+          <div className="flex w-full items-center justify-between gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShowNewProjectModal(false);
+                setDragging(false);
               }}
-              className="space-y-4"
             >
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  placeholder="Ej: Trabajo, Personal, Estudios..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Color
-                </label>
-                <div className="flex gap-2">
-                  {['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#6366f1'].map(
-                    (color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        onClick={() => setNewProjectColor(color)}
-                        className={`w-8 h-8 rounded-full transition-transform ${
-                          newProjectColor === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    )
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewProjectModal(false)}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!newProjectName.trim() || createProjectMutation.isPending}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                >
-                  {createProjectMutation.isPending ? 'Creando...' : 'Crear'}
-                </button>
-              </div>
-            </form>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!newProjectName.trim() || createProjectMutation.isPending}
+              onClick={() => newProjectFormRef.current?.requestSubmit()}
+            >
+              {createProjectMutation.isPending ? 'Creando...' : 'Crear'}
+            </Button>
           </div>
-        </div>
-      )}
+        )}
+      >
+        <div
+          className="mb-6 h-10 cursor-move select-none rounded-lg bg-slate-100/60 dark:bg-slate-700/40"
+          onMouseDown={(event) => {
+            setDragging(true);
+            setDragOffset({ x: event.clientX - modalPos.x, y: event.clientY - modalPos.y });
+          }}
+        />
+
+        <form
+          ref={newProjectFormRef}
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (newProjectName.trim()) {
+              createProjectMutation.mutate({
+                nombre: newProjectName.trim(),
+                color: newProjectColor,
+              });
+            }
+          }}
+          className="space-y-5"
+        >
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Nombre
+            </label>
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(event) => setNewProjectName(event.target.value)}
+              placeholder="Ej: Trabajo, Personal, Estudios..."
+              className="input-elevated"
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Color
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PROJECT_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setNewProjectColor(color)}
+                  className={`h-9 w-9 rounded-full transition-transform ${
+                    newProjectColor === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+                  }`}
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+        </form>
+
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            setShowNewProjectModal(false);
+            setDragging(false);
+          }}
+          className="absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full"
+          aria-label="Cerrar"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </Modal>
 
       {/* Modal Etiqueta */}
       <LabelModal
