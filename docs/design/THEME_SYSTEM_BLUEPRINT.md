@@ -45,7 +45,7 @@
 - Componentes iniciales:
   - `Button`: variantes `primary`, `secondary`, `ghost`, `danger`.
   - `Card`: estilo glass + variantes.
-  - `Modal`: layout estándar (header/body/footer), scroll interior consistente.
+  - `Modal`: layout estándar (header/body/footer), scroll interior consistente, focus trap y cierre con `Esc`.
   - `ScrollArea`: envoltorio con estilos de scrollbar controlados.
   - `Tabs`, `Tooltip`, `Badge`, `Input`, `Select`.
   - `Surface`: contenedor con blur/gradient.
@@ -64,6 +64,10 @@
   - Naming (PascalCase, `Ui` prefix opcional si se desea).
   - Props estándar (`size`, `variant`, `tone`).
   - Ejemplos de composición.
+- Añadir sección “Modal Pattern” con:
+  - Grilla de props (`size`, `hideCloseButton`, `footer`).
+  - Reglas de accesibilidad: focus inicial, salto con `Tab`, cierre con `Esc`, overlay cierra al hacer click.
+  - Ejemplos: `Settings`, `LabelModal`, `TaskEditor`, `Sidebar` (nuevo proyecto / editar proyecto).
 
 ## 6. Migraciones escalonadas
 
@@ -78,6 +82,7 @@
 - [ ] Todo nuevo componente debe declararse en `components/ui` o estar basado en uno existente.
 - [ ] Scrollbars: usar `ScrollArea` o clases utilitarias centralizadas.
 - [ ] Modales: deben invocar el layout base y respetar `spacing/radius/shadow` definidos.
+- [ ] Modales: verificar focus trap, cierre con `Esc` y restauración de foco al cerrar.
 - [ ] Inputs/Botones: utilizar tokens y variantes documentadas.
 - [ ] Nuevas pantallas: validar contraste y tipografía con tokens.
 
@@ -87,5 +92,6 @@
 - Montar Storybook y documentar los primeros componentes.
 - Definir un “lint” visual/estático opcional (ej. revisar importaciones desde `components/ui`).
 - Convertir `Settings` a `Modal` base como piloto.
+- Documentar el patrón de `Modal` (props, accesibilidad, ejemplos) en la guía.
 
 

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -39,6 +39,8 @@ export function Modal({
   className,
   ...props
 }: ModalProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
@@ -48,6 +50,66 @@ export function Modal({
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const previouslyFocusedElement = document.activeElement as HTMLElement | null;
+
+    const getFocusableElements = () =>
+      Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], area[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable="true"]',
+        ),
+      ).filter((el) => !el.hasAttribute('aria-hidden'));
+
+    const focusFirstElement = () => {
+      const focusable = getFocusableElements();
+      if (focusable.length > 0) {
+        focusable[0].focus({ preventScroll: true });
+      } else {
+        container.focus({ preventScroll: true });
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.stopPropagation();
+        onClose();
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        const focusable = getFocusableElements();
+        if (focusable.length === 0) {
+          event.preventDefault();
+          return;
+        }
+
+        const firstElement = focusable[0];
+        const lastElement = focusable[focusable.length - 1];
+
+        if (!event.shiftKey && document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        } else if (event.shiftKey && document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      }
+    };
+
+    focusFirstElement();
+    window.addEventListener('keydown', onKeyDown, true);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, true);
+      previouslyFocusedElement?.focus?.({ preventScroll: true });
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -55,8 +117,10 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         className={cn('modal-container', sizeClass[size], className)}
         onClick={(event) => event.stopPropagation()}
+        ref={containerRef}
         {...props}
       >
         {(title || !hideCloseButton) && (
