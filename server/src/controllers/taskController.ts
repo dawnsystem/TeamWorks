@@ -22,141 +22,16 @@ import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
 import { taskSubscriptionService } from '../services/taskSubscriptionService';
+import { toClientTask as buildClientTask } from '../factories/taskFactory';
+import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
 
 const prisma = new PrismaClient();
 
-function toClientTask(task: any): any {
-  if (!task) return task;
-
-  const {
-    task_labels,
-    other_tasks,
-    tasks: parentTask,
-    projects,
-    sections,
-    _count,
-    ...rest
-  } = task;
-
-  const labels = task_labels
-    ? task_labels.map((tl: any) => {
-        const { labels: label, ...tlRest } = tl;
-        return {
-          ...tlRest,
-          label,
-        };
-      })
-    : rest.labels || [];
-
-  const subTasks = other_tasks ? other_tasks.map((st: any) => toClientTask(st)) : rest.subTasks || [];
-
-  const count = _count
-    ? {
-        ..._count,
-        subTasks: _count.other_tasks ?? _count.subTasks ?? 0,
-      }
-    : rest._count;
-
-  if (count && 'other_tasks' in count) {
-    delete (count as any).other_tasks;
-  }
-
-  return {
-    ...rest,
-    project: projects
-      ? {
-          id: projects.id,
-          nombre: projects.nombre,
-          color: projects.color,
-        }
-      : rest.project,
-    section: sections
-      ? {
-          id: sections.id,
-          nombre: sections.nombre,
-        }
-      : rest.section,
-    labels,
-    subTasks,
-    parentTask: parentTask ? toClientTask(parentTask) : rest.parentTask,
-    _count: count,
-  };
-}
+const toClientTask = buildClientTask;
 
 // Helper function to recursively fetch subtasks
 async function getTaskWithAllSubtasks(taskId: string, userId: string, taskOverride?: any): Promise<any> {
-  const task = taskOverride ?? await prisma.tasks.findFirst({
-    where: {
-      id: taskId,
-      projects: { userId }
-    },
-    include: {
-      task_labels: { include: { labels: true } },
-      projects: {
-        select: {
-          id: true,
-          nombre: true,
-          color: true
-        }
-      },
-      sections: {
-        select: {
-          id: true,
-          nombre: true
-        }
-      },
-      _count: {
-        select: { other_tasks: true, comments: true, reminders: true }
-      }
-    }
-  });
-
-  if (!task) return null;
-
-  // Fetch all direct subtasks
-  const subTasks = await prisma.tasks.findMany({
-    where: {
-      parentTaskId: taskId,
-      projects: { userId }
-    },
-    include: {
-      task_labels: { include: { labels: true } },
-      projects: {
-        select: {
-          id: true,
-          nombre: true,
-          color: true
-        }
-      },
-      sections: {
-        select: {
-          id: true,
-          nombre: true
-        }
-      },
-      _count: {
-        select: { other_tasks: true, comments: true, reminders: true }
-      }
-    },
-    orderBy: { orden: 'asc' }
-  });
-
-  // Recursively fetch subtasks of each subtask
-  const subTasksWithChildren = await Promise.all(
-    subTasks.map(async (subTask) => {
-      const children = await getTaskWithAllSubtasks(subTask.id, userId, subTask);
-      return {
-        ...subTask,
-        other_tasks: children?.other_tasks || [],
-        subTasks: children?.subTasks || []
-      };
-    })
-  );
-
-  return {
-    ...task,
-    other_tasks: subTasksWithChildren
-  };
+  return buildTaskTree(prisma, taskId, userId, taskOverride);
 }
 
 export const getTasks = async (req: any, res: Response) => {
@@ -228,41 +103,10 @@ export const getTasks = async (req: any, res: Response) => {
       where.parentTaskId = null;
     }
 
-    const rootTasks = await prisma.tasks.findMany({
-      where,
-      include: {
-        task_labels: { include: { labels: true } },
-        projects: {
-          select: {
-            id: true,
-            nombre: true,
-            color: true
-          }
-        },
-        sections: {
-          select: {
-            id: true,
-            nombre: true
-          }
-        },
-        _count: {
-          select: { other_tasks: true, comments: true, reminders: true }
-        }
-      },
-      orderBy: { orden: 'asc' }
-    });
+    const tasks = await fetchTasksForest(prisma, where, (req as AuthRequest).userId!);
 
-    const tasksWithSubtasks = await Promise.all(
-      rootTasks.map(async (task) => {
-        const fullTask = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!, task);
-        return fullTask ? toClientTask(fullTask) : toClientTask(task);
-      })
-    );
-
-    const filteredTasks = tasksWithSubtasks.filter(Boolean);
-
-    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${filteredTasks.length}`);
-    res.json(filteredTasks);
+    console.log(`[getTasks] Usuario ${(req as AuthRequest).userId} - Tareas encontradas: ${tasks.length}`);
+    res.json(tasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
     if (error instanceof Error) {
@@ -276,43 +120,13 @@ export const getTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const task = await prisma.tasks.findFirst({
-      where: {
-        id,
-        projects: { userId: (req as AuthRequest).userId }
-      },
-      include: {
-        task_labels: { include: { labels: true } },
-        other_tasks: {
-          orderBy: { orden: 'asc' }
-        },
-        tasks: true,
-        comments: {
-          include: {
-            users: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        },
-        reminders: {
-          orderBy: { fechaHora: 'asc' }
-        },
-        _count: {
-          select: { other_tasks: true, comments: true, reminders: true }
-        }
-      }
-    });
+    const task = await fetchSingleTask(prisma, id, (req as AuthRequest).userId!);
 
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    res.json(toClientTask(task));
+    res.json(task);
   } catch (error) {
     console.error('Error en getTask:', error);
     res.status(500).json({ error: 'Error al obtener tarea' });
@@ -376,7 +190,7 @@ export const createTask = async (req: any, res: Response) => {
     // Auto-subscribe creator to the task
     await taskSubscriptionService.autoSubscribeCreator(task.id, userId);
 
-    const clientTask = toClientTask(task);
+    const clientTask = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
@@ -398,6 +212,7 @@ export const createTask = async (req: any, res: Response) => {
 export const updateTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as AuthRequest).userId!;
     const {
       titulo,
       descripcion,
@@ -413,7 +228,7 @@ export const updateTask = async (req: any, res: Response) => {
     const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        projects: { userId: (req as AuthRequest).userId }
+        projects: { userId }
       }
     });
 
@@ -460,14 +275,15 @@ export const updateTask = async (req: any, res: Response) => {
       }
     });
 
-    const clientTask = toClientTask(task);
+    const clientTask = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const eventProjectId = clientTask?.project?.id ?? task.projectId;
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
-      projectId: task.projectId,
+      projectId: eventProjectId,
       taskId: task.id,
-      userId: (req as AuthRequest).userId!,
+      userId,
       timestamp: new Date(),
       data: clientTask,
     });
@@ -544,12 +360,13 @@ export const toggleTask = async (req: any, res: Response) => {
       }
     });
 
-    const clientTask = toClientTask(task);
+    const clientTask = (await fetchSingleTask(prisma, task.id, (req as AuthRequest).userId!)) ?? toClientTask(task);
+    const eventProjectId = clientTask?.project?.id ?? task.projectId;
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
-      projectId: task.projectId,
+      projectId: eventProjectId,
       taskId: task.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
@@ -557,15 +374,15 @@ export const toggleTask = async (req: any, res: Response) => {
     });
 
     // Crear notificación para suscriptores si la tarea se marcó como completada
-    if (task.completada && !existingTask.completada) {
+    if ((clientTask?.completada ?? task.completada) && !existingTask.completada) {
       await notificationService.createForTaskSubscribers(
         task.id,
         (req as AuthRequest).userId!,
         {
           type: 'task_completed',
           title: '✅ Tarea completada',
-          message: `Se completó la tarea: "${task.titulo}"`,
-          projectId: task.projectId,
+          message: `Se completó la tarea: "${clientTask?.titulo ?? task.titulo}"`,
+          projectId: eventProjectId,
           metadata: {
             completedAt: new Date(),
           },
@@ -584,21 +401,17 @@ export const getTasksByLabel = async (req: any, res: Response) => {
   try {
     const { labelId } = req.params;
 
-    const rootTasks = await prisma.tasks.findMany({
-      where: {
+    const tasks = await fetchTasksForest(
+      prisma,
+      {
         projects: { userId: (req as AuthRequest).userId },
         parentTaskId: null,
-        task_labels: { some: { labelId } }
+        task_labels: { some: { labelId } },
       },
-      include: {
-        task_labels: { include: { labels: true } },
-        _count: {
-          select: { other_tasks: true, comments: true, reminders: true }
-        }
-      },
-      orderBy: { orden: 'asc' }
-    });
-    res.json(rootTasks.map(toClientTask));
+      (req as AuthRequest).userId!,
+    );
+
+    res.json(tasks);
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });

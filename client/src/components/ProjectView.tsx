@@ -28,6 +28,7 @@ import type { ContextMenuItem } from '@/types/contextMenu';
 import type { Task } from '@/types';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTasksTree } from '@/hooks/useTasksTree';
 
 export default function ProjectView() {
   const { id } = useParams();
@@ -72,16 +73,15 @@ export default function ProjectView() {
     enabled: !!projectId,
   });
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, selectedLabelId],
-    queryFn: () => tasksAPI.getAll({ 
-      projectId: projectId!,
-      labelId: selectedLabelId || undefined
-    }).then(res => res.data),
-    enabled: !!projectId,
-    staleTime: 1000 * 15,
-    refetchOnWindowFocus: false,
-  });
+  const {
+    tasks: rootTasks,
+    tasksMap,
+    sectionMap,
+    tasksWithoutSection,
+    isLoading: isTasksLoading,
+  } = useTasksTree({ projectId: projectId ?? undefined, labelId: selectedLabelId });
+  const tasks = rootTasks;
+  const isLoading = isTasksLoading;
 
   const deleteSectionMutation = useMutation({
     mutationFn: (sectionId: string) => projectsAPI.deleteSection(sectionId),
@@ -94,8 +94,8 @@ export default function ProjectView() {
 
   const archiveCompletedTasksMutation = useMutation({
     mutationFn: async (sectionId: string) => {
-      const sectionTasks = tasks?.filter(t => t.sectionId === sectionId && t.completada) || [];
-      await Promise.all(sectionTasks.map(task => tasksAPI.delete(task.id)));
+      const sectionTasks = (sectionMap.get(sectionId) || []).filter((t) => t.completada);
+      await Promise.all(sectionTasks.map((task) => tasksAPI.delete(task.id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
@@ -116,7 +116,7 @@ export default function ProjectView() {
   });
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks?.find(t => t.id === event.active.id);
+    const task = tasksMap.get(event.active.id as string);
     setActiveTask(task || null);
     // Close any open context menus when dragging starts
     sectionContextMenu.hide();
@@ -161,7 +161,6 @@ export default function ProjectView() {
   };
 
   // Separar tareas por sección
-  const tasksWithoutSection = tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [];
   const sections = project?.sections || [];
 
   // Si estamos en modo tablero, renderizar BoardView
@@ -208,8 +207,8 @@ export default function ProjectView() {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return [];
 
-    const sectionTasks = tasks?.filter(t => t.sectionId === sectionId && t.completada) || [];
-    const hasCompletedTasks = sectionTasks.length > 0;
+    const sectionTasks = sectionMap.get(sectionId) || [];
+    const hasCompletedTasks = sectionTasks.some((t) => t.completada);
 
     return [
       {
@@ -345,7 +344,7 @@ export default function ProjectView() {
 
         {/* Secciones con tareas */}
         {sections.map((section) => {
-          const sectionTasks = tasks?.filter(t => t.sectionId === section.id && !t.parentTaskId) || [];
+          const sectionTasks = sectionMap.get(section.id) || [];
           
           if (sectionTasks.length === 0) return null;
 
@@ -378,7 +377,7 @@ export default function ProjectView() {
           );
         })}
 
-        {!isLoading && tasks?.length === 0 && (
+        {!isLoading && tasks.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               No hay tareas en este proyecto

@@ -21,6 +21,7 @@ import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import type { Task } from '@/types';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTasksTree } from '@/hooks/useTasksTree';
 
 export default function BoardView() {
   const { id } = useParams();
@@ -62,16 +63,14 @@ export default function BoardView() {
     enabled: !!projectId,
   });
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, selectedLabelId],
-    queryFn: () => tasksAPI.getAll({ 
-      projectId: projectId!,
-      labelId: selectedLabelId || undefined
-    }).then(res => res.data),
-    enabled: !!projectId,
-    staleTime: 1000 * 15,
-    refetchOnWindowFocus: false,
-  });
+  const {
+    tasks: rootTasks,
+    tasksMap,
+    sectionMap,
+    tasksWithoutSection,
+    isLoading,
+  } = useTasksTree({ projectId: projectId ?? undefined, labelId: selectedLabelId });
+  const tasks = rootTasks;
 
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => tasksAPI.update(id, data).then(res => res.data),
@@ -98,7 +97,7 @@ export default function BoardView() {
   });
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks?.find(t => t.id === event.active.id);
+    const task = tasksMap.get(event.active.id as string);
     setActiveTask(task || null);
   };
 
@@ -113,7 +112,7 @@ export default function BoardView() {
 
     if (!over) return;
 
-    const activeTask = tasks?.find(t => t.id === active.id);
+    const activeTask = tasksMap.get(active.id as string);
     if (!activeTask) return;
 
     // Determinar la sección destino
@@ -125,7 +124,7 @@ export default function BoardView() {
       targetSectionId = sectionIdString === 'no-section' ? null : sectionIdString;
     } else {
       // Se soltó sobre una tarea
-      const overTask = tasks?.find(t => t.id === over.id);
+      const overTask = tasksMap.get(over.id as string);
       targetSectionId = overTask?.sectionId || null;
     }
 
@@ -162,9 +161,10 @@ export default function BoardView() {
 
     // Si no cambió de sección pero cambió de posición, reordenar
     if (activeTask.sectionId === targetSectionId && active.id !== over.id) {
-      const sectionTasks = tasks?.filter(t => 
-        t.sectionId === targetSectionId && !t.parentTaskId
-      ) || [];
+      const sectionTasks = (targetSectionId === null
+        ? tasksWithoutSection
+        : (sectionMap.get(targetSectionId) || [])
+      ).filter((t) => !t.parentTaskId);
 
       const oldIndex = sectionTasks.findIndex(t => t.id === active.id);
       const newIndex = sectionTasks.findIndex(t => t.id === over.id);
@@ -217,14 +217,14 @@ export default function BoardView() {
   const noSectionColumn = {
     id: 'no-section',
     nombre: 'Sin asignar',
-    tasks: tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [],
+    tasks: tasksWithoutSection,
   };
 
   // Crear columnas para cada sección
-  const sectionColumns = sections.map(section => ({
+  const sectionColumns = sections.map((section) => ({
     id: section.id,
     nombre: section.nombre,
-    tasks: tasks?.filter(t => t.sectionId === section.id && !t.parentTaskId) || [],
+    tasks: (sectionMap.get(section.id) || []).filter((t) => !t.parentTaskId),
   }));
 
   // Combinar todas las columnas
