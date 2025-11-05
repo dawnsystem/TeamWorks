@@ -41,7 +41,7 @@ export function useTasksTree({ projectId, labelId = null, enabled = true }: UseT
     refetchOnWindowFocus: false,
   });
 
-  const rootTasks = query.data ?? [];
+  const rootTasks = useMemo(() => query.data ?? [], [query.data]);
 
   const { tasksMap, sectionMap, tasksWithoutSection } = useMemo(() => {
     const map: TasksMap = new Map();
