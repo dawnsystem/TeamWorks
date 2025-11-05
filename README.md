@@ -456,6 +456,11 @@ Este repositorio está vinculado con el **[GitHub Project TeamWorks](https://git
 - [✨ Solicitar Feature](https://github.com/dawnsystem/TeamWorks/issues/new?template=feature_request.md)
 - [📖 Mejorar Docs](https://github.com/dawnsystem/TeamWorks/issues/new?template=documentation.md)
 
+### 📚 Documentación del Proyecto GitHub
+
+- [📖 Guía Completa del GitHub Project](GITHUB_PROJECT_GUIDE.md) - Cómo usar el proyecto para gestionar tareas
+- [⚙️ Configuración del GitHub Project](GITHUB_PROJECT_SETUP.md) - Verificación y configuración completa
+
 ## 📝 Próximas Características
 
 - [ ] Drag & drop para reordenar tareas
