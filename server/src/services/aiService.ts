@@ -904,7 +904,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
                   if (anySection) {
                     targetSectionId = anySection.id;
-                    if (!resolvedProject || resolvedProject.id !== anySection.projectId) {
+                    if (resolvedProject.id !== anySection.projectId) {
                       const sectionProject = await prisma.projects.findFirst({
                         where: {
                           id: anySection.projectId,
