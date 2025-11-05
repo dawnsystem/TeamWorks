@@ -61,9 +61,8 @@ jobs:
     
     services:
       postgres:
-        # Using custom GHCR image for better reliability
-        # Image uploaded by dawnsystem to GitHub Container Registry
-        image: ghcr.io/dawnsystem/teamworks/postgres:16-alpine
+        # Using official PostgreSQL image
+        image: postgres:16-alpine
         env:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
