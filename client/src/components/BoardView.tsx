@@ -18,9 +18,10 @@ import LabelFilter from './LabelFilter';
 import SectionManager from './SectionManager';
 import { projectsAPI, tasksAPI } from '@/lib/api';
 import { useTaskEditorStore, useUIStore } from '@/store/useStore';
-import type { Task } from '@/types';
+import type { Task, ProjectRole } from '@/types';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTasksTree } from '@/hooks/useTasksTree';
 
 export default function BoardView() {
   const { id } = useParams();
@@ -62,15 +63,16 @@ export default function BoardView() {
     enabled: !!projectId,
   });
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, selectedLabelId],
-    queryFn: () => tasksAPI.getAll({ 
-      projectId: projectId!,
-      labelId: selectedLabelId || undefined
-    }).then(res => res.data),
-    enabled: !!projectId,
-    refetchOnWindowFocus: true, // Refrescar cuando el usuario vuelve a la pestaña
-  });
+  const projectRole: ProjectRole = project?.currentUserRole ?? 'owner';
+  const canManageProject = projectRole === 'owner' || projectRole === 'manager';
+  const canWriteProject = projectRole === 'owner' || projectRole === 'manager' || projectRole === 'editor';
+
+  const {
+    tasksMap,
+    sectionMap,
+    tasksWithoutSection,
+    isLoading,
+  } = useTasksTree({ projectId: projectId ?? undefined, labelId: selectedLabelId });
 
   const updateTaskMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => tasksAPI.update(id, data).then(res => res.data),
@@ -97,7 +99,8 @@ export default function BoardView() {
   });
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks?.find(t => t.id === event.active.id);
+    if (!canWriteProject) return;
+    const task = tasksMap.get(event.active.id as string);
     setActiveTask(task || null);
   };
 
@@ -107,12 +110,13 @@ export default function BoardView() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!canWriteProject) return;
     const { active, over } = event;
     setActiveTask(null);
 
     if (!over) return;
 
-    const activeTask = tasks?.find(t => t.id === active.id);
+    const activeTask = tasksMap.get(active.id as string);
     if (!activeTask) return;
 
     // Determinar la sección destino
@@ -124,7 +128,7 @@ export default function BoardView() {
       targetSectionId = sectionIdString === 'no-section' ? null : sectionIdString;
     } else {
       // Se soltó sobre una tarea
-      const overTask = tasks?.find(t => t.id === over.id);
+      const overTask = tasksMap.get(over.id as string);
       targetSectionId = overTask?.sectionId || null;
     }
 
@@ -161,9 +165,10 @@ export default function BoardView() {
 
     // Si no cambió de sección pero cambió de posición, reordenar
     if (activeTask.sectionId === targetSectionId && active.id !== over.id) {
-      const sectionTasks = tasks?.filter(t => 
-        t.sectionId === targetSectionId && !t.parentTaskId
-      ) || [];
+      const sectionTasks = (targetSectionId === null
+        ? tasksWithoutSection
+        : (sectionMap.get(targetSectionId) || [])
+      ).filter((t) => !t.parentTaskId);
 
       const oldIndex = sectionTasks.findIndex(t => t.id === active.id);
       const newIndex = sectionTasks.findIndex(t => t.id === over.id);
@@ -215,15 +220,15 @@ export default function BoardView() {
   // Crear una sección "Sin sección" para las tareas sin sección
   const noSectionColumn = {
     id: 'no-section',
-    nombre: 'Sin sección',
-    tasks: tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [],
+    nombre: 'Sin asignar',
+    tasks: tasksWithoutSection,
   };
 
   // Crear columnas para cada sección
-  const sectionColumns = sections.map(section => ({
+  const sectionColumns = sections.map((section) => ({
     id: section.id,
     nombre: section.nombre,
-    tasks: tasks?.filter(t => t.sectionId === section.id && !t.parentTaskId) || [],
+    tasks: (sectionMap.get(section.id) || []).filter((t) => !t.parentTaskId),
   }));
 
   // Combinar todas las columnas
@@ -257,15 +262,16 @@ export default function BoardView() {
 
             {/* View Mode Switcher + Add Section Button */}
             <div className="flex gap-2 items-center flex-shrink-0">
-              {/* Add Section Button (Mobile) */}
-              <button
-                onClick={() => setIsSectionManagerOpen(true)}
-                className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm font-medium"
-                title="Agregar sección"
-              >
-                <ListPlus className="w-4 h-4" />
-                <span className="hidden sm:inline">Sección</span>
-              </button>
+              {canManageProject && (
+                <button
+                  onClick={() => setIsSectionManagerOpen(true)}
+                  className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm font-medium"
+                  title="Agregar sección"
+                >
+                  <ListPlus className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sección</span>
+                </button>
+              )}
 
               {/* View Switcher */}
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
@@ -287,13 +293,15 @@ export default function BoardView() {
             </div>
           </div>
           
-          <button
-            onClick={() => openEditor({ projectId })}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mt-4"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Agregar tarea</span>
-          </button>
+          {canWriteProject && (
+            <button
+              onClick={() => openEditor({ projectId })}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mt-4"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Agregar tarea</span>
+            </button>
+          )}
 
           <div className="mt-4">
             <LabelFilter 
@@ -340,19 +348,21 @@ export default function BoardView() {
                     title={column.nombre}
                     tasks={column.tasks}
                     projectId={projectId || ''}
+                    role={projectRole}
                   />
                 ))}
                 
-                {/* Botón para agregar nueva sección */}
-                <div className="flex-shrink-0 w-[85vw] sm:w-80 lg:w-96 snap-center">
-                  <button
-                    onClick={() => setIsSectionManagerOpen(true)}
-                    className="w-full h-full min-h-[200px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-red-500 dark:hover:border-red-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
-                  >
-                    <Plus className="w-8 h-8" />
-                    <span className="text-sm font-medium">Agregar Sección</span>
-                  </button>
-                </div>
+                {canManageProject && (
+                  <div className="flex-shrink-0 w-[85vw] sm:w-80 lg:w-96 snap-center">
+                    <button
+                      onClick={() => setIsSectionManagerOpen(true)}
+                      className="w-full h-full min-h-[200px] flex flex-col items-center justify-center gap-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-red-500 dark:hover:border-red-500 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                    >
+                      <Plus className="w-8 h-8" />
+                      <span className="text-sm font-medium">Agregar Sección</span>
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -362,17 +372,19 @@ export default function BoardView() {
       <DragOverlay>
         {activeTask ? (
           <div className="opacity-90 rotate-3 scale-105 shadow-2xl">
-            <TaskItem task={activeTask} />
+            <TaskItem task={activeTask} role={projectRole} />
           </div>
         ) : null}
       </DragOverlay>
 
       {/* Section Manager Modal */}
-      <SectionManager
-        isOpen={isSectionManagerOpen}
-        onClose={() => setIsSectionManagerOpen(false)}
-        projectId={projectId || ''}
-      />
+      {canManageProject && (
+        <SectionManager
+          isOpen={isSectionManagerOpen}
+          onClose={() => setIsSectionManagerOpen(false)}
+          projectId={projectId || ''}
+        />
+      )}
     </DndContext>
   );
 }

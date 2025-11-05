@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Circle, CheckCircle2, Calendar, Tag, ChevronRight, Edit, Copy, Trash2, Flag, FolderInput, ListPlus, Link2, GripVertical } from 'lucide-react';
+import { Circle, CheckCircle2, Calendar, Tag, ChevronRight, Edit, Copy, Trash2, Flag, FolderInput, ListPlus, Link2, GripVertical, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '@/types';
+import type { Task, ProjectRole } from '@/types';
 import type { ContextMenuItem } from '@/types/contextMenu';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import { useTaskEditorStore, useTaskDetailStore, useTaskRelationshipStore } from '@/store/useStore';
@@ -16,9 +16,10 @@ import ContextMenu from './ContextMenu';
 interface TaskItemProps {
   task: Task;
   depth?: number;
+  role?: ProjectRole;
 }
 
-export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
+export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
   const queryClient = useQueryClient();
   const openEditor = useTaskEditorStore((state) => state.openEditor);
   const openDetail = useTaskDetailStore((state) => state.openDetail);
@@ -26,6 +27,9 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   const [subTasksOpen, setSubTasksOpen] = useState(false);
   const contextMenu = useContextMenu();
   const [contextMenuTimer, setContextMenuTimer] = useState<number | null>(null);
+
+  const effectiveRole: ProjectRole = role ?? 'owner';
+  const canWrite = effectiveRole === 'owner' || effectiveRole === 'manager' || effectiveRole === 'editor';
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -44,9 +48,9 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: task.id,
-    disabled: depth > 0, // Disable dragging for subtasks
+    disabled: depth > 0 || !canWrite,
   });
 
   const { data: projects } = useQuery({
@@ -166,11 +170,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   });
 
   const priorityColors = {
-    1: 'border-l-priority-1',
-    2: 'border-l-priority-2',
-    3: 'border-l-priority-3',
-    4: 'border-l-gray-300 dark:border-l-gray-600',
-  };
+    1: 'task-priority-1',
+    2: 'task-priority-2',
+    3: 'task-priority-3',
+    4: 'task-priority-4',
+  } as const;
 
   const priorityLabels = {
     1: 'P1',
@@ -201,7 +205,12 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
     return nextWeek.toISOString();
   };
 
-  const contextMenuItems: ContextMenuItem[] = [
+  const copyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/task/${task.id}`);
+    toast.success('Enlace copiado');
+  };
+
+  const editableContextMenuItems: ContextMenuItem[] = [
     {
       id: 'edit',
       label: 'Editar tarea',
@@ -314,10 +323,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       id: 'copy-link',
       label: 'Copiar enlace',
       icon: Link2,
-      onClick: () => {
-        navigator.clipboard.writeText(`${window.location.origin}/task/${task.id}`);
-        toast.success('Enlace copiado');
-      },
+      onClick: copyLink,
       separator: true,
     },
     {
@@ -329,6 +335,23 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       requireConfirm: true,
     },
   ];
+
+  const readonlyContextMenuItems: ContextMenuItem[] = [
+    {
+      id: 'view',
+      label: 'Ver detalles',
+      icon: Eye,
+      onClick: () => openDetail(task.id),
+    },
+    {
+      id: 'copy-link',
+      label: 'Copiar enlace',
+      icon: Link2,
+      onClick: copyLink,
+    },
+  ];
+
+  const contextMenuItems: ContextMenuItem[] = canWrite ? editableContextMenuItems : readonlyContextMenuItems;
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -371,22 +394,26 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
   return (
     <div className="group" ref={setNodeRef} style={style}>
       <div
-        className={`bg-white dark:bg-gray-800 border-l-4 ${
-          priorityColors[task.prioridad]
-        } rounded-lg p-4 hover:shadow-md transition ${
+        className={`glass-card ${priorityColors[task.prioridad]} rounded-xl p-5 transition-smooth soft-shadow ${
           task.completada ? 'opacity-60' : ''
-        } ${depth === 0 ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} w-full`}
+        } ${
+          depth === 0
+            ? canWrite
+              ? 'cursor-grab active:cursor-grabbing hover:-translate-y-0.5'
+              : 'cursor-default'
+            : 'cursor-pointer'
+        } w-full`}
         style={{
-          userSelect: depth === 0 ? 'none' : undefined,
-          WebkitUserSelect: depth === 0 ? 'none' : undefined,
+          userSelect: depth === 0 && canWrite ? 'none' : undefined,
+          WebkitUserSelect: depth === 0 && canWrite ? 'none' : undefined,
           touchAction: 'manipulation',
         }}
         onContextMenu={handleContextMenu}
-        {...(depth === 0 ? { ...attributes, ...listeners } : {})}
+        {...(depth === 0 && canWrite ? { ...attributes, ...listeners } : {})}
       >
         <div className="flex items-start gap-3 min-w-0">
           {/* Drag Handle - visual indicator for depth 0 (root tasks) */}
-          {depth === 0 && (
+          {depth === 0 && canWrite && (
             <div className="mt-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none">
               <GripVertical className="w-4 h-4 text-gray-400" />
             </div>
@@ -395,9 +422,11 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
           <button
             onClick={(e) => {
               e.stopPropagation();
+              if (!canWrite) return;
               toggleMutation.mutate();
             }}
-            className="mt-0.5"
+            className={`mt-0.5 ${!canWrite ? 'cursor-not-allowed opacity-60' : ''}`}
+            disabled={!canWrite}
           >
             {task.completada ? (
               <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -450,7 +479,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                   {task.labels.slice(0, 3).map((tl) => (
                     <span
                       key={tl.labelId}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-80 transition cursor-pointer flex-shrink-0"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-90 transition-smooth cursor-pointer flex-shrink-0 backdrop-blur-sm shadow-sm"
                       style={{
                         backgroundColor: `${tl.label.color}20`,
                         color: tl.label.color,
@@ -463,7 +492,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
                   ))}
                   {task.labels.length > 3 && (
                     <span
-                      className="px-2 py-0.5 rounded text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      className="px-2 py-0.5 rounded text-xs text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-slate-800/70 cursor-pointer hover:bg-white/90 dark:hover:bg-slate-700 transition-smooth backdrop-blur-sm shadow-sm"
                       title={`Más etiquetas: ${task.labels.slice(3).map(tl => tl.label.nombre).join(', ')}`}
                     >
                       +{task.labels.length - 3}
@@ -505,7 +534,7 @@ export default function TaskItem({ task, depth = 0 }: TaskItemProps) {
       {subTasksOpen && task.subTasks && task.subTasks.length > 0 && (
         <div className="mt-2 space-y-2">
           {task.subTasks.map((subTask) => (
-            <TaskItem key={subTask.id} task={subTask} depth={depth + 1} />
+            <TaskItem key={subTask.id} task={subTask} depth={depth + 1} role={effectiveRole} />
           ))}
         </div>
       )}

@@ -34,6 +34,10 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
   - Ejemplo: *"añadir comentario en tarea comprar leche: verificar si queda algo"*
 - ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
   - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
+- 🧠 **Motores IA seleccionables** - Cambia entre Groq (LLaMA 3.1) y Google Gemini 1.5 según tu caso de uso
+- 🗺️ **AI Planner** ⭐ NUEVO: genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
+- 🔁 **Fallback automático** ⭐ NUEVO: si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
+- ⚙️ **Automatizaciones inteligentes** ⭐ NUEVO: al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
 
 ### Gestión Inteligente de Relaciones 🧠 (Próximamente)
 - 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
@@ -55,12 +59,23 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 📱 **Navegación móvil optimizada** - ⭐ NUEVO: Barra inferior en móviles, sidebar deslizable
 - 📱 **PWA** - Instálala como app en tu dispositivo
 - 🎨 **Personalizable** - Cambia colores, logo y tema a tu gusto
+- 🪟 **Glass UI renovada** - Tarjetas translúcidas, degradados dinámicos y estados vacíos inspiradores ([ver detalles](docs/UX_IMPROVEMENTS.md)) ⭐ NUEVO
 
 ### Configuración y Acceso
 - 🔐 **Multi-usuario** - Sistema de autenticación y datos separados por usuario
 - 🌐 **Acceso en red local** - Accede desde cualquier dispositivo en tu red
 - ⚙️ **Totalmente configurable** - Configura todo desde la UI sin tocar código
 - 📖 **Manual integrado** - Ayuda y documentación accesible desde la app
+
+### Colaboración
+- 👥 **Compartir proyectos** - Invita colaboradores por email y gestiona accesos desde el modal de compartir
+- 🛡️ **Roles granulares** - Viewer (solo lectura), Editor (CRUD de tareas) y Gestor (estructura + permisos)
+- ⚡ **Revocación en caliente** - Cambios de rol y eliminaciones aplican al instante sin recargar la app
+
+### Observabilidad & Performance
+- 📊 **/metrics** - Dashboard JSON con peticiones totales, errores y tiempos medio/máximo por ruta
+- 🛰️ **Telemetría cliente** - El navegador envía LCP/FID/CLS y long-tasks a `/api/metrics/client` vía `sendBeacon`
+- 💤 **Lazy loading crítico** - Vista Kanban y modal de compartir se cargan bajo demanda para reducir el bundle inicial
 
 ## 🛠️ Tecnologías
 
@@ -124,17 +139,26 @@ JWT_SECRET="cambia-este-secreto-por-algo-seguro"
 JWT_EXPIRES_IN="7d"
 PORT=3000
 NODE_ENV=development
+AI_PROVIDER="groq" # groq (por defecto) o gemini
 GROQ_API_KEY="tu-groq-api-key-aqui"
+GEMINI_API_KEY="tu-gemini-api-key-aqui"
 FRONTEND_URL="http://localhost:5173"
 ```
 
-**Obtener API Key de Groq (para IA):**
+**Obtener API Keys (para IA):**
+
+**Groq** (LLaMA 3.1 Instant)
 1. Ve a [Groq Console](https://console.groq.com)
 2. Crea una cuenta gratuita
 3. Ve a API Keys y crea una nueva key
 4. Copia la key al archivo `.env` como `GROQ_API_KEY`
 
-**Nota**: Groq ofrece acceso gratuito a modelos potentes como Llama 3.1 8B Instant, ideal para procesamiento de lenguaje natural.
+**Google Gemini** (1.5 Flash)
+1. Abre [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Genera una nueva API key
+3. Añádela al `.env` como `GEMINI_API_KEY`
+
+> Nota: puedes alternar el proveedor por defecto ajustando `AI_PROVIDER` en `.env` o desde la pantalla de configuración (cliente). Si eliges Gemini, asegúrate de definir la variable en el backend.
 
 Configurar base de datos:
 ```bash
@@ -296,6 +320,9 @@ El asistente de IA puede interpretar comandos en lenguaje natural:
 
 "crear proyecto de trabajo"
 → Crea un nuevo proyecto llamado "trabajo"
+
+"generar plan para lanzar campaña de marketing"
+→ Abre el AI Planner; puedes elegir modo automático o responder preguntas antes de obtener el plan.
 ```
 
 ### Modos de ejecución:
@@ -368,8 +395,19 @@ TeamWorks/
 
 ## 🛠️ Comandos Útiles
 
-### Backend
+### Scripts útiles
 ```bash
+# Frontend
+npm run dev          # Desarrollo
+npm run build        # Build de producción
+npm run preview      # Preview del build
+npm run lint         # ESLint completo
+npm run lint:ui      # Valida uso del kit UI (botones, modales, etc.)
+npx tsc --noEmit      # Type-check
+npm run storybook     # Storybook interactivo
+npm run storybook:build # Build estático de Storybook
+
+# Backend
 npm run dev          # Desarrollo con hot reload
 npm run build        # Compilar TypeScript
 npm start            # Producción

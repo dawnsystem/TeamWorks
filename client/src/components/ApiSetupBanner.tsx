@@ -9,12 +9,14 @@ interface ApiSetupBannerProps {
 }
 
 export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps) {
-  const settings = useSettingsStore();
+  const setApiUrl = useSettingsStore((state) => state.setApiUrl);
   const [dismissed, setDismissed] = useState(false);
   const [checking, setChecking] = useState(false);
   const [autoDetecting, setAutoDetecting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'failed' | 'connected'>('unknown');
   const [retryCount, setRetryCount] = useState(0);
+  const [hasConnectedOnce, setHasConnectedOnce] = useState(false);
+  const [mounted, setMounted] = useState(false);
   
   // Check if we should show the banner
   const shouldShow = 
@@ -22,6 +24,11 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
     connectionStatus !== 'connected';
 
   const autoConnectToServer = useCallback(async () => {
+    // Evitar reconexiones si ya está conectado
+    if (connectionStatus === 'connected') {
+      return;
+    }
+
     setAutoDetecting(true);
     setChecking(true);
     
@@ -30,11 +37,16 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
       
       if (detectedUrl) {
         // Found a working URL
-        settings.setApiUrl(detectedUrl);
+        setApiUrl(detectedUrl);
         updateApiUrl(detectedUrl);
         setRetryCount(0);
         setConnectionStatus('connected');
-        toast.success(`✅ Conectado a ${detectedUrl}`);
+        
+        // Solo mostrar toast la primera vez que se conecta
+        if (!hasConnectedOnce) {
+          toast.success(`✅ Conectado a ${detectedUrl}`);
+          setHasConnectedOnce(true);
+        }
       } else {
         // No working URL found
         setConnectionStatus('failed');
@@ -46,24 +58,33 @@ export default function ApiSetupBanner({ onSettingsClick }: ApiSetupBannerProps)
       setAutoDetecting(false);
       setChecking(false);
     }
-  }, [settings]);
+  }, [setApiUrl, connectionStatus, hasConnectedOnce]);
 
   useEffect(() => {
-    // Auto-detect and connect on mount
-    autoConnectToServer();
-  }, [autoConnectToServer]);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    // Auto-detect and connect on mount, solo una vez
+    if (mounted && connectionStatus === 'unknown' && !hasConnectedOnce) {
+      autoConnectToServer();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted]); // Solo ejecutar cuando el componente se monte
 
   // Auto-retry connection every 10 seconds if failed (but not if connected)
   useEffect(() => {
-    if (connectionStatus === 'failed' && retryCount < 10) {
+    if (connectionStatus === 'failed' && retryCount < 10 && !hasConnectedOnce) {
       const timer = setTimeout(() => {
         console.log(`🔄 Reintentando conexión (intento ${retryCount + 1}/10)...`);
         setRetryCount(prev => prev + 1);
+        // Llamar directamente sin usar la dependencia para evitar bucles
         autoConnectToServer();
       }, 10000);
       return () => clearTimeout(timer);
     }
-  }, [connectionStatus, retryCount, autoConnectToServer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectionStatus, retryCount, hasConnectedOnce]); // Remover autoConnectToServer para evitar bucles
 
   const handleAutoFix = async () => {
     setRetryCount(0);

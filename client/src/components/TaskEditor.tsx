@@ -1,20 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { X, Calendar, Flag, Tag, Trash2, Plus, Search } from 'lucide-react';
+import { Calendar, Flag, Tag, Plus, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTaskEditorStore } from '@/store/useStore';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import LabelModal from './LabelModal';
+import { Button, Modal, ScrollArea } from '@/components/ui';
 
 export default function TaskEditor() {
   const queryClient = useQueryClient();
-  const { isOpen, taskId, projectId: defaultProjectId, sectionId, parentTaskId, closeEditor } = useTaskEditorStore();
+  const { isOpen, taskId, projectId: defaultProjectId, sectionId: initialSectionId, parentTaskId, closeEditor } = useTaskEditorStore();
+
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [prioridad, setPrioridad] = useState<1 | 2 | 3 | 4>(4);
   const [fechaVencimiento, setFechaVencimiento] = useState('');
   const [projectId, setProjectId] = useState(defaultProjectId || '');
+  const [selectedSectionId, setSelectedSectionId] = useState<string>(initialSectionId || '');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
   const [labelSearchQuery, setLabelSearchQuery] = useState('');
   const [showLabelModal, setShowLabelModal] = useState(false);
@@ -30,6 +34,12 @@ export default function TaskEditor() {
     queryFn: () => projectsAPI.getAll().then(res => res.data),
   });
 
+  const { data: projectDetail } = useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => projectId ? projectsAPI.getOne(projectId).then(res => res.data) : null,
+    enabled: !!projectId,
+  });
+
   const { data: labels } = useQuery({
     queryKey: ['labels'],
     queryFn: () => labelsAPI.getAll().then(res => res.data),
@@ -42,23 +52,39 @@ export default function TaskEditor() {
       setPrioridad(task.prioridad);
       setFechaVencimiento(task.fechaVencimiento ? task.fechaVencimiento.split('T')[0] : '');
       setProjectId(task.projectId);
-      setSelectedLabels(task.labels?.map(tl => tl.labelId) || []);
+      setSelectedSectionId(task.sectionId || '');
+      setSelectedLabels(
+        // Compatibilidad: backend puede devolver task_labels o labels
+        (task as any).task_labels?.map((tl: any) => tl.labelId) ||
+        task.labels?.map((tl: any) => tl.labelId) ||
+        []
+      );
     } else {
       setTitulo('');
       setDescripcion('');
       setPrioridad(4);
-      setFechaVencimiento('');
+      // Por defecto: hoy (YYYY-MM-DD) y proyecto Inbox si existe
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      setFechaVencimiento(`${yyyy}-${mm}-${dd}`);
       setProjectId(defaultProjectId || projects?.find(p => p.nombre === 'Inbox')?.id || '');
+      setSelectedSectionId('');
       setSelectedLabels([]);
     }
   }, [task, defaultProjectId, projects]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => tasksAPI.create(data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Tarea creada');
+      if (response.data?.automationNotes?.length) {
+        response.data.automationNotes.forEach((note: string) => toast.success(note));
+      } else {
+        toast.success('Tarea creada');
+      }
       closeEditor();
     },
     onError: (error: any) => {
@@ -70,11 +96,15 @@ export default function TaskEditor() {
 
   const updateMutation = useMutation({
     mutationFn: (data: any) => tasksAPI.update(taskId!, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskId] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Tarea actualizada');
+      if (response.data?.automationNotes?.length) {
+        response.data.automationNotes.forEach((note: string) => toast.success(note));
+      } else {
+        toast.success('Tarea actualizada');
+      }
       closeEditor();
     },
     onError: (error: any) => {
@@ -107,13 +137,18 @@ export default function TaskEditor() {
       return;
     }
 
+    if (!projectId) {
+      toast.error('Selecciona un proyecto');
+      return;
+    }
+
     const data = {
       titulo,
       descripcion: descripcion || undefined,
       prioridad,
       fechaVencimiento: fechaVencimiento || undefined,
       projectId,
-      sectionId,
+      sectionId: selectedSectionId || undefined,
       parentTaskId, // Incluir parentTaskId para subtareas
       labelIds: selectedLabels,
     };
@@ -134,40 +169,69 @@ export default function TaskEditor() {
     { value: 4, label: 'P4 - Ninguna', color: 'bg-priority-4' },
   ];
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {taskId ? 'Editar Tarea' : 'Nueva Tarea'}
-          </h2>
-          <button
-            onClick={closeEditor}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+  const handleDelete = () => {
+    if (!taskId) return;
+    if (confirm('¿Estás seguro de eliminar esta tarea?')) {
+      deleteMutation.mutate();
+    }
+  };
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div>
+  const submitDisabled = createMutation.isPending || updateMutation.isPending;
+
+  const modalFooter = (
+    <div className="flex w-full items-center justify-between gap-3">
+      {taskId ? (
+        <Button
+          variant="danger"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+        >
+          {deleteMutation.isPending ? 'Eliminando...' : 'Eliminar'}
+        </Button>
+      ) : (
+        <span />
+      )}
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" onClick={closeEditor}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={() => formRef.current?.requestSubmit()}
+          disabled={submitDisabled}
+        >
+          {submitDisabled ? (taskId ? 'Guardando...' : 'Creando...') : taskId ? 'Guardar' : 'Crear'}
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={closeEditor}
+        title={taskId ? 'Editar tarea' : 'Nueva tarea'}
+        size="xl"
+        footer={modalFooter}
+      >
+        <ScrollArea className="max-h-[70vh] pr-2">
+          <form ref={formRef} onSubmit={handleSubmit} className="space-y-6 pb-4">
+          <div className="space-y-3">
             <input
               type="text"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
               placeholder="Nombre de la tarea"
               autoFocus
-              className="w-full text-lg font-medium px-0 py-2 border-0 border-b-2 border-gray-200 dark:border-gray-700 bg-transparent focus:border-red-500 focus:ring-0 outline-none dark:text-white"
+              className="input-elevated text-lg font-semibold bg-transparent"
             />
-          </div>
 
-          <div>
             <textarea
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder="Descripción"
+              placeholder="Describe los detalles, notas o próximos pasos"
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none"
+              className="input-elevated resize-none min-h-[120px]"
             />
           </div>
 
@@ -180,7 +244,7 @@ export default function TaskEditor() {
               <select
                 value={prioridad}
                 onChange={(e) => setPrioridad(Number(e.target.value) as 1 | 2 | 3 | 4)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated bg-transparent"
               >
                 {priorityOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -199,12 +263,12 @@ export default function TaskEditor() {
                 type="date"
                 value={fechaVencimiento}
                 onChange={(e) => setFechaVencimiento(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated"
               />
             </div>
           </div>
 
-          {/* Show project selector only if not creating a subtask */}
+          {/* Show project/section selector only if not creating a subtask */}
           {!parentTaskId ? (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -213,7 +277,7 @@ export default function TaskEditor() {
               <select
                 value={projectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none"
+                className="input-elevated bg-transparent"
                 disabled={!!taskId && !!task?.parentTaskId}
               >
                 {projects?.map((project) => (
@@ -222,12 +286,37 @@ export default function TaskEditor() {
                   </option>
                 ))}
               </select>
+
+              {/* Selector de sección cuando hay proyecto seleccionado */}
+              {!!projectId && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Sección
+                  </label>
+                  <select
+                    value={selectedSectionId}
+                    onChange={(e) => setSelectedSectionId(e.target.value)}
+                    className="input-elevated bg-transparent"
+                  >
+                    <option value="">(Sin sección)</option>
+                    {projectDetail?.sections?.map((s: any) => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-700 dark:text-blue-300">
                 📌 Se creará como subtarea
               </p>
+              {/* Mostrar breadcrumb de sección si viene del contexto */}
+              {initialSectionId && projectDetail?.sections && (
+                <p className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">
+                  En sección: {projectDetail.sections.find((s: any) => s.id === initialSectionId)?.nombre || 'Sin sección'}
+                </p>
+              )}
             </div>
           )}
 
@@ -256,11 +345,11 @@ export default function TaskEditor() {
                     placeholder="Buscar etiquetas..."
                     value={labelSearchQuery}
                     onChange={(e) => setLabelSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    className="input-elevated pl-10"
                   />
                 </div>
                 
-                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto scrollbar-thin">
                   {labels
                     .filter(label => 
                       labelSearchQuery === '' || 
@@ -277,13 +366,13 @@ export default function TaskEditor() {
                             setSelectedLabels([...selectedLabels, label.id]);
                           }
                         }}
-                        className={`px-3 py-1 rounded-full text-sm transition ${
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition-smooth shadow-sm backdrop-blur ${
                           selectedLabels.includes(label.id)
-                            ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-800'
-                            : 'opacity-60 hover:opacity-100'
+                            ? 'ring-2 ring-offset-1 ring-offset-white/70 dark:ring-offset-slate-900/70'
+                            : 'opacity-70 hover:opacity-100'
                         }`}
                         style={{
-                          backgroundColor: `${label.color}20`,
+                          backgroundColor: `${label.color}22`,
                           color: label.color,
                         }}
                       >
@@ -332,46 +421,12 @@ export default function TaskEditor() {
               </div>
             )}
           </div>
+          </form>
+        </ScrollArea>
+      </Modal>
 
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-            {taskId && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm('¿Estás seguro de eliminar esta tarea?')) {
-                    deleteMutation.mutate();
-                  }
-                }}
-                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition"
-              >
-                <Trash2 className="w-4 h-4" />
-                Eliminar
-              </button>
-            )}
-
-            <div className="flex gap-3 ml-auto">
-              <button
-                type="button"
-                onClick={closeEditor}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {taskId ? 'Guardar' : 'Crear'}
-              </button>
-            </div>
-          </div>
-        </form>
-      </div>
-
-      {/* Label Modal */}
       <LabelModal isOpen={showLabelModal} onClose={() => setShowLabelModal(false)} />
-    </div>
+    </>
   );
 }
 

@@ -1,77 +1,50 @@
+// Normaliza fechas desde 'dd/mm/yyyy' o 'yyyy-mm-dd' o ISO a Date | null
+function parseDateInput(input?: string | null): Date | null {
+  if (!input) return null;
+  const s = input.trim();
+  if (!s) return null;
+  // dd/mm/yyyy
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) {
+    const [_, dd, mm, yyyy] = m;
+    return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
+  }
+  // yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    return new Date(`${s}T00:00:00.000Z`);
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
 import { taskSubscriptionService } from '../services/taskSubscriptionService';
+import { toClientTask as buildClientTask } from '../factories/taskFactory';
+import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
+import { applyTaskAutomations } from '../services/automationService';
+import { assertProjectPermission } from '../services/projectShareService';
+import { findUnauthorizedLabelIds } from '../services/labelDomainService';
+import prisma from '../lib/prisma';
 
-const prisma = new PrismaClient();
+const projectAccessWhere = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
 
-// Helper function to recursively fetch subtasks
-async function getTaskWithAllSubtasks(taskId: string, userId: string): Promise<any> {
-  const task = await prisma.task.findFirst({
-    where: {
-      id: taskId,
-      project: { userId }
-    },
-    include: {
-      labels: {
-        include: {
-          label: true
-        }
-      },
-      _count: {
-        select: { subTasks: true, comments: true, reminders: true }
-      }
-    }
-  });
-
-  if (!task) return null;
-
-  // Fetch all direct subtasks
-  const subTasks = await prisma.task.findMany({
-    where: {
-      parentTaskId: taskId,
-      project: { userId }
-    },
-    include: {
-      labels: {
-        include: {
-          label: true
-        }
-      },
-      _count: {
-        select: { subTasks: true, comments: true, reminders: true }
-      }
-    },
-    orderBy: { orden: 'asc' }
-  });
-
-  // Recursively fetch subtasks of each subtask
-  const subTasksWithChildren = await Promise.all(
-    subTasks.map(async (subTask) => {
-      const children = await getTaskWithAllSubtasks(subTask.id, userId);
-      return {
-        ...subTask,
-        subTasks: children?.subTasks || []
-      };
-    })
-  );
-
-  return {
-    ...task,
-    subTasks: subTasksWithChildren
-  };
-}
+const toClientTask = buildClientTask;
 
 export const getTasks = async (req: any, res: Response) => {
   try {
     const { projectId, sectionId, filter, search, labelId } = req.query;
+    const userId = (req as AuthRequest).userId!;
 
     // Construir filtros
-    const where: any = {
-      project: { userId: (req as AuthRequest).userId }
-    };
+    const where: Prisma.tasksWhereInput = {};
 
     if (projectId) {
       where.projectId = projectId as string;
@@ -82,11 +55,7 @@ export const getTasks = async (req: any, res: Response) => {
     }
 
     if (labelId) {
-      where.labels = {
-        some: {
-          labelId: labelId as string
-        }
-      };
+      where.task_labels = { some: { labelId: labelId as string } };
     }
 
     if (search) {
@@ -131,39 +100,22 @@ export const getTasks = async (req: any, res: Response) => {
       where.completada = false;
     }
 
-    // Only fetch root tasks (those without a parent)
-    where.parentTaskId = null;
+    // Only fetch root tasks (those without a parent) - but allow showing all if needed
+    // Si no se especifica projectId, mostrar solo raíz para evitar duplicados
+    if (!projectId) {
+      where.parentTaskId = null;
+    }
 
-    const rootTasks = await prisma.task.findMany({
-      where,
-      include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        _count: {
-          select: { subTasks: true, comments: true, reminders: true }
-        }
-      },
-      orderBy: { orden: 'asc' }
-    });
+    const tasks = await fetchTasksForest(prisma, where, userId);
 
-    // Recursively fetch all subtasks for each root task
-    const tasksWithAllSubtasks = await Promise.all(
-      rootTasks.map(async (task) => {
-        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!);
-        return taskWithSubtasks;
-      })
-    );
-
-    // Filter out any null values that might occur if a task couldn't be retrieved
-    const validTasks = tasksWithAllSubtasks.filter(task => task !== null);
-
-    res.json(validTasks);
+    console.log(`[getTasks] Usuario ${userId} - Tareas encontradas: ${tasks.length}`);
+    res.json(tasks);
   } catch (error) {
     console.error('Error en getTasks:', error);
-    res.status(500).json({ error: 'Error al obtener tareas' });
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Error al obtener tareas', details: error instanceof Error ? error.message : String(error) });
   }
 };
 
@@ -171,41 +123,7 @@ export const getTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const task = await prisma.task.findFirst({
-      where: {
-        id,
-        project: { userId: (req as AuthRequest).userId }
-      },
-      include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        subTasks: {
-          orderBy: { orden: 'asc' }
-        },
-        parentTask: true,
-        comments: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                nombre: true,
-                email: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'asc' }
-        },
-        reminders: {
-          orderBy: { fechaHora: 'asc' }
-        },
-        _count: {
-          select: { subTasks: true, comments: true, reminders: true }
-        }
-      }
-    });
+    const task = await fetchSingleTask(prisma, id, (req as AuthRequest).userId!);
 
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
@@ -237,47 +155,76 @@ export const createTask = async (req: any, res: Response) => {
     const userId = (req as AuthRequest).userId!;
 
     // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        userId
-      }
-    });
-
-    if (!project) {
-      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    try {
+      await assertProjectPermission(prisma, projectId, userId, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
-    const task = await prisma.task.create({
+    const parsedDueDate = parseDateInput(fechaVencimiento);
+
+    if (labelIds?.length) {
+      const invalidLabelIds = await findUnauthorizedLabelIds(prisma, labelIds, userId);
+      if (invalidLabelIds.length > 0) {
+        return res.status(403).json({
+          error: 'No tienes acceso a una o más etiquetas',
+          invalidLabelIds,
+        });
+      }
+    }
+
+    const automations = await applyTaskAutomations(
+      prisma,
+      userId,
+      {
+        titulo,
+        projectId,
+        prioridad: prioridad || 4,
+        fechaVencimiento: parsedDueDate ?? null,
+        sectionId: sectionId ?? null,
+      },
+      {
+        mode: 'create',
+        hasDueDate: Boolean(fechaVencimiento),
+        hasSection: Boolean(sectionId),
+      },
+    );
+
+    const finalFechaVencimiento = automations.patches.fechaVencimiento ?? parsedDueDate;
+    const finalSectionId = automations.patches.sectionId ?? sectionId ?? null;
+
+    const task = await prisma.tasks.create({
       data: {
         titulo,
         descripcion,
         prioridad: prioridad || 4,
-        fechaVencimiento: fechaVencimiento ? new Date(fechaVencimiento) : null,
+        fechaVencimiento: finalFechaVencimiento,
         projectId,
-        sectionId,
+        sectionId: finalSectionId,
         parentTaskId,
         orden: orden || 0,
         createdBy: userId,
         ...(labelIds && labelIds.length > 0 && {
-          labels: {
-            create: labelIds.map((labelId: string) => ({
-              labelId
-            }))
+          task_labels: {
+            create: labelIds.map((labelId: string) => ({ labelId }))
           }
         })
-      },
+      } as any,
       include: {
-        labels: {
-          include: {
-            label: true
-          }
+        task_labels: {
+          include: { labels: true }
         }
       }
     });
 
     // Auto-subscribe creator to the task
     await taskSubscriptionService.autoSubscribeCreator(task.id, userId);
+
+    const clientTaskRaw = (await fetchSingleTask(prisma, task.id, userId)) ?? toClientTask(task);
+    const clientTask = {
+      ...clientTaskRaw,
+      ...(automations.notes.length > 0 && { automationNotes: automations.notes }),
+    };
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
@@ -286,10 +233,10 @@ export const createTask = async (req: any, res: Response) => {
       taskId: task.id,
       userId,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
-    res.status(201).json(task);
+    res.status(201).json(clientTask);
   } catch (error) {
     console.error('Error en createTask:', error);
     res.status(500).json({ error: 'Error al crear tarea' });
@@ -299,6 +246,7 @@ export const createTask = async (req: any, res: Response) => {
 export const updateTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as AuthRequest).userId!;
     const {
       titulo,
       descripcion,
@@ -311,10 +259,10 @@ export const updateTask = async (req: any, res: Response) => {
     } = req.body;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere(userId),
       }
     });
 
@@ -322,18 +270,19 @@ export const updateTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    // Si se proporcionan labelIds, actualizar las relaciones
-    if (labelIds !== undefined) {
-      await prisma.taskLabel.deleteMany({
-        where: { taskId: id }
-      });
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, userId, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
+    }
 
-      if (labelIds.length > 0) {
-        await prisma.taskLabel.createMany({
-          data: labelIds.map((labelId: string) => ({
-            taskId: id,
-            labelId
-          }))
+    // Validar etiquetas proporcionadas
+    if (labelIds !== undefined) {
+      const invalidLabelIds = await findUnauthorizedLabelIds(prisma, labelIds, userId);
+      if (invalidLabelIds.length > 0) {
+        return res.status(403).json({
+          error: 'No tienes acceso a una o más etiquetas',
+          invalidLabelIds,
         });
       }
     }
@@ -344,38 +293,85 @@ export const updateTask = async (req: any, res: Response) => {
     if (descripcion !== undefined) updateData.descripcion = descripcion;
     if (prioridad !== undefined) updateData.prioridad = prioridad;
     if (fechaVencimiento !== undefined) {
-      updateData.fechaVencimiento = fechaVencimiento ? new Date(fechaVencimiento) : null;
+      updateData.fechaVencimiento = parseDateInput(fechaVencimiento);
     }
     if (completada !== undefined) updateData.completada = completada;
     if (sectionId !== undefined) updateData.sectionId = sectionId;
     if (orden !== undefined) updateData.orden = orden;
 
-    const task = await prisma.task.update({
-      where: { id },
-      data: updateData,
-      include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+    const automations = await applyTaskAutomations(
+      prisma,
+      userId,
+      {
+        titulo: updateData.titulo ?? existingTask.titulo,
+        projectId: existingTask.projectId,
+        prioridad: updateData.prioridad ?? existingTask.prioridad,
+        fechaVencimiento:
+          updateData.fechaVencimiento !== undefined
+            ? updateData.fechaVencimiento
+            : existingTask.fechaVencimiento,
+        sectionId: updateData.sectionId ?? existingTask.sectionId,
+      },
+      {
+        mode: 'update',
+        hasDueDate: fechaVencimiento !== undefined,
+        hasSection: sectionId !== undefined,
+      },
+    );
+
+    if (automations.patches.fechaVencimiento !== undefined && fechaVencimiento === undefined) {
+      updateData.fechaVencimiento = automations.patches.fechaVencimiento;
+    }
+    if (automations.patches.sectionId !== undefined && sectionId === undefined) {
+      updateData.sectionId = automations.patches.sectionId;
+    }
+
+    const taskUpdated = await prisma.$transaction(async (tx) => {
+      if (labelIds !== undefined) {
+        await tx.task_labels.deleteMany({
+          where: { taskId: id },
+        });
+
+        if (labelIds.length > 0) {
+          await tx.task_labels.createMany({
+            data: labelIds.map((labelId: string) => ({
+              taskId: id,
+              labelId,
+            })),
+          });
         }
       }
+
+      return tx.tasks.update({
+        where: { id },
+        data: updateData,
+        include: {
+          task_labels: { include: { labels: true } },
+          _count: {
+            select: { other_tasks: true, comments: true, reminders: true },
+          },
+        },
+      });
     });
+
+    const clientTaskRaw = (await fetchSingleTask(prisma, taskUpdated.id, userId)) ?? toClientTask(taskUpdated);
+    const clientTask = {
+      ...clientTaskRaw,
+      ...(automations.notes.length > 0 && { automationNotes: automations.notes }),
+    };
+    const eventProjectId = clientTask?.project?.id ?? taskUpdated.projectId;
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
-      projectId: task.projectId,
-      taskId: task.id,
-      userId: (req as AuthRequest).userId!,
+      projectId: eventProjectId,
+      taskId: taskUpdated.id,
+      userId,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
-    res.json(task);
+    res.json(clientTask);
   } catch (error) {
     console.error('Error en updateTask:', error);
     res.status(500).json({ error: 'Error al actualizar tarea' });
@@ -387,10 +383,10 @@ export const deleteTask = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 
@@ -398,7 +394,13 @@ export const deleteTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    await prisma.task.delete({
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, (req as AuthRequest).userId!, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
+    }
+
+    await prisma.tasks.delete({
       where: { id }
     });
 
@@ -423,10 +425,10 @@ export const toggleTask = async (req: any, res: Response) => {
     const { id } = req.params;
 
     // Verificar que la tarea pertenece al usuario
-    const existingTask = await prisma.task.findFirst({
+    const existingTask = await prisma.tasks.findFirst({
       where: {
         id,
-        project: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 
@@ -434,43 +436,48 @@ export const toggleTask = async (req: any, res: Response) => {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
-    const task = await prisma.task.update({
+    try {
+      await assertProjectPermission(prisma, existingTask.projectId, (req as AuthRequest).userId!, 'write');
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
+    }
+
+    const taskUpdated = await prisma.tasks.update({
       where: { id },
       data: {
         completada: !existingTask.completada
       },
       include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
+        task_labels: { include: { labels: true } },
         _count: {
-          select: { subTasks: true, comments: true, reminders: true }
+          select: { other_tasks: true, comments: true, reminders: true }
         }
       }
     });
 
+    const clientTask = (await fetchSingleTask(prisma, taskUpdated.id, (req as AuthRequest).userId!)) ?? toClientTask(taskUpdated);
+    const eventProjectId = clientTask?.project?.id ?? taskUpdated.projectId;
+
     // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'task_updated',
-      projectId: task.projectId,
-      taskId: task.id,
+      projectId: eventProjectId,
+      taskId: taskUpdated.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: task,
+      data: clientTask,
     });
 
     // Crear notificación para suscriptores si la tarea se marcó como completada
-    if (task.completada && !existingTask.completada) {
+    if ((clientTask?.completada ?? taskUpdated.completada) && !existingTask.completada) {
       await notificationService.createForTaskSubscribers(
-        task.id,
+        taskUpdated.id,
         (req as AuthRequest).userId!,
         {
           type: 'task_completed',
           title: '✅ Tarea completada',
-          message: `Se completó la tarea: "${task.titulo}"`,
-          projectId: task.projectId,
+          message: `Se completó la tarea: "${clientTask?.titulo ?? taskUpdated.titulo}"`,
+          projectId: eventProjectId,
           metadata: {
             completedAt: new Date(),
           },
@@ -478,7 +485,7 @@ export const toggleTask = async (req: any, res: Response) => {
       );
     }
 
-    res.json(task);
+    res.json(clientTask);
   } catch (error) {
     console.error('Error en toggleTask:', error);
     res.status(500).json({ error: 'Error al cambiar estado de tarea' });
@@ -489,39 +496,16 @@ export const getTasksByLabel = async (req: any, res: Response) => {
   try {
     const { labelId } = req.params;
 
-    const rootTasks = await prisma.task.findMany({
-      where: {
-        project: { userId: (req as AuthRequest).userId },
+    const tasks = await fetchTasksForest(
+      prisma,
+      {
         parentTaskId: null,
-        labels: {
-          some: { labelId }
-        }
+        task_labels: { some: { labelId } },
       },
-      include: {
-        labels: {
-          include: {
-            label: true
-          }
-        },
-        _count: {
-          select: { subTasks: true, comments: true, reminders: true }
-        }
-      },
-      orderBy: { orden: 'asc' }
-    });
-
-    // Recursively fetch all subtasks for each root task
-    const tasksWithAllSubtasks = await Promise.all(
-      rootTasks.map(async (task) => {
-        const taskWithSubtasks = await getTaskWithAllSubtasks(task.id, (req as AuthRequest).userId!);
-        return taskWithSubtasks;
-      })
+      (req as AuthRequest).userId!,
     );
 
-    // Filter out any null values that might occur if a task couldn't be retrieved
-    const validTasks = tasksWithAllSubtasks.filter(task => task !== null);
-
-    res.json(validTasks);
+    res.json(tasks);
   } catch (error) {
     console.error('Error en getTasksByLabel:', error);
     res.status(500).json({ error: 'Error al obtener tareas por etiqueta' });
@@ -538,10 +522,10 @@ export const reorderTasks = async (req: any, res: Response) => {
 
     // Verificar que todas las tareas pertenecen al usuario
     const taskIds = taskUpdates.map((t: any) => t.id);
-    const tasks = await prisma.task.findMany({
+    const tasks = await prisma.tasks.findMany({
       where: {
         id: { in: taskIds },
-        project: { userId: (req as AuthRequest).userId }
+        ...projectAccessWhere((req as AuthRequest).userId!),
       }
     });
 
@@ -552,7 +536,7 @@ export const reorderTasks = async (req: any, res: Response) => {
     // Actualizar todas las tareas en una transacción
     await prisma.$transaction(
       taskUpdates.map((update: any) =>
-        prisma.task.update({
+        prisma.tasks.update({
           where: { id: update.id },
           data: {
             orden: update.orden,

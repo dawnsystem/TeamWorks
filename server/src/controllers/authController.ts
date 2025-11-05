@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { Secret } from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
-
-const prisma = new PrismaClient();
+import { MissingEnvVarError, requireEnvVar } from '../lib/env';
+import prisma from '../lib/prisma';
 
 export const register = async (req: any, res: Response) => {
   try {
@@ -12,7 +11,7 @@ export const register = async (req: any, res: Response) => {
 
     // Validación de formato ya realizada por middleware
     // Verificar si el usuario ya existe
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -24,16 +23,23 @@ export const register = async (req: any, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Crear usuario
-    const user = await prisma.user.create({
+    const user = await prisma.users.create({
       data: {
         email,
         password: hashedPassword,
         nombre
+      },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
 
     // Crear proyecto inbox por defecto
-    await prisma.project.create({
+    await prisma.projects.create({
       data: {
         nombre: 'Inbox',
         color: '#808080',
@@ -43,7 +49,7 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Generar token
-    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const secret: Secret = requireEnvVar('JWT_SECRET');
     const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
@@ -56,12 +62,29 @@ export const register = async (req: any, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        nombre: user.nombre
+        nombre: user.nombre,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof MissingEnvVarError) {
+      console.error('Configuración inválida:', error.message);
+      return res.status(500).json({ error: 'Configuración del servidor inválida: falta JWT_SECRET' });
+    }
     console.error('Error en register:', error);
-    res.status(500).json({ error: 'Error al registrar usuario' });
+    console.error('Error stack:', error?.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
+    // Devolver más detalles en desarrollo
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error al registrar usuario: ${error?.message || 'Error desconocido'}`
+      : 'Error al registrar usuario';
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+    });
   }
 };
 
@@ -71,8 +94,16 @@ export const login = async (req: any, res: Response) => {
 
     // Validación de formato ya realizada por middleware
     // Buscar usuario
-    const user = await prisma.user.findUnique({
-      where: { email }
+    const user = await prisma.users.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        nombre: true,
+        password: true,
+        createdAt: true,
+        updatedAt: true
+      }
     });
 
     if (!user) {
@@ -87,7 +118,7 @@ export const login = async (req: any, res: Response) => {
     }
 
     // Generar token
-    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const secret: Secret = requireEnvVar('JWT_SECRET');
     const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
@@ -100,18 +131,35 @@ export const login = async (req: any, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
-        nombre: user.nombre
+        nombre: user.nombre,
+        createdAt: user.createdAt.toISOString(),
+        updatedAt: user.updatedAt.toISOString()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof MissingEnvVarError) {
+      console.error('Configuración inválida:', error.message);
+      return res.status(500).json({ error: 'Configuración del servidor inválida: falta JWT_SECRET' });
+    }
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error al iniciar sesión' });
+    console.error('Error stack:', error?.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    
+    // Devolver más detalles en desarrollo
+    const errorMessage = process.env.NODE_ENV === 'development' 
+      ? `Error al iniciar sesión: ${error?.message || 'Error desconocido'}`
+      : 'Error al iniciar sesión';
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+    });
   }
 };
 
 export const getMe = async (req: any & { userId?: string }, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: (req as AuthRequest).userId },
       select: {
         id: true,

@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import { labelsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Label } from '@/types';
+import { Button, Modal } from '@/components/ui';
 
 interface LabelModalProps {
   isOpen: boolean;
@@ -11,21 +12,35 @@ interface LabelModalProps {
   editLabel?: Label | null;
 }
 
+const presetColors = [
+  '#3b82f6',
+  '#ef4444',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#14b8a6',
+  '#6366f1',
+];
+
 export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalProps) {
   const queryClient = useQueryClient();
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState('#3b82f6');
-
-  const colors = [
-    '#3b82f6', // Blue
-    '#ef4444', // Red
-    '#10b981', // Green
-    '#f59e0b', // Amber
-    '#8b5cf6', // Purple
-    '#ec4899', // Pink
-    '#14b8a6', // Teal
-    '#6366f1', // Indigo
-  ];
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => {
+    const saved = localStorage.getItem('label-modal-pos');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        /* noop */
+      }
+    }
+    return { x: 0, y: 0 };
+  });
+  const [dragging, setDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   useEffect(() => {
     if (editLabel) {
@@ -36,6 +51,31 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
       setColor('#3b82f6');
     }
   }, [editLabel, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const onMove = (event: MouseEvent) => {
+      if (!dragging) return;
+      setPos({ x: event.clientX - dragOffset.x, y: event.clientY - dragOffset.y });
+    };
+
+    const onUp = () => {
+      setDragging(false);
+      try {
+        localStorage.setItem('label-modal-pos', JSON.stringify(pos));
+      } catch {
+        /* noop */
+      }
+    };
+
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging, dragOffset, isOpen, pos]);
 
   const createMutation = useMutation({
     mutationFn: (data: { nombre: string; color: string }) => labelsAPI.create(data),
@@ -50,8 +90,7 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
   });
 
   const updateMutation = useMutation({
-    mutationFn: (data: { nombre: string; color: string }) => 
-      labelsAPI.update(editLabel!.id, data),
+    mutationFn: (data: { nombre: string; color: string }) => labelsAPI.update(editLabel!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['labels'] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -63,8 +102,8 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (!nombre.trim()) {
       toast.error('El nombre es requerido');
@@ -78,85 +117,97 @@ export default function LabelModal({ isOpen, onClose, editLabel }: LabelModalPro
     }
   };
 
-  if (!isOpen) return null;
+  const submitDisabled = !nombre.trim() || createMutation.isPending || updateMutation.isPending;
+
+  const footer = (
+    <div className="flex w-full items-center justify-between gap-3">
+      <Button variant="ghost" onClick={onClose}>
+        Cancelar
+      </Button>
+      <Button
+        disabled={submitDisabled}
+        onClick={() => formRef.current?.requestSubmit()}
+      >
+        {editLabel
+          ? updateMutation.isPending
+            ? 'Guardando...'
+            : 'Guardar'
+          : createMutation.isPending
+          ? 'Creando...'
+          : 'Crear'}
+      </Button>
+    </div>
+  );
+
+  const title = editLabel ? 'Editar etiqueta' : 'Nueva etiqueta';
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" 
-      onClick={onClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      hideCloseButton
+      size="sm"
+      style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
+      footer={footer}
     >
-      <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-96" 
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {editLabel ? 'Editar Etiqueta' : 'Nueva Etiqueta'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      <div
+        className="mb-6 h-10 cursor-move select-none rounded-lg bg-slate-100/60 dark:bg-slate-700/40"
+        onMouseDown={(event) => {
+          setDragging(true);
+          setDragOffset({ x: event.clientX - pos.x, y: event.clientY - pos.y });
+        }}
+      />
+
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            Nombre
+          </label>
+          <input
+            type="text"
+            value={nombre}
+            onChange={(event) => setNombre(event.target.value)}
+            placeholder="Ej: Importante, Urgente, Personal..."
+            className="input-elevated"
+            autoFocus
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Nombre
-            </label>
-            <input
-              type="text"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej: Importante, Urgente, Personal..."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              autoFocus
-            />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+            Color
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {presetColors.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setColor(preset)}
+                className={`h-9 w-9 rounded-full transition-transform ${
+                  color === preset ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+                }`}
+                style={{ backgroundColor: preset }}
+              />
+            ))}
           </div>
+          <input
+            type="text"
+            value={color}
+            onChange={(event) => setColor(event.target.value)}
+            className="input-elevated mt-3"
+          />
+        </div>
+      </form>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Color
-            </label>
-            <div className="flex gap-2">
-              {colors.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`w-8 h-8 rounded-full transition-transform ${
-                    color === c ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
-                  }`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={!nombre.trim() || createMutation.isPending || updateMutation.isPending}
-              className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {editLabel
-                ? updateMutation.isPending ? 'Guardando...' : 'Guardar'
-                : createMutation.isPending ? 'Creando...' : 'Crear'
-              }
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <button
+        onClick={onClose}
+        className="ui-button ui-button--ghost absolute right-6 top-6 flex h-9 w-9 items-center justify-center rounded-full"
+        aria-label="Cerrar"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </Modal>
   );
 }
 

@@ -1,0 +1,24 @@
+# Architecture Changelog
+
+## 2025-11-04 — Fase 1 (Servicios de Dominio)
+- ✅ Incorporado `projectDomainService` con operaciones CRUD de proyectos y secciones.
+- ✅ Creada `projectFactory` para normalizar respuestas.
+- ✅ `projectController` delega en servicios/factories y emite eventos SSE con payloads consistentes.
+- ✅ Añadidos `labelDomainService` y `labelFactory`; `labelController` usa la nueva capa y respuestas homogéneas.
+- ✅ Añadidos `notificationDomainService` + `notificationFactory`; `notificationController` delega en la nueva capa y mantiene eventos SSE.
+- ✅ Integrado con auditoría (`ARCHITECTURE_AUDIT_2025-11-04.md`) y ADR-0001.
+- ✅ Creada librería UI inicial (`Button`, `Card`, `Modal`, `ScrollArea`) alineada con el sistema de diseño y aplicada en `Settings`.
+- ✅ Refactor de comentarios con `commentDomainService` + `commentFactory`; controlador reducido a orquestación y normalización unificada.
+- ✅ Recordatorios alineados con la capa de dominio (`reminderDomainService` + `reminderFactory`) y respuestas serializadas.
+- ✅ `LabelModal`, modales de proyectos y `TaskEditor` migrados al kit de UI reutilizable con acciones en el footer y scroll consistente.
+- ✅ Definidos tokens compartidos (`spacingTokens`, `radiiTokens`, `shadowTokens`) y guía de componentes UI.
+- ✅ Storybook configurado (`npm run storybook`) con historia base de `Button` y script `lint:ui` para validar uso del kit.
+- ✅ Multi-proveedor IA con fallback Groq/Gemini, planner interactivo/automático y creación masiva desde plan.
+- ✅ Automatizaciones de tareas (fecha por prioridad, sección única) con notas en UI y pruebas unitarias en domain services.
+- ✅ Workflow CI (`.github/workflows/ci.yml`) que ejecuta lint, lint:ui, tsc, storybook build y tests backend.
+- ✅ Seguridad por proyecto: `projectShareService` + rutas REST con roles viewer/editor/manager, SSE y notificaciones al compartir o revocar.
+- ✅ UI colaborativa: modal de compartir lazy-loaded, TaskItem/Board/List bloquean edición según rol y muestran estados de solo lectura.
+- ✅ Observabilidad end-to-end: `/metrics` de servidor + ingesta `/api/metrics/client` (LCP/FID/CLS/longtask) y envío automático desde el navegador.
+- ✅ Performance: carga diferida de `BoardView`/`ProjectShareModal`, automatismos en React Query y vigilancia de long tasks en cliente.
+
+

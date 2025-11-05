@@ -1,30 +1,35 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
-
-const prisma = new PrismaClient();
+import { projectFactory } from '../factories/projectFactory';
+import {
+  fetchProjects,
+  fetchProject,
+  createProject as createProjectService,
+  updateProject as updateProjectService,
+  deleteProject as deleteProjectService,
+  createSection as createSectionService,
+  updateSection as updateSectionService,
+  deleteSection as deleteSectionService,
+} from '../services/projectDomainService';
+import { assertProjectPermission } from '../services/projectShareService';
+import prisma from '../lib/prisma';
 
 export const getProjects = async (req: any, res: Response) => {
   try {
-    const projects = await prisma.project.findMany({
-      where: { userId: (req as AuthRequest).userId },
-      include: {
-        sections: {
-          orderBy: { orden: 'asc' }
-        },
-        _count: {
-          select: { tasks: true }
-        }
-      },
-      orderBy: { orden: 'asc' }
-    });
+    const userId = (req as AuthRequest).userId!;
+    const projects = await fetchProjects(prisma, userId);
+    const clientProjects = projects.map((project) => projectFactory.toClientProject(project, userId));
 
-    res.json(projects);
+    console.log(`[getProjects] Usuario ${(req as AuthRequest).userId} - Proyectos encontrados: ${clientProjects.length}`);
+    res.json(clientProjects);
   } catch (error) {
     console.error('Error en getProjects:', error);
-    res.status(500).json({ error: 'Error al obtener proyectos' });
+    if (error instanceof Error) {
+      console.error('Stack:', error.stack);
+    }
+    res.status(500).json({ error: 'Error al obtener proyectos', details: error instanceof Error ? error.message : String(error) });
   }
 };
 
@@ -32,23 +37,13 @@ export const getProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const project = await prisma.project.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      },
-      include: {
-        sections: {
-          orderBy: { orden: 'asc' }
-        }
-      }
-    });
+    const project = await fetchProject(prisma, id, (req as AuthRequest).userId!);
 
     if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    res.json(project);
+    res.json(projectFactory.toClientProject(project, (req as AuthRequest).userId!));
   } catch (error) {
     console.error('Error en getProject:', error);
     res.status(500).json({ error: 'Error al obtener proyecto' });
@@ -59,15 +54,14 @@ export const createProject = async (req: any, res: Response) => {
   try {
     const { nombre, color, orden } = req.body;
 
-    // Validación de formato ya realizada por middleware
-    const project = await prisma.project.create({
-      data: {
-        nombre,
-        color: color || '#808080',
-        orden: orden || 0,
-        userId: (req as AuthRequest).userId!
-      }
+    const project = await createProjectService(prisma, {
+      nombre,
+      color,
+      orden,
+      userId: (req as AuthRequest).userId!,
     });
+
+    const clientProject = projectFactory.toClientProject(project, (req as AuthRequest).userId!);
 
     // Enviar evento SSE
     sseService.sendTaskEvent({
@@ -75,12 +69,12 @@ export const createProject = async (req: any, res: Response) => {
       projectId: project.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: project,
+      data: clientProject,
     });
 
     // No crear notificación para acciones propias del usuario
 
-    res.status(201).json(project);
+    res.status(201).json(clientProject);
   } catch (error) {
     console.error('Error en createProject:', error);
     res.status(500).json({ error: 'Error al crear proyecto' });
@@ -92,37 +86,27 @@ export const updateProject = async (req: any, res: Response) => {
     const { id } = req.params;
     const { nombre, color, orden } = req.body;
 
-    // Verificar que el proyecto pertenece al usuario
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      }
+    const project = await updateProjectService(prisma, id, (req as AuthRequest).userId!, {
+      nombre,
+      color,
+      orden,
     });
 
-    if (!existingProject) {
+    if (!project) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    const project = await prisma.project.update({
-      where: { id },
-      data: {
-        ...(nombre && { nombre }),
-        ...(color && { color }),
-        ...(orden !== undefined && { orden })
-      }
-    });
+    const clientProject = projectFactory.toClientProject(project, (req as AuthRequest).userId!);
 
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'project_updated',
       projectId: project.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: project,
+      data: clientProject,
     });
 
-    res.json(project);
+    res.json(clientProject);
   } catch (error) {
     console.error('Error en updateProject:', error);
     res.status(500).json({ error: 'Error al actualizar proyecto' });
@@ -133,23 +117,12 @@ export const deleteProject = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Verificar que el proyecto pertenece al usuario
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        id,
-        userId: (req as AuthRequest).userId
-      }
-    });
+    const existingProject = await deleteProjectService(prisma, id, (req as AuthRequest).userId!);
 
     if (!existingProject) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    await prisma.project.delete({
-      where: { id }
-    });
-
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'project_deleted',
       projectId: id,
@@ -169,41 +142,35 @@ export const createSection = async (req: any, res: Response) => {
   try {
     const { projectId } = req.params;
     const { nombre, orden } = req.body;
+    const userId = (req as AuthRequest).userId!;
 
-    // Verificar que el proyecto pertenece al usuario
-    const project = await prisma.project.findFirst({
-      where: {
-        id: projectId,
-        userId: (req as AuthRequest).userId
-      }
+    try {
+      await assertProjectPermission(prisma, projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
+
+    const section = await createSectionService(prisma, projectId, (req as AuthRequest).userId!, {
+      nombre,
+      orden,
     });
 
-    if (!project) {
+    if (!section) {
       return res.status(404).json({ error: 'Proyecto no encontrado' });
     }
 
-    // Validación de formato ya realizada por middleware
-    const section = await prisma.section.create({
-      data: {
-        nombre,
-        orden: orden || 0,
-        projectId
-      }
-    });
+    const clientSection = projectFactory.toClientSection(section);
 
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'section_created',
-      projectId: projectId,
+      projectId,
       sectionId: section.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: section,
+      data: clientSection,
     });
 
-    // No crear notificación para acciones propias del usuario
-
-    res.status(201).json(section);
+    res.status(201).json(clientSection);
   } catch (error) {
     console.error('Error en createSection:', error);
     res.status(500).json({ error: 'Error al crear sección' });
@@ -214,36 +181,44 @@ export const updateSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
     const { nombre, orden } = req.body;
+    const userId = (req as AuthRequest).userId!;
 
-    // Verificar que la sección pertenece a un proyecto del usuario
-    const section = await prisma.section.findFirst({
+    const existingSection = await prisma.sections.findUnique({
       where: { id },
-      include: { project: true }
+      select: { projectId: true },
     });
 
-    if (!section || section.project.userId !== (req as AuthRequest).userId) {
+    if (!existingSection) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
-    const updatedSection = await prisma.section.update({
-      where: { id },
-      data: {
-        ...(nombre && { nombre }),
-        ...(orden !== undefined && { orden })
-      }
+    try {
+      await assertProjectPermission(prisma, existingSection.projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
+
+    const updatedSection = await updateSectionService(prisma, id, (req as AuthRequest).userId!, {
+      nombre,
+      orden,
     });
 
-    // Enviar evento SSE
+    if (!updatedSection) {
+      return res.status(404).json({ error: 'Sección no encontrada' });
+    }
+
+    const clientSection = projectFactory.toClientSection(updatedSection);
+
     sseService.sendTaskEvent({
       type: 'section_updated',
-      projectId: section.projectId,
+      projectId: updatedSection.projectId,
       sectionId: updatedSection.id,
       userId: (req as AuthRequest).userId!,
       timestamp: new Date(),
-      data: updatedSection,
+      data: clientSection,
     });
 
-    res.json(updatedSection);
+    res.json(clientSection);
   } catch (error) {
     console.error('Error en updateSection:', error);
     res.status(500).json({ error: 'Error al actualizar sección' });
@@ -253,22 +228,34 @@ export const updateSection = async (req: any, res: Response) => {
 export const deleteSection = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = (req as AuthRequest).userId!;
 
-    // Verificar que la sección pertenece a un proyecto del usuario
-    const section = await prisma.section.findFirst({
+    const existingSection = await prisma.sections.findUnique({
       where: { id },
-      include: { project: true }
+      select: { projectId: true },
     });
 
-    if (!section || section.project.userId !== (req as AuthRequest).userId) {
+    if (!existingSection) {
       return res.status(404).json({ error: 'Sección no encontrada' });
     }
 
-    await prisma.section.delete({
-      where: { id }
+    try {
+      await assertProjectPermission(prisma, existingSection.projectId, userId, 'manage');
+    } catch (error: any) {
+      return res.status(error?.status || 500).json({ error: error?.message || 'Permisos insuficientes' });
+    }
+
+    const section = await deleteSectionService(prisma, id, (req as AuthRequest).userId!);
+
+    if (!section) {
+      return res.status(404).json({ error: 'Sección no encontrada' });
+    }
+
+    await prisma.tasks.updateMany({
+      where: { sectionId: id },
+      data: { sectionId: null },
     });
 
-    // Enviar evento SSE
     sseService.sendTaskEvent({
       type: 'section_deleted',
       projectId: section.projectId,

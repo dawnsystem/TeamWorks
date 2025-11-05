@@ -5,33 +5,45 @@ export const createTaskSchema = z.object({
   titulo: z.string().min(1, 'El título es requerido').max(500, 'El título es demasiado largo'),
   descripcion: z.string().max(5000, 'La descripción es demasiado larga').optional().nullable(),
   prioridad: z.number().int().min(1).max(4).default(4),
-  fechaVencimiento: z.string().datetime().optional().nullable(),
-  projectId: z.string().uuid('ID de proyecto inválido'),
-  sectionId: z.string().uuid('ID de sección inválido').optional().nullable(),
-  parentTaskId: z.string().uuid('ID de tarea padre inválido').optional().nullable(),
+  // Acepta fecha en formato YYYY-MM-DD (datepicker del cliente) o ISO datetime
+  fechaVencimiento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida, use YYYY-MM-DD')
+    .or(z.string().datetime())
+    .optional()
+    .nullable(),
+  // IDs generados con cuid(); no forzamos formato UUID
+  projectId: z.string().min(1, 'ID de proyecto requerido'),
+  sectionId: z.string().min(1).optional().nullable(),
+  parentTaskId: z.string().min(1).optional().nullable(),
   orden: z.number().int().min(0).default(0),
-  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional().default([]),
+  labelIds: z.array(z.string().min(1)).optional().default([]),
 });
 
 export const updateTaskSchema = z.object({
   titulo: z.string().min(1).max(500).optional(),
   descripcion: z.string().max(5000).optional().nullable(),
   prioridad: z.number().int().min(1).max(4).optional(),
-  fechaVencimiento: z.string().datetime().optional().nullable(),
+  fechaVencimiento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha inválida, use YYYY-MM-DD')
+    .or(z.string().datetime())
+    .optional()
+    .nullable(),
   // projectId removido: cambiar proyecto requiere lógica especial y no se implementa en el controlador
-  sectionId: z.string().uuid().optional().nullable(),
+  sectionId: z.string().min(1).optional().nullable(),
   completada: z.boolean().optional(),
   orden: z.number().int().min(0).optional(),
-  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional(),
+  labelIds: z.array(z.string().min(1)).optional(),
 });
 
 export const reorderTasksSchema = z.object({
   taskUpdates: z.array(z.object({
-    id: z.string().uuid(),
+    id: z.string().min(1),
     orden: z.number().int().min(0),
-    projectId: z.string().uuid().optional(),
-    sectionId: z.string().uuid().optional().nullable(),
-    parentTaskId: z.string().uuid().optional().nullable(),
+    projectId: z.string().min(1).optional(),
+    sectionId: z.string().min(1).optional().nullable(),
+    parentTaskId: z.string().min(1).optional().nullable(),
   })).min(1, 'Debe proporcionar al menos una actualización'),
 });
 
@@ -101,6 +113,7 @@ export const aiProcessSchema = z.object({
   command: z.string().min(1, 'El comando no puede estar vacío').max(1000, 'El comando es demasiado largo'),
   autoExecute: z.boolean().optional().default(false),
   context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
 });
 
 export const aiExecuteSchema = z.object({
@@ -127,6 +140,14 @@ export const aiExecuteSchema = z.object({
   })).min(1, 'Debe proporcionar al menos una acción'),
 });
 
+export const aiPlannerSchema = z.object({
+  goal: z.string().min(5, 'Describe un objetivo con al menos 5 caracteres').max(2000, 'El objetivo es demasiado largo'),
+  mode: z.enum(['auto', 'interactive']).default('auto'),
+  answers: z.array(z.string().min(1)).optional().default([]),
+  context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
+});
+
 // Tipo de datos inferidos de los esquemas
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -144,25 +165,26 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type AIProcessInput = z.infer<typeof aiProcessSchema>;
 export type AIExecuteInput = z.infer<typeof aiExecuteSchema>;
+export type AIPlannerInput = z.infer<typeof aiPlannerSchema>;
 
 // Esquemas de validación para plantillas
 export const createTemplateSchema = z.object({
   titulo: z.string().min(1).max(255, 'El título es demasiado largo'),
   descripcion: z.string().optional(),
   prioridad: z.number().int().min(1).max(4).default(4),
-  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).default([]),
+  labelIds: z.array(z.string().min(1)).default([]),
 });
 
 export const updateTemplateSchema = z.object({
   titulo: z.string().min(1).max(255).optional(),
   descripcion: z.string().optional().nullable(),
   prioridad: z.number().int().min(1).max(4).optional(),
-  labelIds: z.array(z.string().uuid('ID de etiqueta inválido')).optional(),
+  labelIds: z.array(z.string().min(1)).optional(),
 });
 
 export const applyTemplateSchema = z.object({
-  projectId: z.string().uuid('ID de proyecto inválido'),
-  sectionId: z.string().uuid('ID de sección inválido').optional(),
+  projectId: z.string().min(1, 'ID de proyecto inválido'),
+  sectionId: z.string().min(1).optional(),
 });
 
 // Tipos inferidos

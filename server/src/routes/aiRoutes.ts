@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { processCommand, executeActions } from '../controllers/aiController';
+import { processCommand, executeActions, generatePlan } from '../controllers/aiController';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
-import { aiProcessSchema, aiExecuteSchema } from '../validation/schemas';
+import { aiProcessSchema, aiExecuteSchema, aiPlannerSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -11,6 +11,7 @@ router.use(authMiddleware);
 
 router.post('/process', validateBody(aiProcessSchema), processCommand);
 router.post('/execute', validateBody(aiExecuteSchema), executeActions);
+router.post('/planner', validateBody(aiPlannerSchema), generatePlan);
 
 export default router;
 

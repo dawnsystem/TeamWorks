@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { Plus, Edit, Trash2, Copy, Archive, ListPlus, BarChart3, List, LayoutGrid } from 'lucide-react';
+import { Plus, Edit, Trash2, Copy, Archive, ListPlus, BarChart3, List, LayoutGrid, Share2 } from 'lucide-react';
 import {
   DndContext,
   DragEndEvent,
@@ -19,15 +19,18 @@ import {
 import TaskList from './TaskList';
 import TaskItem from './TaskItem';
 import LabelFilter from './LabelFilter';
-import BoardView from './BoardView';
-import { projectsAPI, tasksAPI } from '@/lib/api';
+import { projectsAPI, tasksAPI, projectSharesAPI } from '@/lib/api';
 import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import { useContextMenu } from '@/hooks/useContextMenu';
 import ContextMenu from './ContextMenu';
 import type { ContextMenuItem } from '@/types/contextMenu';
-import type { Task } from '@/types';
-import { useState } from 'react';
+import type { Task, ProjectRole } from '@/types';
+import { useState, lazy, Suspense } from 'react';
 import toast from 'react-hot-toast';
+import { useTasksTree } from '@/hooks/useTasksTree';
+
+const BoardViewLazy = lazy(() => import('./BoardView'));
+const ProjectShareModalLazy = lazy(() => import('./ProjectShareModal').then((module) => ({ default: module.ProjectShareModal })));
 
 export default function ProjectView() {
   const { id } = useParams();
@@ -40,6 +43,7 @@ export default function ProjectView() {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isShareModalOpen, setShareModalOpen] = useState(false);
 
   // Sensors for drag and drop
   // MouseSensor for desktop (no delay) and TouchSensor for mobile (with delay for scrolling)
@@ -72,14 +76,25 @@ export default function ProjectView() {
     enabled: !!projectId,
   });
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, selectedLabelId],
-    queryFn: () => tasksAPI.getAll({ 
-      projectId: projectId!,
-      labelId: selectedLabelId || undefined
-    }).then(res => res.data),
-    enabled: !!projectId,
+  const projectRole: ProjectRole = project?.currentUserRole ?? 'owner';
+  const canManageProject = projectRole === 'owner' || projectRole === 'manager';
+  const canWriteProject = projectRole === 'owner' || projectRole === 'manager' || projectRole === 'editor';
+
+  const { data: projectShares = [], refetch: refetchShares } = useQuery({
+    queryKey: ['project', projectId, 'shares'],
+    queryFn: () => projectId ? projectSharesAPI.list(projectId).then(res => res.data) : [],
+    enabled: isShareModalOpen && !!projectId && canManageProject,
   });
+
+  const {
+    tasks: rootTasks,
+    tasksMap,
+    sectionMap,
+    tasksWithoutSection,
+    isLoading: isTasksLoading,
+  } = useTasksTree({ projectId: projectId ?? undefined, labelId: selectedLabelId });
+  const tasks = rootTasks;
+  const isLoading = isTasksLoading;
 
   const deleteSectionMutation = useMutation({
     mutationFn: (sectionId: string) => projectsAPI.deleteSection(sectionId),
@@ -92,8 +107,8 @@ export default function ProjectView() {
 
   const archiveCompletedTasksMutation = useMutation({
     mutationFn: async (sectionId: string) => {
-      const sectionTasks = tasks?.filter(t => t.sectionId === sectionId && t.completada) || [];
-      await Promise.all(sectionTasks.map(task => tasksAPI.delete(task.id)));
+      const sectionTasks = (sectionMap.get(sectionId) || []).filter((t) => t.completada);
+      await Promise.all(sectionTasks.map((task) => tasksAPI.delete(task.id)));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
@@ -114,7 +129,8 @@ export default function ProjectView() {
   });
 
   const handleDragStart = (event: DragStartEvent) => {
-    const task = tasks?.find(t => t.id === event.active.id);
+    if (!canWriteProject) return;
+    const task = tasksMap.get(event.active.id as string);
     setActiveTask(task || null);
     // Close any open context menus when dragging starts
     sectionContextMenu.hide();
@@ -122,6 +138,7 @@ export default function ProjectView() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (!canWriteProject) return;
     setActiveTask(null);
     const { active, over } = event;
 
@@ -159,31 +176,41 @@ export default function ProjectView() {
   };
 
   // Separar tareas por sección
-  const tasksWithoutSection = tasks?.filter(t => !t.sectionId && !t.parentTaskId) || [];
   const sections = project?.sections || [];
 
   // Si estamos en modo tablero, renderizar BoardView
   if (projectViewMode === 'board') {
-    return <BoardView />;
+    return (
+      <Suspense fallback={<div className="p-6 text-center text-gray-500 dark:text-gray-400">Cargando tablero...</div>}>
+        <BoardViewLazy />
+      </Suspense>
+    );
   }
 
   const getProjectHeaderContextMenuItems = (): ContextMenuItem[] => {
     if (!project) return [];
 
-    return [
-      {
-        id: 'edit',
-        label: 'Editar proyecto',
-        icon: Edit,
-        onClick: () => toast.success('Función próximamente'),
-      },
-      {
-        id: 'add-section',
-        label: 'Añadir sección',
-        icon: ListPlus,
-        onClick: () => toast.success('Función próximamente'),
-        separator: true,
-      },
+    const items: ContextMenuItem[] = [];
+
+    if (canWriteProject) {
+      items.push(
+        {
+          id: 'edit',
+          label: 'Editar proyecto',
+          icon: Edit,
+          onClick: () => toast.success('Función próximamente'),
+        },
+        {
+          id: 'add-section',
+          label: 'Añadir sección',
+          icon: ListPlus,
+          onClick: () => toast.success('Función próximamente'),
+          separator: true,
+        },
+      );
+    }
+
+    items.push(
       {
         id: 'copy-link',
         label: 'Copiar enlace',
@@ -199,22 +226,28 @@ export default function ProjectView() {
         icon: BarChart3,
         onClick: () => toast.success('Función próximamente'),
       },
-    ];
+    );
+
+    return items;
   };
 
   const getSectionContextMenuItems = (sectionId: string): ContextMenuItem[] => {
     const section = sections.find(s => s.id === sectionId);
     if (!section) return [];
 
-    const sectionTasks = tasks?.filter(t => t.sectionId === sectionId && t.completada) || [];
-    const hasCompletedTasks = sectionTasks.length > 0;
+    const sectionTasks = sectionMap.get(sectionId) || [];
+    const hasCompletedTasks = sectionTasks.some((t) => t.completada);
 
     return [
       {
         id: 'add-task',
         label: 'Añadir tarea',
         icon: Plus,
-        onClick: () => openEditor({ projectId, sectionId }),
+        onClick: () => {
+          if (!canWriteProject) return;
+          openEditor({ projectId, sectionId });
+        },
+        disabled: !canWriteProject,
         separator: true,
       },
       {
@@ -222,22 +255,33 @@ export default function ProjectView() {
         label: 'Editar nombre',
         icon: Edit,
         onClick: () => toast.success('Función próximamente'),
+        disabled: !canManageProject,
       },
       {
         id: 'archive',
         label: 'Archivar completadas',
         icon: Archive,
-        onClick: () => archiveCompletedTasksMutation.mutate(sectionId),
-        disabled: !hasCompletedTasks,
+        onClick: () => {
+          if (!canWriteProject) return;
+          archiveCompletedTasksMutation.mutate(sectionId);
+        },
+        disabled: !hasCompletedTasks || !canWriteProject,
         separator: true,
       },
       {
         id: 'delete',
         label: 'Eliminar sección',
         icon: Trash2,
-        onClick: () => deleteSectionMutation.mutate(sectionId),
+        onClick: () => {
+          if (!canManageProject) {
+            toast.error('No tienes permisos para eliminar secciones');
+            return;
+          }
+          deleteSectionMutation.mutate(sectionId);
+        },
         danger: true,
         requireConfirm: true,
+        disabled: !canManageProject,
       },
     ];
   };
@@ -267,40 +311,52 @@ export default function ProjectView() {
               </h1>
             </div>
 
-            {/* View Mode Switcher */}
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex-shrink-0">
-              <button
-                onClick={() => setProjectViewMode('list')}
-                className={`p-2 rounded transition ${
-                  projectViewMode === 'list'
-                    ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }`}
-                title="Vista de lista"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setProjectViewMode('board')}
-                className={
-                  projectViewMode !== 'list'
-                    ? 'p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
-                    : 'p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-                }
-                title="Vista de tablero"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {canManageProject && (
+                <button
+                  onClick={() => setShareModalOpen(true)}
+                  className="ui-button ui-button--ghost flex items-center gap-2"
+                >
+                  <Share2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Compartir</span>
+                </button>
+              )}
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <button
+                  onClick={() => setProjectViewMode('list')}
+                  className={`p-2 rounded transition ${
+                    projectViewMode === 'list'
+                      ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`}
+                  title="Vista de lista"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setProjectViewMode('board')}
+                  className={
+                    projectViewMode !== 'list'
+                      ? 'p-2 rounded transition bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow'
+                      : 'p-2 rounded transition text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
+                  }
+                  title="Vista de tablero"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
           
-          <button
-            onClick={() => openEditor({ projectId })}
-            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mt-4"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Agregar tarea</span>
-          </button>
+          {canWriteProject && (
+            <button
+              onClick={() => openEditor({ projectId })}
+              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mt-4"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Agregar tarea</span>
+            </button>
+          )}
         </div>
 
         <LabelFilter 
@@ -308,9 +364,28 @@ export default function ProjectView() {
           onSelectLabel={setSelectedLabelId}
         />
 
-        {/* Tareas sin sección */}
+        {/* Sección virtual: Sin asignar */}
         {tasksWithoutSection.length > 0 && (
           <div className="mb-8">
+            <div 
+              className="flex items-center justify-between mb-4 group"
+              onContextMenu={(e) => {
+                setSelectedSectionId('unassigned');
+                sectionContextMenu.show(e);
+              }}
+            >
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
+                Sin asignar
+              </h2>
+              {canWriteProject && (
+                <button
+                  onClick={() => openEditor({ projectId })}
+                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             <SortableContext
               items={tasksWithoutSection.map(t => t.id)}
               strategy={verticalListSortingStrategy}
@@ -318,7 +393,8 @@ export default function ProjectView() {
               <TaskList
                 tasks={tasksWithoutSection}
                 loading={isLoading}
-                emptyMessage="No hay tareas en este proyecto"
+                emptyMessage="No hay tareas sin asignar"
+                projectRole={projectRole}
               />
             </SortableContext>
           </div>
@@ -326,7 +402,7 @@ export default function ProjectView() {
 
         {/* Secciones con tareas */}
         {sections.map((section) => {
-          const sectionTasks = tasks?.filter(t => t.sectionId === section.id && !t.parentTaskId) || [];
+          const sectionTasks = sectionMap.get(section.id) || [];
           
           if (sectionTasks.length === 0) return null;
 
@@ -342,35 +418,39 @@ export default function ProjectView() {
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu">
                   {section.nombre}
                 </h2>
-                <button
-                  onClick={() => openEditor({ projectId, sectionId: section.id })}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+                {canWriteProject && (
+                  <button
+                    onClick={() => openEditor({ projectId, sectionId: section.id })}
+                    className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
               </div>
               <SortableContext
                 items={sectionTasks.map(t => t.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <TaskList tasks={sectionTasks} />
+                <TaskList tasks={sectionTasks} projectRole={projectRole} />
               </SortableContext>
             </div>
           );
         })}
 
-        {!isLoading && tasks?.length === 0 && (
+        {!isLoading && tasks.length === 0 && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400 mb-4">
               No hay tareas en este proyecto
             </p>
-            <button
-              onClick={() => openEditor({ projectId })}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Crear primera tarea
-            </button>
+            {canWriteProject && (
+              <button
+                onClick={() => openEditor({ projectId })}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                <Plus className="w-4 h-4" />
+                Crear primera tarea
+              </button>
+            )}
           </div>
         )}
 
@@ -389,12 +469,24 @@ export default function ProjectView() {
             onClose={sectionContextMenu.hide}
           />
         )}
+
+        {canManageProject && (
+          <Suspense fallback={null}>
+            <ProjectShareModalLazy
+              project={project}
+              shares={projectShares}
+              isOpen={isShareModalOpen}
+              onClose={() => setShareModalOpen(false)}
+              refetch={refetchShares}
+            />
+          </Suspense>
+        )}
       </div>
 
       <DragOverlay>
         {activeTask ? (
           <div className="opacity-90 rotate-3 scale-105 shadow-2xl">
-            <TaskItem task={activeTask} />
+            <TaskItem task={activeTask} role={projectRole} />
           </div>
         ) : null}
       </DragOverlay>

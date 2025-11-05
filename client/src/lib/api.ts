@@ -1,8 +1,20 @@
 import axios from 'axios';
-import type { User, Project, Task, Label, AIAction, TaskFilters, Comment, Reminder, TaskTemplate } from '@/types';
+import type {
+  User,
+  Project,
+  Task,
+  Label,
+  AIAction,
+  TaskFilters,
+  Comment,
+  Reminder,
+  TaskTemplate,
+  ProjectShare,
+} from '@/types';
+import { useAuthStore } from '@/store/useStore';
 
 // Function to get API URL from settings or environment
-const getApiUrl = () => {
+export const getApiUrl = () => {
   // Try to get from localStorage settings first
   const settingsStorage = localStorage.getItem('settings-storage');
   if (settingsStorage) {
@@ -114,8 +126,21 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Solo limpiar si no es una petición de login/register (para evitar bucles)
+      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
+      
+      if (!isAuthRequest) {
+        // Limpiar el estado de auth usando el store
+        useAuthStore.getState().logout();
+        
+        // Solo redirigir si no estamos ya en una página pública
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          // Usar replace para evitar agregar al historial y evitar bucles
+          window.location.replace('/login');
+        }
+      }
     }
     return Promise.reject(error);
   }
@@ -153,6 +178,14 @@ export const projectsAPI = {
     api.patch(`/projects/sections/${id}`, data),
   
   deleteSection: (id: string) => api.delete(`/projects/sections/${id}`),
+};
+
+export const projectSharesAPI = {
+  getAccess: (projectId: string) => api.get<{ role: string }>(`/projects/${projectId}/access`),
+  list: (projectId: string) => api.get<ProjectShare[]>(`/projects/${projectId}/shares`),
+  upsert: (projectId: string, data: { email: string; role: 'viewer' | 'editor' | 'manager' }) =>
+    api.post<ProjectShare[]>(`/projects/${projectId}/shares`, data),
+  remove: (projectId: string, shareId: string) => api.delete<ProjectShare[]>(`/projects/${projectId}/shares/${shareId}`),
 };
 
 // Tasks
@@ -254,11 +287,14 @@ export const templatesAPI = {
 
 // AI
 export const aiAPI = {
-  process: (command: string, autoExecute = false, context?: any) =>
-    api.post('/ai/process', { command, autoExecute, context }),
+  process: (command: string, autoExecute = false, provider?: string, context?: any) =>
+    api.post('/ai/process', { command, autoExecute, provider, context }),
   
   execute: (actions: AIAction[]) =>
     api.post('/ai/execute', { actions }),
+  
+  planner: (payload: { goal: string; mode: 'auto' | 'interactive'; answers?: string[]; provider?: string; context?: any; }) =>
+    api.post('/ai/planner', payload),
 };
 
 export default api;

@@ -15,6 +15,21 @@ module.exports = {
       { allowConstantExport: true },
     ],
     '@typescript-eslint/no-explicit-any': 'off',
+    'no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: '@/components/Modal',
+            message: 'Importa Modal desde "@/components/ui" para mantener consistencia.',
+          },
+          {
+            name: '@/components/Button',
+            message: 'Importa Button desde "@/components/ui" para mantener consistencia.',
+          },
+        ],
+      },
+    ],
   },
 }
 

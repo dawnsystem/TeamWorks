@@ -1,4 +1,5 @@
 import express from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
@@ -13,14 +14,23 @@ import taskSubscriptionRoutes from './routes/taskSubscriptionRoutes';
 import sseRoutes from './routes/sseRoutes';
 import { sseService } from './services/sseService';
 import { reminderService } from './services/reminderService';
-// import templateRoutes from './routes/templateRoutes';
+import templateRoutes from './routes/templateRoutes';
+import projectShareRoutes from './routes/projectShareRoutes';
+import { metricsMiddleware, getMetricsSnapshot } from './middleware/metrics';
+import { addClientMetrics, getClientMetrics } from './services/clientMetricsService';
+import { authMiddleware } from './middleware/auth';
 
 dotenv.config();
+
+// Log para verificar DATABASE_URL después de cargar .env
+console.log('📊 DATABASE_URL configurada:', process.env.DATABASE_URL?.replace(/password@[^/]+/, 'password@***') || 'NO CONFIGURADA');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 // Middleware
+app.use(compression());
+app.use(metricsMiddleware);
 // CORS configuration that allows access from local network devices
 app.use(cors({
   origin: (origin, callback) => {
@@ -103,9 +113,28 @@ app.get('/api/server-info', (req, res) => {
   res.json(serverInfo);
 });
 
+app.get('/metrics', (req, res) => {
+  res.status(200).json(getMetricsSnapshot());
+});
+
+app.post('/api/metrics/client', (req, res) => {
+  try {
+    addClientMetrics(req.body);
+    res.status(202).json({ status: 'accepted' });
+  } catch (error) {
+    console.error('Error guardando métricas de cliente:', error);
+    res.status(400).json({ error: 'Formato de métricas inválido' });
+  }
+});
+
+app.get('/api/metrics/client', authMiddleware, (req, res) => {
+  res.json(getClientMetrics(200));
+});
+
 // Protected routes (require auth)
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/projects', projectShareRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/ai', aiRoutes);
@@ -114,6 +143,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api', taskSubscriptionRoutes);
 app.use('/api', commentRoutes);
 app.use('/api', reminderRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

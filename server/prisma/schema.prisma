@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,169 +7,118 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  nombre    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  projects          Project[]
-  labels            Label[]
-  comments          Comment[]
-  templates         TaskTemplate[]
-  notifications     Notification[]
-  taskSubscriptions TaskSubscription[]
-
-  @@map("users")
+model comments {
+  id            String          @id @default(cuid())
+  contenido     String
+  taskId        String
+  userId        String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  tasks         tasks           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  users         users           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notifications notifications[]
 }
 
-model Project {
-  id        String   @id @default(uuid())
-  nombre    String
-  color     String   @default("#808080")
-  orden     Int      @default(0)
+model labels {
+  id          String        @id @default(cuid())
+  nombre      String
+  color       String        @default("#808080")
+  userId      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  users       users         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task_labels task_labels[]
+
+  @@index([userId])
+}
+
+model notifications {
+  id        String    @id @default(cuid())
   userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sections      Section[]
-  tasks         Task[]
-  notifications Notification[]
-
-  @@map("projects")
-}
-
-model Section {
-  id        String   @id @default(uuid())
-  nombre    String
-  orden     Int      @default(0)
-  projectId String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-
-  @@map("sections")
-}
-
-model Task {
-  id              String    @id @default(uuid())
-  titulo          String
-  descripcion     String?
-  prioridad       Int       @default(4) // 1: alta, 2: media, 3: baja, 4: ninguna
-  fechaVencimiento DateTime?
-  completada      Boolean   @default(false)
-  orden           Int       @default(0)
-  projectId       String
-  sectionId       String?
-  parentTaskId    String?
-  createdBy       String    // User ID of the creator
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-
-  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  section       Section?           @relation(fields: [sectionId], references: [id], onDelete: SetNull)
-  parentTask    Task?              @relation("SubTasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
-  subTasks      Task[]             @relation("SubTasks")
-  labels        TaskLabel[]
-  comments      Comment[]
-  reminders     Reminder[]
-  notifications Notification[]
-  subscribers   TaskSubscription[]
-
-  @@map("tasks")
-}
-
-model Label {
-  id        String   @id @default(uuid())
-  nombre    String
-  color     String   @default("#808080")
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks TaskLabel[]
-
-  @@map("labels")
-}
-
-model TaskLabel {
-  taskId  String
-  labelId String
-
-  task  Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  label Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
-
-  @@id([taskId, labelId])
-  @@map("task_labels")
-}
-
-model Comment {
-  id        String   @id @default(uuid())
-  contenido String
-  taskId    String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  task          Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notifications Notification[]
-
-  @@map("comments")
-}
-
-model Reminder {
-  id        String   @id @default(uuid())
-  fechaHora DateTime
-  taskId    String
-  enviado   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@map("reminders")
-}
-
-model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  type      String   // 'reminder', 'comment', 'task_completed', 'due_date', 'mention', 'ai_action'
+  type      String
   title     String
   message   String
-  read      Boolean  @default(false)
-  
-  // Referencias opcionales según tipo
+  read      Boolean   @default(false)
   taskId    String?
   commentId String?
   projectId String?
   sectionId String?
   labelId   String?
-  
-  // Metadatos
   metadata  Json?
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  task    Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  @@map("notifications")
-  @@index([userId, read])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  comments  comments? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  projects  projects? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     tasks?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  users     users     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
+  @@index([userId, read])
 }
 
-model TaskTemplate {
-  id          String   @id @default(uuid())
+model projects {
+  id            String          @id @default(cuid())
+  nombre        String
+  color         String          @default("#808080")
+  orden         Int             @default(0)
+  userId        String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  notifications notifications[]
+  users         users           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections      sections[]
+  tasks         tasks[]
+  shares        project_shares[]
+}
+
+model reminders {
+  id        String   @id @default(cuid())
+  fechaHora DateTime
+  taskId    String
+  enviado   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model sections {
+  id        String   @id @default(cuid())
+  nombre    String
+  orden     Int      @default(0)
+  projectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  projects  projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     tasks[]
+
+  @@index([projectId])
+}
+
+model task_labels {
+  taskId  String
+  labelId String
+  labels  labels @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  tasks   tasks  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model task_subscriptions {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tasks     tasks    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  users     users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model task_templates {
+  id          String   @id @default(cuid())
   titulo      String
   descripcion String?
   prioridad   Int      @default(4)
@@ -180,24 +126,76 @@ model TaskTemplate {
   labelIds    String[] @default([])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("task_templates")
+  users       users    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model TaskSubscription {
-  id        String   @id @default(uuid())
-  taskId    String
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model tasks {
+  id                 String               @id @default(cuid())
+  titulo             String
+  descripcion        String?
+  prioridad          Int                  @default(4)
+  fechaVencimiento   DateTime?
+  completada         Boolean              @default(false)
+  orden              Int                  @default(0)
+  projectId          String
+  sectionId          String?
+  parentTaskId       String?
+  createdBy          String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  comments           comments[]
+  notifications      notifications[]
+  reminders          reminders[]
+  task_labels        task_labels[]
+  task_subscriptions task_subscriptions[]
+  tasks              tasks?               @relation("tasksTotasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  other_tasks        tasks[]              @relation("tasksTotasks")
+  projects           projects             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sections           sections?            @relation(fields: [sectionId], references: [id])
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([projectId, sectionId])
+  @@index([parentTaskId])
+  @@index([createdAt])
+  @@index([orden])
+}
 
-  @@unique([taskId, userId])
-  @@map("task_subscriptions")
-  @@index([taskId])
-  @@index([userId])
+model users {
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  password           String
+  nombre             String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  comments           comments[]
+  labels             labels[]
+  notifications      notifications[]
+  projects           projects[]
+  task_subscriptions task_subscriptions[]
+  task_templates     task_templates[]
+  ownedShares        project_shares[]     @relation("ProjectShareOwner")
+  sharedProjects     project_shares[]     @relation("ProjectShareUser")
+}
+
+enum ProjectShareRole {
+  viewer
+  editor
+  manager
+}
+
+model project_shares {
+  id           String           @id @default(cuid())
+  projectId    String
+  ownerId      String
+  sharedWithId String
+  role         ProjectShareRole @default(editor)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project    projects @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner      users    @relation("ProjectShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedWith users    @relation("ProjectShareUser", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sharedWithId])
+  @@index([sharedWithId])
+  @@index([ownerId])
 }

@@ -15,7 +15,8 @@ interface TaskEvent {
         'comment_created' | 'comment_updated' | 'comment_deleted' |
         'label_created' | 'label_updated' | 'label_deleted' |
         'notification_created' | 'notification_read' | 'notification_deleted' |
-        'task_subscription_created' | 'task_subscription_deleted';
+        'task_subscription_created' | 'task_subscription_deleted' |
+        'project_shared' | 'project_unshared';
   projectId: string;
   taskId?: string;
   sectionId?: string;

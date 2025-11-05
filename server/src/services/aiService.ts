@@ -1,14 +1,122 @@
 import Groq from 'groq-sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { assertProjectPermission } from './projectShareService';
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || ''
-});
+const SUPPORTED_AI_PROVIDERS = ['groq', 'gemini'] as const;
+type SupportedAIProvider = (typeof SUPPORTED_AI_PROVIDERS)[number];
 
-// Función para verificar API Key
-const checkApiKey = () => {
-  if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-    throw new Error('GROQ_API_KEY no está configurada. Obtén una gratis en https://console.groq.com');
+const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+
+let groqClient: Groq | null = null;
+let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
+
+const isProviderConfigured = (provider: SupportedAIProvider) => {
+  if (provider === 'groq') {
+    const apiKey = process.env.GROQ_API_KEY;
+    return Boolean(apiKey && apiKey !== 'YOUR_GROQ_API_KEY_HERE');
   }
+  if (provider === 'gemini') {
+    const apiKey = process.env.GEMINI_API_KEY;
+    return Boolean(apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE');
+  }
+  return false;
+};
+
+const getConfiguredProviders = () =>
+  SUPPORTED_AI_PROVIDERS.filter((provider) => isProviderConfigured(provider));
+
+const getGroqClient = () => {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
+    throw new Error('El proveedor Groq está seleccionado pero GROQ_API_KEY no está configurada. Obtén una en https://console.groq.com');
+  }
+  if (!groqClient) {
+    groqClient = new Groq({ apiKey });
+  }
+  return groqClient;
+};
+
+const getGeminiModel = () => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+    throw new Error('El proveedor Gemini está seleccionado pero GEMINI_API_KEY no está configurada. Genera una en https://makersuite.google.com/app/apikey');
+  }
+  if (!geminiModel) {
+    const client = new GoogleGenerativeAI(apiKey);
+    geminiModel = client.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+  }
+  return geminiModel;
+};
+
+const resolveProvider = (provider?: string): SupportedAIProvider => {
+  const selected = (provider || process.env.AI_PROVIDER || 'groq').toLowerCase();
+  if (!SUPPORTED_AI_PROVIDERS.includes(selected as SupportedAIProvider)) {
+    throw new Error(`Proveedor IA '${selected}' no soportado. Usa uno de: ${SUPPORTED_AI_PROVIDERS.join(', ')}`);
+  }
+  return selected as SupportedAIProvider;
+};
+
+const getProviderOrder = (preferred: SupportedAIProvider, override?: string) => {
+  if (override) {
+    return [preferred];
+  }
+
+  const configured = getConfiguredProviders();
+  const ordered = configured.filter((p) => p === preferred);
+  for (const provider of configured) {
+    if (!ordered.includes(provider)) {
+      ordered.push(provider);
+    }
+  }
+  // Always ensure preferred first even if not configured (will throw quickly)
+  if (!ordered.includes(preferred)) {
+    ordered.unshift(preferred);
+  }
+  return ordered;
+};
+
+const generateWithProvider = async (prompt: string, provider: SupportedAIProvider): Promise<string> => {
+  if (provider === 'gemini') {
+    const model = getGeminiModel();
+    const result = await model.generateContent(prompt);
+    return result.response.text() || '';
+  }
+
+  const client = getGroqClient();
+  const completion = await client.chat.completions.create({
+    messages: [{ role: 'user', content: prompt }],
+    model: DEFAULT_GROQ_MODEL,
+    temperature: 0.7,
+    max_tokens: 1000
+  });
+
+  return completion.choices[0]?.message?.content || '';
+};
+
+const generateWithFallback = async (
+  prompt: string,
+  preferred: SupportedAIProvider,
+  override?: string,
+): Promise<{ text: string; providerUsed: SupportedAIProvider }> => {
+  const providersToTry = getProviderOrder(preferred, override);
+  const errors: string[] = [];
+
+  for (const provider of providersToTry) {
+    try {
+      const text = await generateWithProvider(prompt, provider);
+      if (!text.trim()) {
+        throw new Error('Respuesta vacía');
+      }
+      return { text, providerUsed: provider };
+    } catch (error: any) {
+      errors.push(`${provider}: ${error?.message || error}`);
+    }
+  }
+
+  throw new Error(
+    `No se pudo generar respuesta usando los proveedores disponibles. Detalles: ${errors.join(' | ')}`,
+  );
 };
 
 // Función para parsear fechas en lenguaje natural
@@ -103,6 +211,20 @@ const parseDateString = (dateInput: string): Date | null => {
   return null;
 };
 
+const projectAccessQuery = (userId: string) => ({
+  OR: [
+    { userId },
+    { shares: { some: { sharedWithId: userId } } },
+  ],
+});
+
+const taskAccessWhere = (userId: string) => ({
+  OR: [
+    { projects: { userId } },
+    { projects: { shares: { some: { sharedWithId: userId } } } },
+  ],
+});
+
 export interface AIAction {
   type: 'create' | 'update' | 'delete' | 'query' | 'complete' | 'create_bulk' | 'update_bulk' | 'create_project' | 'create_section' | 'create_label' | 'add_comment' | 'create_reminder';
   entity: 'task' | 'project' | 'label' | 'section' | 'comment' | 'reminder';
@@ -112,13 +234,186 @@ export interface AIAction {
   explanation: string;
 }
 
-export const processNaturalLanguage = async (input: string, context?: any): Promise<AIAction[]> => {
+// Funciones helper para procesamiento de IA
+const parseActionsFromText = (text: string): AIAction[] => {
+  let jsonText = text.trim();
+
+  if (jsonText.startsWith('```json')) {
+    jsonText = jsonText.substring(7);
+  } else if (jsonText.startsWith('```')) {
+    jsonText = jsonText.substring(3);
+  }
+
+  if (jsonText.endsWith('```')) {
+    jsonText = jsonText.substring(0, jsonText.length - 3);
+  }
+
+  jsonText = jsonText.trim();
+
   try {
-    checkApiKey();
+    const parsed = JSON.parse(jsonText);
+    return parsed.actions || [];
+  } catch (error) {
+    console.error('Error parseando respuesta de IA:', error);
+    return [];
+  }
+};
 
-    const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
+const createFallbackAction = (input: string): AIAction => ({
+  type: 'create',
+  entity: 'task',
+  data: {
+    titulo: input
+  },
+  confidence: 0.5,
+  explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
+});
 
-    const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
+export interface ProcessNaturalLanguageResult {
+  actions: AIAction[];
+  providerUsed: SupportedAIProvider;
+  raw?: string;
+  fallback?: boolean;
+  errorMessage?: string;
+}
+
+export interface AIPlanTask {
+  title: string;
+  description?: string;
+  priority?: number;
+  dueInDays?: number;
+  dependencies?: string[];
+}
+
+export interface AIPlanPhase {
+  title: string;
+  description?: string;
+  duration?: string;
+  tasks: AIPlanTask[];
+}
+
+export interface AIPlan {
+  goal: string;
+  summary: string;
+  assumptions?: string[];
+  timeline?: string[];
+  phases: AIPlanPhase[];
+}
+
+interface PlannerQuestionsResponse {
+  status: 'questions';
+  questions: string[];
+}
+
+interface PlannerPlanResponse {
+  status: 'plan';
+  plan: AIPlan;
+  notes?: string[];
+}
+
+type InternalPlannerResponse = PlannerQuestionsResponse | PlannerPlanResponse;
+
+const stripCodeFences = (text: string) => {
+  if (!text) return '';
+
+  // Intentar extraer contenido dentro de un bloque ``` ```
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch && fenceMatch[1]) {
+    return fenceMatch[1].trim();
+  }
+
+  let jsonText = text.trim();
+
+  if (jsonText.startsWith('```')) {
+    jsonText = jsonText.replace(/^```[a-zA-Z]*\n?/, '');
+  }
+  if (jsonText.endsWith('```')) {
+    jsonText = jsonText.slice(0, jsonText.lastIndexOf('```'));
+  }
+
+  jsonText = jsonText.trim();
+
+  const firstBrace = jsonText.indexOf('{');
+  const lastBrace = jsonText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+    return jsonText.slice(firstBrace, lastBrace + 1).trim();
+  }
+
+  return jsonText;
+};
+
+const parsePlanFromText = (text: string): InternalPlannerResponse => {
+  const jsonText = stripCodeFences(text);
+
+  try {
+    const parsed = JSON.parse(jsonText);
+    if (parsed.status === 'questions' && Array.isArray(parsed.questions)) {
+      return {
+        status: 'questions',
+        questions: parsed.questions.filter((q: unknown) => typeof q === 'string' && q.trim()).map((q: string) => q.trim()),
+      };
+    }
+
+    if (parsed.status === 'plan' && parsed.plan) {
+      const phases = Array.isArray(parsed.plan.phases) ? parsed.plan.phases : [];
+      const normalizedPhases: AIPlanPhase[] = phases
+        .filter((phase: any) => phase && typeof phase.title === 'string')
+        .map((phase: any) => ({
+          title: phase.title,
+          description: phase.description,
+          duration: phase.duration,
+          tasks: Array.isArray(phase.tasks)
+            ? phase.tasks
+                .filter((task: any) => task && typeof task.title === 'string')
+                .map((task: any) => ({
+                  title: task.title,
+                  description: task.description,
+                  priority: typeof task.priority === 'number' ? task.priority : undefined,
+                  dueInDays: typeof task.dueInDays === 'number' ? task.dueInDays : undefined,
+                  dependencies: Array.isArray(task.dependencies)
+                    ? task.dependencies.filter((dep: unknown) => typeof dep === 'string')
+                    : undefined,
+                }))
+            : [],
+        }));
+
+      const plan: AIPlan = {
+        goal: parsed.plan.goal || '',
+        summary: parsed.plan.summary || '',
+        assumptions: Array.isArray(parsed.plan.assumptions)
+          ? parsed.plan.assumptions.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        timeline: Array.isArray(parsed.plan.timeline)
+          ? parsed.plan.timeline.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+        phases: normalizedPhases,
+      };
+
+      return {
+        status: 'plan',
+        plan,
+        notes: Array.isArray(parsed.notes)
+          ? parsed.notes.filter((item: unknown) => typeof item === 'string')
+          : undefined,
+      };
+    }
+
+    throw new Error('Respuesta del planner con formato inesperado');
+  } catch (error) {
+    console.error('Error parseando respuesta del planner IA:', error, '\nRespuesta original:', text);
+    throw new Error('No se pudo interpretar la respuesta del planner IA');
+  }
+};
+
+export const processNaturalLanguage = async (
+  input: string,
+  context?: any,
+  providerOverride?: string
+): Promise<ProcessNaturalLanguageResult> => {
+  const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
+  const preferred = resolveProvider(providerOverride);
+
+  const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
 Tu trabajo es interpretar comandos en lenguaje natural y convertirlos en acciones estructuradas.
 
 Contexto actual del usuario:
@@ -412,53 +707,129 @@ Colores disponibles:
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      model: 'llama-3.1-8b-instant', // Llama 3.1 8B Instant - rápido, gratis y actualizado
-      temperature: 0.7,
-      max_tokens: 1000
-    });
+  try {
+    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+    const actions = parseActionsFromText(text);
 
-    const text = chatCompletion.choices[0]?.message?.content || '';
-
-    // Extraer JSON del texto
-    let jsonText = text.trim();
-    
-    // Eliminar markdown code blocks si existen
-    if (jsonText.startsWith('```json')) {
-      jsonText = jsonText.substring(7);
-    } else if (jsonText.startsWith('```')) {
-      jsonText = jsonText.substring(3);
+    if (!actions.length) {
+      throw new Error('La respuesta de la IA no contenía acciones válidas');
     }
-    
-    if (jsonText.endsWith('```')) {
-      jsonText = jsonText.substring(0, jsonText.length - 3);
-    }
-    
-    jsonText = jsonText.trim();
 
-    const parsed = JSON.parse(jsonText);
-    
-    return parsed.actions || [];
-  } catch (error) {
+    return {
+      actions,
+      providerUsed,
+      raw: text,
+      fallback: providerUsed !== preferred,
+    };
+  } catch (error: any) {
     console.error('Error en processNaturalLanguage:', error);
-    
-    // Fallback: intentar parsear el comando de forma básica
-    return [{
-      type: 'create',
-      entity: 'task',
-      data: {
-        titulo: input
-      },
-      confidence: 0.5,
-      explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
-    }];
+    const fallbackProvider = preferred;
+    return {
+      actions: [createFallbackAction(input)],
+      providerUsed: fallbackProvider,
+      fallback: true,
+      errorMessage: error instanceof Error ? error.message : String(error),
+    };
   }
+};
+
+interface GenerateAIPlanOptions {
+  providerOverride?: string;
+  answers?: string[];
+  context?: any;
+}
+
+const buildPlannerPrompt = (
+  goal: string,
+  mode: 'auto' | 'interactive',
+  answers: string[] = [],
+  contextString: string,
+) => {
+  if (mode === 'interactive' && (!answers.length)) {
+    return `Eres un planner experto que ayuda a desglosar objetivos complejos en planes ejecutables.
+Contexto del usuario:
+${contextString}
+
+Objetivo principal: "${goal}"
+
+Primero necesitas hacer hasta 3 preguntas aclaratorias para entender mejor el objetivo. Devuelve únicamente un JSON con el formato:
+{
+  "status": "questions",
+  "questions": ["Pregunta 1", "Pregunta 2", "Pregunta 3"]
+}
+
+- Máximo 3 preguntas.
+- Las preguntas deben ser claras, concretas y enfocadas en información crítica para planificar.
+- Si crees que no necesitas más información, devuelve un array vacío.
+- No incluyas texto adicional fuera del JSON.`;
+  }
+
+  const answersBlock = answers
+    .map((answer, idx) => `Respuesta ${idx + 1}: ${answer}`)
+    .join('\n');
+
+  return `Eres un planner experto que ayuda a desglosar objetivos complejos en planes accionables.
+Objetivo principal: "${goal}"
+
+Información adicional del usuario:
+${contextString}
+
+${answers.length ? `Respuestas del usuario a preguntas anteriores:\n${answersBlock}` : 'No se proporcionaron respuestas adicionales.'}
+
+Devuelve un JSON con el siguiente formato estricto:
+{
+  "status": "plan",
+  "plan": {
+    "goal": "Resumen del objetivo",
+    "summary": "Resumen ejecutivo del plan",
+    "assumptions": ["Lista opcional de supuestos"],
+    "timeline": ["Hito 1", "Hito 2"],
+    "phases": [
+      {
+        "title": "Nombre de la fase",
+        "description": "Descripción breve",
+        "duration": "Duración estimada (ej. 2 semanas)",
+        "tasks": [
+          {
+            "title": "Tarea específica",
+            "description": "Descripción breve",
+            "priority": 1,
+            "dueInDays": 7,
+            "dependencies": ["Otra tarea"]
+          }
+        ]
+      }
+    ]
+  },
+  "notes": ["Notas opcionales para el usuario"]
+}
+
+Reglas:
+- Prioridad debe ser un número 1-4 (1=alta, 4=baja).
+- dueInDays es un número entero >= 0 indicando días desde hoy.
+- Incluye al menos 2 fases si el objetivo amerita dividirse.
+- Cada fase debe tener al menos una tarea.
+- Mantén las descripciones concisas.
+- No incluyas texto fuera del JSON.`;
+};
+
+export const generateAIPlan = async (
+  goal: string,
+  mode: 'auto' | 'interactive',
+  options: GenerateAIPlanOptions = {},
+) => {
+  const preferred = resolveProvider(options.providerOverride);
+  const contextString = options.context ? JSON.stringify(options.context, null, 2) : 'Sin contexto adicional';
+
+  const prompt = buildPlannerPrompt(goal, mode, options.answers, contextString);
+
+  const { text, providerUsed } = await generateWithFallback(prompt, preferred, options.providerOverride);
+  const parsed = parsePlanFromText(text);
+
+  return {
+    ...parsed,
+    providerUsed,
+  };
 };
 
 export const executeAIActions = async (actions: AIAction[], userId: string, prisma: any) => {
@@ -472,10 +843,10 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_bulk':
           if (action.entity === 'task' && action.data?.tasks && Array.isArray(action.data.tasks)) {
             // Buscar el proyecto inbox del usuario
-            const inboxProject = await prisma.project.findFirst({
+            const inboxProject = await prisma.projects.findFirst({
               where: {
-                userId,
-                nombre: 'Inbox'
+                nombre: 'Inbox',
+                ...projectAccessQuery(userId),
               }
             });
 
@@ -490,25 +861,76 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Buscar proyecto si se especifica
               let targetProject = inboxProject;
               if (taskData.projectName) {
-                const foundProject = await prisma.project.findFirst({
+                const foundProject = await prisma.projects.findFirst({
                   where: {
-                    userId,
-                    nombre: { equals: taskData.projectName, mode: 'insensitive' }
+                    nombre: { equals: taskData.projectName, mode: 'insensitive' },
+                    ...projectAccessQuery(userId),
                   }
                 });
                 if (foundProject) targetProject = foundProject;
               }
 
+              let resolvedProject = targetProject ?? inboxProject;
+              if (!resolvedProject) {
+                throw new Error('No se encontró un proyecto válido para crear la tarea');
+              }
+
+              await assertProjectPermission(prisma, resolvedProject.id, userId, 'write');
+
+              // Buscar sección si se especifica
+              let targetSectionId: string | null = null;
+              if (taskData.sectionName) {
+                const sectionInProject = await prisma.sections.findFirst({
+                  where: {
+                    projectId: resolvedProject.id,
+                    nombre: { equals: taskData.sectionName, mode: 'insensitive' }
+                  }
+                });
+                if (sectionInProject) {
+                  targetSectionId = sectionInProject.id;
+                }
+
+                if (!targetSectionId) {
+                  const anySection = await prisma.sections.findFirst({
+                    where: {
+                      nombre: { equals: taskData.sectionName, mode: 'insensitive' },
+                      projects: projectAccessQuery(userId),
+                    },
+                    select: {
+                      id: true,
+                      projectId: true
+                    }
+                  });
+
+                  if (anySection) {
+                    targetSectionId = anySection.id;
+                    if (resolvedProject.id !== anySection.projectId) {
+                      const sectionProject = await prisma.projects.findFirst({
+                        where: {
+                          id: anySection.projectId,
+                          ...projectAccessQuery(userId),
+                        }
+                      });
+                      if (sectionProject) {
+                        await assertProjectPermission(prisma, sectionProject.id, userId, 'write');
+                        resolvedProject = sectionProject;
+                      }
+                    }
+                  }
+                }
+              }
+
               // Crear tarea
-              const task = await prisma.task.create({
+              const task = await prisma.tasks.create({
                 data: {
                   titulo: taskData.titulo,
                   descripcion: taskData.descripcion || null,
                   prioridad: taskData.prioridad || 4,
                   fechaVencimiento,
-                  projectId: targetProject?.id,
-                  sectionId: null,
-                  orden: 0
+                  projectId: resolvedProject.id,
+                  sectionId: targetSectionId,
+                  orden: 0,
+                  createdBy: userId
                 }
               });
 
@@ -522,10 +944,10 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create':
           if (action.entity === 'task') {
             // Buscar el proyecto inbox del usuario
-            const inboxProject = await prisma.project.findFirst({
+            const inboxProject = await prisma.projects.findFirst({
               where: {
-                userId,
-                nombre: 'Inbox'
+                nombre: 'Inbox',
+                ...projectAccessQuery(userId),
               }
             });
 
@@ -538,10 +960,10 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar proyecto por nombre si se especifica
             let targetProject = inboxProject;
             if (action.data?.projectName) {
-              const foundProject = await prisma.project.findFirst({
+              const foundProject = await prisma.projects.findFirst({
                 where: {
-                  userId,
-                  nombre: { equals: action.data.projectName, mode: 'insensitive' }
+                  nombre: { equals: action.data.projectName, mode: 'insensitive' },
+                  ...projectAccessQuery(userId),
                 }
               });
               if (foundProject) {
@@ -549,12 +971,19 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               }
             }
 
+            const resolvedProject = targetProject ?? inboxProject;
+            if (!resolvedProject) {
+              throw new Error('No se encontró un proyecto válido para crear la tarea');
+            }
+
+            await assertProjectPermission(prisma, resolvedProject.id, userId, 'write');
+
             // Buscar sección por nombre si se especifica
             let targetSectionId = action.data.sectionId || null;
-            if (action.data?.sectionName && targetProject) {
-              const foundSection = await prisma.section.findFirst({
+            if (action.data?.sectionName) {
+              const foundSection = await prisma.sections.findFirst({
                 where: {
-                  projectId: targetProject.id,
+                  projectId: resolvedProject.id,
                   nombre: { equals: action.data.sectionName, mode: 'insensitive' }
                 }
               });
@@ -566,88 +995,64 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Procesar etiquetas si se especifican
             let labelConnections: any[] = [];
             if (action.data?.labelNames && Array.isArray(action.data.labelNames)) {
-              for (const labelName of action.data.labelNames) {
-                // Buscar o crear etiqueta
-                let label = await prisma.label.findFirst({
-                  where: {
-                    userId,
-                    nombre: { equals: labelName, mode: 'insensitive' }
-                  }
-                });
-
-                if (!label) {
-                  // Crear etiqueta con color aleatorio
-                  const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-                  label = await prisma.label.create({
-                    data: {
-                      nombre: labelName,
-                      color: colors[Math.floor(Math.random() * colors.length)],
-                      userId
+              const labels = await Promise.all(
+                action.data.labelNames.map(async (labelName: string) => {
+                  let label = await prisma.labels.findFirst({
+                    where: {
+                      userId,
+                      nombre: { equals: labelName, mode: 'insensitive' }
                     }
                   });
-                }
-
-                labelConnections.push({
-                  label: { connect: { id: label.id } }
-                });
-              }
-            }
-
-            // Buscar tarea padre si se especifica (para subtareas)
-            let parentTaskId = null;
-            if (action.data?.parentTaskTitle) {
-              const parentTask = await prisma.task.findFirst({
-                where: {
-                  project: { userId },
-                  titulo: { contains: action.data.parentTaskTitle, mode: 'insensitive' }
-                }
-              });
-              if (parentTask) {
-                parentTaskId = parentTask.id;
-                // Si hay tarea padre, heredar su proyecto y sección
-                if (!action.data.projectName && !targetProject) {
-                  targetProject = { id: parentTask.projectId } as any;
-                }
-                if (!action.data.sectionName && !targetSectionId) {
-                  targetSectionId = parentTask.sectionId;
-                }
-              }
-            }
-
-            result = await prisma.task.create({
-              data: {
-                titulo: action.data.titulo,
-                descripcion: action.data.descripcion || null,
-                prioridad: action.data.prioridad || 4,
-                fechaVencimiento,
-                projectId: targetProject?.id || action.data.projectId,
-                sectionId: targetSectionId,
-                parentTaskId,
-                orden: 0,
-                ...(labelConnections.length > 0 && {
-                  labels: {
-                    create: labelConnections
+                  if (!label) {
+                    label = await prisma.labels.create({
+                      data: {
+                        nombre: labelName,
+                        color: '#3b82f6',
+                        userId,
+                      }
+                    });
                   }
+                  return label;
                 })
+              );
+
+              labelConnections = labels.map((label: any) => ({
+                labelId: label.id,
+              }));
+            }
+
+            const task = await prisma.tasks.create({
+              data: {
+                titulo: action.data?.titulo || 'Tarea sin título',
+                descripcion: action.data?.descripcion || null,
+                prioridad: action.data?.prioridad || 4,
+                fechaVencimiento,
+                projectId: resolvedProject.id,
+                sectionId: targetSectionId,
+                parentTaskId: action.data?.parentTaskId || null,
+                orden: 0,
+                createdBy: userId,
+                ...(labelConnections.length > 0 && {
+                  task_labels: {
+                    create: labelConnections,
+                  },
+                }),
               },
-              include: {
-                labels: {
-                  include: {
-                    label: true
-                  }
-                }
-              }
             });
+
+            result = task;
           }
           break;
 
         case 'update':
           if (action.entity === 'task' && action.data?.search) {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
-                titulo: { contains: action.data.search, mode: 'insensitive' }
+                AND: [
+                  taskAccessWhere(userId),
+                  { titulo: { contains: action.data.search, mode: 'insensitive' } },
+                ],
               }
             });
 
@@ -664,7 +1069,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               
               // Actualizar proyecto
               if (action.data.projectName) {
-                const foundProject = await prisma.project.findFirst({
+                const foundProject = await prisma.projects.findFirst({
                   where: {
                     userId,
                     nombre: { equals: action.data.projectName, mode: 'insensitive' }
@@ -675,7 +1080,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               
               // Actualizar sección
               if (action.data.sectionName && updateData.projectId) {
-                const foundSection = await prisma.section.findFirst({
+                const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId: updateData.projectId,
                     nombre: { equals: action.data.sectionName, mode: 'insensitive' }
@@ -684,7 +1089,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 if (foundSection) updateData.sectionId = foundSection.id;
               }
 
-              result = await prisma.task.update({
+              result = await prisma.tasks.update({
                 where: { id: task.id },
                 data: updateData
               });
@@ -696,15 +1101,15 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
           if (action.entity === 'task' && action.data?.filter && action.data?.updates) {
             // Construir filtro de búsqueda
             const where: any = {
-              project: { userId }
+              ...taskAccessWhere(userId),
             };
 
             // Filtrar por proyecto
             if (action.data.filter.projectName) {
-              const project = await prisma.project.findFirst({
+              const project = await prisma.projects.findFirst({
                 where: {
-                  userId,
-                  nombre: { equals: action.data.filter.projectName, mode: 'insensitive' }
+                  nombre: { equals: action.data.filter.projectName, mode: 'insensitive' },
+                  ...projectAccessQuery(userId),
                 }
               });
               if (project) where.projectId = project.id;
@@ -712,10 +1117,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Filtrar por sección
             if (action.data.filter.sectionName) {
-              const section = await prisma.section.findFirst({
+              const section = await prisma.sections.findFirst({
                 where: {
                   nombre: { equals: action.data.filter.sectionName, mode: 'insensitive' },
-                  project: { userId }
+                  projects: {
+                    ...projectAccessQuery(userId),
+                  },
                 }
               });
               if (section) where.sectionId = section.id;
@@ -723,9 +1130,9 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Filtrar por etiqueta
             if (action.data.filter.labelName) {
-              where.labels = {
+              where.task_labels = {
                 some: {
-                  label: {
+                  labels: {
                     nombre: { equals: action.data.filter.labelName, mode: 'insensitive' },
                     userId
                   }
@@ -775,10 +1182,10 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             // Actualizar proyecto
             if (action.data.updates.projectName) {
-              const foundProject = await prisma.project.findFirst({
+              const foundProject = await prisma.projects.findFirst({
                 where: {
-                  userId,
-                  nombre: { equals: action.data.updates.projectName, mode: 'insensitive' }
+                  nombre: { equals: action.data.updates.projectName, mode: 'insensitive' },
+                  ...projectAccessQuery(userId),
                 }
               });
               if (foundProject) updateData.projectId = foundProject.id;
@@ -789,7 +1196,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Necesitamos el proyecto para buscar la sección
               const projectId = updateData.projectId || where.projectId;
               if (projectId) {
-                const foundSection = await prisma.section.findFirst({
+                const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId,
                     nombre: { equals: action.data.updates.sectionName, mode: 'insensitive' }
@@ -802,7 +1209,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Para añadir etiquetas, necesitamos actualizar cada tarea individualmente
             if (action.data.updates.addLabelNames && Array.isArray(action.data.updates.addLabelNames)) {
               // Primero buscar todas las tareas que coinciden
-              const tasks = await prisma.task.findMany({
+              const tasks = await prisma.tasks.findMany({
                 where,
                 select: { id: true }
               });
@@ -811,7 +1218,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               for (const task of tasks) {
                 for (const labelName of action.data.updates.addLabelNames) {
                   // Buscar o crear etiqueta
-                  let label = await prisma.label.findFirst({
+                  let label = await prisma.labels.findFirst({
                     where: {
                       userId,
                       nombre: { equals: labelName, mode: 'insensitive' }
@@ -820,7 +1227,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
                   if (!label) {
                     const colors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-                    label = await prisma.label.create({
+                    label = await prisma.labels.create({
                       data: {
                         nombre: labelName,
                         color: colors[Math.floor(Math.random() * colors.length)],
@@ -830,7 +1237,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   }
 
                   // Verificar si la tarea ya tiene esta etiqueta
-                  const existing = await prisma.taskLabel.findFirst({
+                  const existing = await prisma.task_labels.findFirst({
                     where: {
                       taskId: task.id,
                       labelId: label.id
@@ -838,7 +1245,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   });
 
                   if (!existing) {
-                    await prisma.taskLabel.create({
+                    await prisma.task_labels.create({
                       data: {
                         taskId: task.id,
                         labelId: label.id
@@ -851,7 +1258,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               result = { count: tasks.length, message: `Etiquetas añadidas a ${tasks.length} tareas` };
             } else {
               // Actualización normal sin etiquetas
-              result = await prisma.task.updateMany({
+              result = await prisma.tasks.updateMany({
                 where,
                 data: updateData
               });
@@ -862,15 +1269,17 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'complete':
           if (action.entity === 'task' && action.data?.search) {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
-                titulo: { contains: action.data.search, mode: 'insensitive' }
+                AND: [
+                  taskAccessWhere(userId),
+                  { titulo: { contains: action.data.search, mode: 'insensitive' } },
+                ],
               }
             });
 
             if (task) {
-              result = await prisma.task.update({
+              result = await prisma.tasks.update({
                 where: { id: task.id },
                 data: { completada: true }
               });
@@ -880,10 +1289,10 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
         case 'delete':
           if (action.entity === 'task') {
-            result = await prisma.task.deleteMany({
+            result = await prisma.tasks.deleteMany({
               where: {
-                project: { userId },
-                ...action.data.filter
+                ...taskAccessWhere(userId),
+                ...action.data.filter,
               }
             });
           }
@@ -892,7 +1301,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'query':
           if (action.entity === 'task') {
             const where: any = {
-              project: { userId }
+              ...taskAccessWhere(userId),
             };
 
             if (action.data?.filter === 'week') {
@@ -911,12 +1320,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               where.completada = action.data.completada;
             }
 
-            result = await prisma.task.findMany({
+            result = await prisma.tasks.findMany({
               where,
               include: {
-                labels: {
+                task_labels: {
                   include: {
-                    label: true
+                    labels: true
                   }
                 }
               },
@@ -928,7 +1337,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_project':
           if (action.entity === 'project') {
             // Obtener el último orden
-            const lastProject = await prisma.project.findFirst({
+            const lastProject = await prisma.projects.findFirst({
               where: { userId },
               orderBy: { orden: 'desc' }
             });
@@ -936,7 +1345,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
             let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
-            result = await prisma.project.create({
+            result = await prisma.projects.create({
               data: {
                 nombre: action.data.nombre,
                 color,
@@ -952,7 +1361,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Buscar proyecto por nombre
             let targetProject = null;
             if (action.data?.projectName) {
-              targetProject = await prisma.project.findFirst({
+              targetProject = await prisma.projects.findFirst({
                 where: {
                   userId,
                   nombre: { equals: action.data.projectName, mode: 'insensitive' }
@@ -962,12 +1371,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
             if (targetProject) {
               // Obtener el último orden
-              const lastSection = await prisma.section.findFirst({
+              const lastSection = await prisma.sections.findFirst({
                 where: { projectId: targetProject.id },
                 orderBy: { orden: 'desc' }
               });
 
-              result = await prisma.section.create({
+              result = await prisma.sections.create({
                 data: {
                   nombre: action.data.nombre,
                   projectId: targetProject.id,
@@ -983,7 +1392,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
             let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
-            result = await prisma.label.create({
+            result = await prisma.labels.create({
               data: {
                 nombre: action.data.nombre,
                 color,
@@ -996,15 +1405,17 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'add_comment':
           if (action.entity === 'comment') {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
-                titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
+                AND: [
+                  taskAccessWhere(userId),
+                  { titulo: { contains: action.data.taskTitle, mode: 'insensitive' } },
+                ],
               }
             });
 
             if (task) {
-              result = await prisma.comment.create({
+              result = await prisma.comments.create({
                 data: {
                   contenido: action.data.contenido,
                   taskId: task.id,
@@ -1018,10 +1429,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_reminder':
           if (action.entity === 'reminder') {
             // Buscar tarea por título
-            const task = await prisma.task.findFirst({
+            const task = await prisma.tasks.findFirst({
               where: {
-                project: { userId },
-                titulo: { contains: action.data.taskTitle, mode: 'insensitive' }
+                AND: [
+                  taskAccessWhere(userId),
+                  { titulo: { contains: action.data.taskTitle, mode: 'insensitive' } },
+                ],
               }
             });
 
@@ -1034,7 +1447,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 fechaRecordatorio = new Date(action.data.fecha);
               }
 
-              result = await prisma.reminder.create({
+              result = await prisma.reminders.create({
                 data: {
                   fecha: fechaRecordatorio,
                   taskId: task.id
