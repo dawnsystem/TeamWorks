@@ -8,10 +8,8 @@ import {
   markAllNotificationsAsRead,
   deleteNotification as deleteNotificationDomain,
 } from '../services/notificationDomainService';
-import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // GET /api/notifications
 export const getNotifications = async (req: Request, res: Response) => {

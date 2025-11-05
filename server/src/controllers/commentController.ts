@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
@@ -12,8 +11,7 @@ import {
   deleteComment as deleteCommentDomain,
 } from '../services/commentDomainService';
 import { commentFactory } from '../factories/commentFactory';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 const projectAccessCondition = (userId: string) => ({
   OR: [

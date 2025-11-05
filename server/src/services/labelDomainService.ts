@@ -84,4 +84,26 @@ export async function deleteLabel(prisma: PrismaClient, labelId: string, userId:
   return existing;
 }
 
+export async function findUnauthorizedLabelIds(
+  prisma: PrismaClient,
+  labelIds: string[] | undefined,
+  userId: string,
+): Promise<string[]> {
+  if (!labelIds?.length) {
+    return [];
+  }
+
+  const uniqueIds = Array.from(new Set(labelIds));
+  const ownedLabels = await prisma.labels.findMany({
+    where: {
+      id: { in: uniqueIds },
+      userId,
+    },
+    select: { id: true },
+  });
+
+  const ownedSet = new Set(ownedLabels.map((label) => label.id));
+  return uniqueIds.filter((id) => !ownedSet.has(id));
+}
+
 

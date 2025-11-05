@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import { assertProjectPermission } from '../services/projectShareService';
 import {
@@ -8,8 +7,7 @@ import {
   deleteReminder as deleteReminderDomain,
 } from '../services/reminderDomainService';
 import { reminderFactory } from '../factories/reminderFactory';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 const projectAccessCondition = (userId: string) => ({
   OR: [

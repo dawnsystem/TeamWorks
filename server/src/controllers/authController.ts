@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt, { Secret } from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
-
-const prisma = new PrismaClient();
+import { MissingEnvVarError, requireEnvVar } from '../lib/env';
+import prisma from '../lib/prisma';
 
 export const register = async (req: any, res: Response) => {
   try {
@@ -50,7 +49,7 @@ export const register = async (req: any, res: Response) => {
     });
 
     // Generar token
-    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const secret: Secret = requireEnvVar('JWT_SECRET');
     const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
@@ -69,6 +68,10 @@ export const register = async (req: any, res: Response) => {
       }
     });
   } catch (error: any) {
+    if (error instanceof MissingEnvVarError) {
+      console.error('Configuración inválida:', error.message);
+      return res.status(500).json({ error: 'Configuración del servidor inválida: falta JWT_SECRET' });
+    }
     console.error('Error en register:', error);
     console.error('Error stack:', error?.stack);
     console.error('Error details:', JSON.stringify(error, null, 2));
@@ -115,7 +118,7 @@ export const login = async (req: any, res: Response) => {
     }
 
     // Generar token
-    const secret: Secret = process.env.JWT_SECRET || 'secret';
+    const secret: Secret = requireEnvVar('JWT_SECRET');
     const expiresIn = (process.env.JWT_EXPIRES_IN || '7d') as string;
     const token = jwt.sign(
       { userId: user.id },
@@ -134,6 +137,10 @@ export const login = async (req: any, res: Response) => {
       }
     });
   } catch (error: any) {
+    if (error instanceof MissingEnvVarError) {
+      console.error('Configuración inválida:', error.message);
+      return res.status(500).json({ error: 'Configuración del servidor inválida: falta JWT_SECRET' });
+    }
     console.error('Error en login:', error);
     console.error('Error stack:', error?.stack);
     console.error('Error details:', JSON.stringify(error, null, 2));

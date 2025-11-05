@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { notificationService } from './notificationService';
 import * as cron from 'node-cron';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 class ReminderService {
   private cronJob: cron.ScheduledTask | null = null;

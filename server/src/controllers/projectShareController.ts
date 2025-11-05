@@ -1,5 +1,4 @@
 import { Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { AuthRequest } from '../middleware/auth';
 import {
   assertProjectPermission,
@@ -10,8 +9,7 @@ import {
 } from '../services/projectShareService';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getShares = async (req: any, res: Response) => {
   try {

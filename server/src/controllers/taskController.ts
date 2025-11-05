@@ -18,7 +18,7 @@ function parseDateInput(input?: string | null): Date | null {
 }
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
 import { taskSubscriptionService } from '../services/taskSubscriptionService';
@@ -26,8 +26,8 @@ import { toClientTask as buildClientTask } from '../factories/taskFactory';
 import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
 import { applyTaskAutomations } from '../services/automationService';
 import { assertProjectPermission } from '../services/projectShareService';
-
-const prisma = new PrismaClient();
+import { findUnauthorizedLabelIds } from '../services/labelDomainService';
+import prisma from '../lib/prisma';
 
 const projectAccessWhere = (userId: string) => ({
   OR: [
@@ -168,6 +168,16 @@ export const createTask = async (req: any, res: Response) => {
 
     const parsedDueDate = parseDateInput(fechaVencimiento);
 
+    if (labelIds?.length) {
+      const invalidLabelIds = await findUnauthorizedLabelIds(prisma, labelIds, userId);
+      if (invalidLabelIds.length > 0) {
+        return res.status(403).json({
+          error: 'No tienes acceso a una o más etiquetas',
+          invalidLabelIds,
+        });
+      }
+    }
+
     const automations = await applyTaskAutomations(
       prisma,
       userId,
@@ -271,18 +281,13 @@ export const updateTask = async (req: any, res: Response) => {
       return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
-    // Si se proporcionan labelIds, actualizar las relaciones
+    // Validar etiquetas proporcionadas
     if (labelIds !== undefined) {
-      await prisma.task_labels.deleteMany({
-        where: { taskId: id }
-      });
-
-      if (labelIds.length > 0) {
-        await prisma.task_labels.createMany({
-          data: labelIds.map((labelId: string) => ({
-            taskId: id,
-            labelId
-          }))
+      const invalidLabelIds = await findUnauthorizedLabelIds(prisma, labelIds, userId);
+      if (invalidLabelIds.length > 0) {
+        return res.status(403).json({
+          error: 'No tienes acceso a una o más etiquetas',
+          invalidLabelIds,
         });
       }
     }
@@ -293,7 +298,7 @@ export const updateTask = async (req: any, res: Response) => {
     if (descripcion !== undefined) updateData.descripcion = descripcion;
     if (prioridad !== undefined) updateData.prioridad = prioridad;
     if (fechaVencimiento !== undefined) {
-      updateData.fechaVencimiento = fechaVencimiento ? new Date(fechaVencimiento) : null;
+      updateData.fechaVencimiento = parseDateInput(fechaVencimiento);
     }
     if (completada !== undefined) updateData.completada = completada;
     if (sectionId !== undefined) updateData.sectionId = sectionId;
@@ -326,15 +331,32 @@ export const updateTask = async (req: any, res: Response) => {
       updateData.sectionId = automations.patches.sectionId;
     }
 
-    const taskUpdated = await prisma.tasks.update({
-      where: { id },
-      data: updateData,
-      include: {
-        task_labels: { include: { labels: true } },
-        _count: {
-          select: { other_tasks: true, comments: true, reminders: true }
+    const taskUpdated = await prisma.$transaction(async (tx) => {
+      if (labelIds !== undefined) {
+        await tx.task_labels.deleteMany({
+          where: { taskId: id },
+        });
+
+        if (labelIds.length > 0) {
+          await tx.task_labels.createMany({
+            data: labelIds.map((labelId: string) => ({
+              taskId: id,
+              labelId,
+            })),
+          });
         }
       }
+
+      return tx.tasks.update({
+        where: { id },
+        data: updateData,
+        include: {
+          task_labels: { include: { labels: true } },
+          _count: {
+            select: { other_tasks: true, comments: true, reminders: true },
+          },
+        },
+      });
     });
 
     const clientTaskRaw = (await fetchSingleTask(prisma, taskUpdated.id, userId)) ?? toClientTask(taskUpdated);

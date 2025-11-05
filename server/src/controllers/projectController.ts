@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { notificationService } from '../services/notificationService';
 import { projectFactory } from '../factories/projectFactory';
@@ -15,8 +14,7 @@ import {
   deleteSection as deleteSectionService,
 } from '../services/projectDomainService';
 import { assertProjectPermission } from '../services/projectShareService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getProjects = async (req: any, res: Response) => {
   try {

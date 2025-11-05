@@ -1,9 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
 import { processNaturalLanguage, executeAIActions, generateAIPlan } from '../services/aiService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 const projectAccessWhere = (userId: string) => ({
   OR: [

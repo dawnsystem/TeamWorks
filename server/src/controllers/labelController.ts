@@ -1,6 +1,5 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { PrismaClient } from '@prisma/client';
 import { sseService } from '../services/sseService';
 import { labelFactory } from '../factories/labelFactory';
 import {
@@ -10,8 +9,7 @@ import {
   updateLabel as updateLabelService,
   deleteLabel as deleteLabelService,
 } from '../services/labelDomainService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getLabels = async (req: any, res: Response) => {
   try {

@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import { sseService } from './sseService';
 import { taskSubscriptionService } from './taskSubscriptionService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export type NotificationType = 
   | 'reminder'

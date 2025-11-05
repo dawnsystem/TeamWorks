@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { sseService } from './sseService';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 class TaskSubscriptionService {
   /**
