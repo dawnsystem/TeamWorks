@@ -146,11 +146,15 @@ describe('authMiddleware', () => {
     };
     const res = mockResponse();
 
+    (jwt.verify as jest.Mock).mockImplementation(() => {
+      throw new Error('Invalid token');
+    });
+
     authMiddleware(req, res, mockNext);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
-      error: 'Token no proporcionado',
+      error: 'Token inválido o expirado',
     });
   });
 
