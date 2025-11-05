@@ -3,6 +3,25 @@
   "version": "1.0.0",
   "description": "Frontend para TeamWorks - Aplicación de tareas con IA",
   "type": "module",
+  "keywords": [
+    "task-management",
+    "ai",
+    "productivity",
+    "todo",
+    "teamworks",
+    "react",
+    "typescript"
+  ],
+  "author": "dawnsystem",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dawnsystem/TeamWorks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dawnsystem/TeamWorks/issues"
+  },
+  "homepage": "https://github.com/dawnsystem/TeamWorks#readme",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

@@ -438,6 +438,24 @@ npm run preview      # Preview del build
 - Comprueba el `VITE_API_URL` en `.env` del cliente
 - Revisa la consola del navegador para errores CORS
 
+## 📊 GitHub Project
+
+Este repositorio está vinculado con el **[GitHub Project TeamWorks](https://github.com/orgs/dawnsystem/projects)** para la gestión y seguimiento de tareas, issues y roadmap del proyecto.
+
+### 🎯 Cómo Usar el Proyecto
+
+- **Ver el Tablero**: Visita el [proyecto TeamWorks](https://github.com/orgs/dawnsystem/projects) para ver el estado actual
+- **Crear Issues**: Los nuevos issues automáticamente se vinculan al proyecto
+- **Seguimiento**: Todas las tareas se organizan en columnas (Backlog, In Progress, Done)
+- **Roadmap**: Planificación y priorización de features futuros
+
+### 🔗 Enlaces Rápidos
+
+- [📋 Ver Proyecto](https://github.com/orgs/dawnsystem/projects)
+- [🐛 Reportar Bug](https://github.com/dawnsystem/TeamWorks/issues/new?template=bug_report.md)
+- [✨ Solicitar Feature](https://github.com/dawnsystem/TeamWorks/issues/new?template=feature_request.md)
+- [📖 Mejorar Docs](https://github.com/dawnsystem/TeamWorks/issues/new?template=documentation.md)
+
 ## 📝 Próximas Características
 
 - [ ] Drag & drop para reordenar tareas
