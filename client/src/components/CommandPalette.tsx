@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import { searchAll, type Action } from '@/utils/search';
-import { useUIStore, useTaskEditorStore, useAIStore } from '@/store/useStore';
+import { useUIStore, useTaskEditorStore, useAIStore, useTaskDetailStore } from '@/store/useStore';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const toggleDarkMode = useUIStore(state => state.toggleDarkMode);
   const openEditor = useTaskEditorStore(state => state.openEditor);
   const toggleAI = useAIStore(state => state.toggleAI);
+  const openTaskDetail = useTaskDetailStore(state => state.openDetail);
   
   // Fetch data for search
   const { data: tasks = [] } = useQuery({
@@ -134,8 +135,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const handleSelectResult = useCallback((result: any) => {
     switch (result.type) {
       case 'task':
-        navigate(`/project/${result.data.projectId}`);
-        // TODO: Scroll to task or open task detail
+        // Open task detail modal
+        openTaskDetail(result.id);
         break;
       case 'project':
         navigate(`/project/${result.id}`);
@@ -148,7 +149,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
         break;
     }
     onClose();
-  }, [navigate, onClose]);
+  }, [navigate, onClose, openTaskDetail]);
   
   // Keyboard navigation
   useEffect(() => {

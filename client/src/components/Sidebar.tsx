@@ -201,7 +201,10 @@ export default function Sidebar() {
         id: 'filter',
         label: 'Ver tareas con esta etiqueta',
         icon: Tag,
-        onClick: () => toast.success('Función próximamente'),
+        onClick: () => {
+          // Navigate to label view to filter tasks by label
+          window.location.href = `/label/${labelId}`;
+        },
       },
       {
         id: 'edit',
