@@ -15,9 +15,23 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --maxWorkers=2"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "task-management",
+    "ai",
+    "productivity",
+    "todo",
+    "teamworks"
+  ],
+  "author": "dawnsystem",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dawnsystem/TeamWorks.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dawnsystem/TeamWorks/issues"
+  },
+  "homepage": "https://github.com/dawnsystem/TeamWorks#readme",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^5.20.0",
