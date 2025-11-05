@@ -38,11 +38,6 @@ const projectAccessWhere = (userId: string) => ({
 
 const toClientTask = buildClientTask;
 
-// Helper function to recursively fetch subtasks
-async function getTaskWithAllSubtasks(taskId: string, userId: string, taskOverride?: any): Promise<any> {
-  return buildTaskTree(prisma, taskId, userId, taskOverride);
-}
-
 export const getTasks = async (req: any, res: Response) => {
   try {
     const { projectId, sectionId, filter, search, labelId } = req.query;
