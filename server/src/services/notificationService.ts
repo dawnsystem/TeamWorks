@@ -76,7 +76,7 @@ class NotificationService {
       type?: string;
       limit?: number;
       offset?: number;
-    }
+    },
   ) {
     try {
       const where: any = { userId };
@@ -249,7 +249,7 @@ class NotificationService {
   async createForTaskSubscribers(
     taskId: string,
     actorUserId: string,
-    notificationData: Omit<CreateNotificationData, 'userId'>
+    notificationData: Omit<CreateNotificationData, 'userId'>,
   ) {
     try {
       // Get all subscribers for the task
@@ -270,8 +270,8 @@ class NotificationService {
             ...notificationData,
             userId,
             taskId,
-          })
-        )
+          }),
+        ),
       );
 
       console.log(`[Notification] Created ${notifications.length} notifications for task ${taskId} subscribers`);

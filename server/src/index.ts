@@ -86,7 +86,7 @@ app.use(cors({
       return callback(null, false);
     }
   },
-  credentials: true
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -97,7 +97,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'TeamWorks API'
+    service: 'TeamWorks API',
   });
 });
 
@@ -149,16 +149,16 @@ app.use('/api/templates', templateRoutes);
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
+    error: err.message || 'Internal server error',
   });
 });
 
 // Escuchar en 0.0.0.0 para acceso en red local
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-  console.log(`📡 Accessible on local network`);
-  console.log(`🔌 SSE enabled for real-time updates`);
-  console.log(`🔔 Notification system enabled`);
+  console.log('📡 Accessible on local network');
+  console.log('🔌 SSE enabled for real-time updates');
+  console.log('🔔 Notification system enabled');
   
   // Iniciar checker de recordatorios
   reminderService.startReminderChecker();
@@ -169,13 +169,13 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 server.on('error', (error: NodeJS.ErrnoException) => {
   if (error.code === 'EADDRINUSE') {
     console.error(`❌ Error: Port ${PORT} is already in use`);
-    console.error(`   Please stop the other server or use a different port`);
-    console.error(`   You can set PORT in the .env file`);
+    console.error('   Please stop the other server or use a different port');
+    console.error('   You can set PORT in the .env file');
   } else if (error.code === 'EACCES') {
     console.error(`❌ Error: Permission denied to bind to port ${PORT}`);
-    console.error(`   Try using a port number above 1024`);
+    console.error('   Try using a port number above 1024');
   } else {
-    console.error(`❌ Server error:`, error.message);
+    console.error('❌ Server error:', error.message);
   }
   process.exit(1);
 });

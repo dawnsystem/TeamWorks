@@ -88,7 +88,7 @@ const generateWithProvider = async (prompt: string, provider: SupportedAIProvide
     messages: [{ role: 'user', content: prompt }],
     model: DEFAULT_GROQ_MODEL,
     temperature: 0.7,
-    max_tokens: 1000
+    max_tokens: 1000,
   });
 
   return completion.choices[0]?.message?.content || '';
@@ -263,10 +263,10 @@ const createFallbackAction = (input: string): AIAction => ({
   type: 'create',
   entity: 'task',
   data: {
-    titulo: input
+    titulo: input,
   },
   confidence: 0.5,
-  explanation: 'No se pudo procesar el comando con IA, creando tarea simple'
+  explanation: 'No se pudo procesar el comando con IA, creando tarea simple',
 });
 
 export interface ProcessNaturalLanguageResult {
@@ -408,7 +408,7 @@ const parsePlanFromText = (text: string): InternalPlannerResponse => {
 export const processNaturalLanguage = async (
   input: string,
   context?: any,
-  providerOverride?: string
+  providerOverride?: string,
 ): Promise<ProcessNaturalLanguageResult> => {
   const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
   const preferred = resolveProvider(providerOverride);
@@ -847,7 +847,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               where: {
                 nombre: 'Inbox',
                 ...projectAccessQuery(userId),
-              }
+              },
             });
 
             const createdTasks = [];
@@ -865,7 +865,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   where: {
                     nombre: { equals: taskData.projectName, mode: 'insensitive' },
                     ...projectAccessQuery(userId),
-                  }
+                  },
                 });
                 if (foundProject) targetProject = foundProject;
               }
@@ -883,8 +883,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 const sectionInProject = await prisma.sections.findFirst({
                   where: {
                     projectId: resolvedProject.id,
-                    nombre: { equals: taskData.sectionName, mode: 'insensitive' }
-                  }
+                    nombre: { equals: taskData.sectionName, mode: 'insensitive' },
+                  },
                 });
                 if (sectionInProject) {
                   targetSectionId = sectionInProject.id;
@@ -898,8 +898,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                     },
                     select: {
                       id: true,
-                      projectId: true
-                    }
+                      projectId: true,
+                    },
                   });
 
                   if (anySection) {
@@ -909,7 +909,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                         where: {
                           id: anySection.projectId,
                           ...projectAccessQuery(userId),
-                        }
+                        },
                       });
                       if (sectionProject) {
                         await assertProjectPermission(prisma, sectionProject.id, userId, 'write');
@@ -930,8 +930,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   projectId: resolvedProject.id,
                   sectionId: targetSectionId,
                   orden: 0,
-                  createdBy: userId
-                }
+                  createdBy: userId,
+                },
               });
 
               createdTasks.push(task);
@@ -948,7 +948,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               where: {
                 nombre: 'Inbox',
                 ...projectAccessQuery(userId),
-              }
+              },
             });
 
             // Procesar fecha de forma robusta
@@ -964,7 +964,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 where: {
                   nombre: { equals: action.data.projectName, mode: 'insensitive' },
                   ...projectAccessQuery(userId),
-                }
+                },
               });
               if (foundProject) {
                 targetProject = foundProject;
@@ -984,8 +984,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               const foundSection = await prisma.sections.findFirst({
                 where: {
                   projectId: resolvedProject.id,
-                  nombre: { equals: action.data.sectionName, mode: 'insensitive' }
-                }
+                  nombre: { equals: action.data.sectionName, mode: 'insensitive' },
+                },
               });
               if (foundSection) {
                 targetSectionId = foundSection.id;
@@ -1000,8 +1000,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   let label = await prisma.labels.findFirst({
                     where: {
                       userId,
-                      nombre: { equals: labelName, mode: 'insensitive' }
-                    }
+                      nombre: { equals: labelName, mode: 'insensitive' },
+                    },
                   });
                   if (!label) {
                     label = await prisma.labels.create({
@@ -1009,11 +1009,11 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                         nombre: labelName,
                         color: '#3b82f6',
                         userId,
-                      }
+                      },
                     });
                   }
                   return label;
-                })
+                }),
               );
 
               labelConnections = labels.map((label: any) => ({
@@ -1053,7 +1053,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   taskAccessWhere(userId),
                   { titulo: { contains: action.data.search, mode: 'insensitive' } },
                 ],
-              }
+              },
             });
 
             if (task) {
@@ -1072,8 +1072,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 const foundProject = await prisma.projects.findFirst({
                   where: {
                     userId,
-                    nombre: { equals: action.data.projectName, mode: 'insensitive' }
-                  }
+                    nombre: { equals: action.data.projectName, mode: 'insensitive' },
+                  },
                 });
                 if (foundProject) updateData.projectId = foundProject.id;
               }
@@ -1083,15 +1083,15 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId: updateData.projectId,
-                    nombre: { equals: action.data.sectionName, mode: 'insensitive' }
-                  }
+                    nombre: { equals: action.data.sectionName, mode: 'insensitive' },
+                  },
                 });
                 if (foundSection) updateData.sectionId = foundSection.id;
               }
 
               result = await prisma.tasks.update({
                 where: { id: task.id },
-                data: updateData
+                data: updateData,
               });
             }
           }
@@ -1110,7 +1110,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 where: {
                   nombre: { equals: action.data.filter.projectName, mode: 'insensitive' },
                   ...projectAccessQuery(userId),
-                }
+                },
               });
               if (project) where.projectId = project.id;
             }
@@ -1123,7 +1123,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   projects: {
                     ...projectAccessQuery(userId),
                   },
-                }
+                },
               });
               if (section) where.sectionId = section.id;
             }
@@ -1134,9 +1134,9 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 some: {
                   labels: {
                     nombre: { equals: action.data.filter.labelName, mode: 'insensitive' },
-                    userId
-                  }
-                }
+                    userId,
+                  },
+                },
               };
             }
 
@@ -1150,7 +1150,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 endOfDay.setHours(23, 59, 59, 999);
                 where.fechaVencimiento = {
                   gte: startOfDay,
-                  lte: endOfDay
+                  lte: endOfDay,
                 };
               }
             }
@@ -1186,7 +1186,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 where: {
                   nombre: { equals: action.data.updates.projectName, mode: 'insensitive' },
                   ...projectAccessQuery(userId),
-                }
+                },
               });
               if (foundProject) updateData.projectId = foundProject.id;
             }
@@ -1199,8 +1199,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 const foundSection = await prisma.sections.findFirst({
                   where: {
                     projectId,
-                    nombre: { equals: action.data.updates.sectionName, mode: 'insensitive' }
-                  }
+                    nombre: { equals: action.data.updates.sectionName, mode: 'insensitive' },
+                  },
                 });
                 if (foundSection) updateData.sectionId = foundSection.id;
               }
@@ -1211,7 +1211,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Primero buscar todas las tareas que coinciden
               const tasks = await prisma.tasks.findMany({
                 where,
-                select: { id: true }
+                select: { id: true },
               });
 
               // Para cada tarea, añadir las etiquetas
@@ -1221,8 +1221,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   let label = await prisma.labels.findFirst({
                     where: {
                       userId,
-                      nombre: { equals: labelName, mode: 'insensitive' }
-                    }
+                      nombre: { equals: labelName, mode: 'insensitive' },
+                    },
                   });
 
                   if (!label) {
@@ -1231,8 +1231,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                       data: {
                         nombre: labelName,
                         color: colors[Math.floor(Math.random() * colors.length)],
-                        userId
-                      }
+                        userId,
+                      },
                     });
                   }
 
@@ -1240,16 +1240,16 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   const existing = await prisma.task_labels.findFirst({
                     where: {
                       taskId: task.id,
-                      labelId: label.id
-                    }
+                      labelId: label.id,
+                    },
                   });
 
                   if (!existing) {
                     await prisma.task_labels.create({
                       data: {
                         taskId: task.id,
-                        labelId: label.id
-                      }
+                        labelId: label.id,
+                      },
                     });
                   }
                 }
@@ -1260,7 +1260,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Actualización normal sin etiquetas
               result = await prisma.tasks.updateMany({
                 where,
-                data: updateData
+                data: updateData,
               });
             }
           }
@@ -1275,13 +1275,13 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   taskAccessWhere(userId),
                   { titulo: { contains: action.data.search, mode: 'insensitive' } },
                 ],
-              }
+              },
             });
 
             if (task) {
               result = await prisma.tasks.update({
                 where: { id: task.id },
-                data: { completada: true }
+                data: { completada: true },
               });
             }
           }
@@ -1293,7 +1293,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               where: {
                 ...taskAccessWhere(userId),
                 ...action.data.filter,
-              }
+              },
             });
           }
           break;
@@ -1312,7 +1312,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
               where.fechaVencimiento = {
                 gte: today,
-                lt: nextWeek
+                lt: nextWeek,
               };
             }
 
@@ -1325,11 +1325,11 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               include: {
                 task_labels: {
                   include: {
-                    labels: true
-                  }
-                }
+                    labels: true,
+                  },
+                },
               },
-              orderBy: { orden: 'asc' }
+              orderBy: { orden: 'asc' },
             });
           }
           break;
@@ -1339,19 +1339,19 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
             // Obtener el último orden
             const lastProject = await prisma.projects.findFirst({
               where: { userId },
-              orderBy: { orden: 'desc' }
+              orderBy: { orden: 'desc' },
             });
 
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
-            let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
+            const color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
             result = await prisma.projects.create({
               data: {
                 nombre: action.data.nombre,
                 color,
                 userId,
-                orden: (lastProject?.orden || 0) + 1
-              }
+                orden: (lastProject?.orden || 0) + 1,
+              },
             });
           }
           break;
@@ -1364,8 +1364,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               targetProject = await prisma.projects.findFirst({
                 where: {
                   userId,
-                  nombre: { equals: action.data.projectName, mode: 'insensitive' }
-                }
+                  nombre: { equals: action.data.projectName, mode: 'insensitive' },
+                },
               });
             }
 
@@ -1373,15 +1373,15 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Obtener el último orden
               const lastSection = await prisma.sections.findFirst({
                 where: { projectId: targetProject.id },
-                orderBy: { orden: 'desc' }
+                orderBy: { orden: 'desc' },
               });
 
               result = await prisma.sections.create({
                 data: {
                   nombre: action.data.nombre,
                   projectId: targetProject.id,
-                  orden: (lastSection?.orden || 0) + 1
-                }
+                  orden: (lastSection?.orden || 0) + 1,
+                },
               });
             }
           }
@@ -1390,14 +1390,14 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
         case 'create_label':
           if (action.entity === 'label') {
             const colors = ['#ef4444', '#f59e0b', '#eab308', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#6b7280'];
-            let color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
+            const color = action.data.color || colors[Math.floor(Math.random() * colors.length)];
 
             result = await prisma.labels.create({
               data: {
                 nombre: action.data.nombre,
                 color,
-                userId
-              }
+                userId,
+              },
             });
           }
           break;
@@ -1411,7 +1411,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   taskAccessWhere(userId),
                   { titulo: { contains: action.data.taskTitle, mode: 'insensitive' } },
                 ],
-              }
+              },
             });
 
             if (task) {
@@ -1419,8 +1419,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                 data: {
                   contenido: action.data.contenido,
                   taskId: task.id,
-                  userId
-                }
+                  userId,
+                },
               });
             }
           }
@@ -1435,7 +1435,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   taskAccessWhere(userId),
                   { titulo: { contains: action.data.taskTitle, mode: 'insensitive' } },
                 ],
-              }
+              },
             });
 
             if (task) {
@@ -1450,8 +1450,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               result = await prisma.reminders.create({
                 data: {
                   fecha: fechaRecordatorio,
-                  taskId: task.id
-                }
+                  taskId: task.id,
+                },
               });
             }
           }
@@ -1461,14 +1461,14 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
       results.push({
         action,
         result,
-        success: true
+        success: true,
       });
     } catch (error) {
       console.error('Error ejecutando acción:', error);
       results.push({
         action,
         error: error instanceof Error ? error.message : 'Error desconocido',
-        success: false
+        success: false,
       });
     }
   }

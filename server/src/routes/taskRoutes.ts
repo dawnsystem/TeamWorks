@@ -7,7 +7,7 @@ import {
   deleteTask,
   toggleTask,
   getTasksByLabel,
-  reorderTasks
+  reorderTasks,
 } from '../controllers/taskController';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';

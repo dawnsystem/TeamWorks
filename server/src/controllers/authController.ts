@@ -12,7 +12,7 @@ export const register = async (req: any, res: Response) => {
     // Validación de formato ya realizada por middleware
     // Verificar si el usuario ya existe
     const existingUser = await prisma.users.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
@@ -27,15 +27,15 @@ export const register = async (req: any, res: Response) => {
       data: {
         email,
         password: hashedPassword,
-        nombre
+        nombre,
       },
       select: {
         id: true,
         email: true,
         nombre: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     // Crear proyecto inbox por defecto
@@ -44,8 +44,8 @@ export const register = async (req: any, res: Response) => {
         nombre: 'Inbox',
         color: '#808080',
         orden: 0,
-        userId: user.id
-      }
+        userId: user.id,
+      },
     });
 
     // Generar token
@@ -54,7 +54,7 @@ export const register = async (req: any, res: Response) => {
     const token = jwt.sign(
       { userId: user.id },
       secret,
-      { expiresIn: expiresIn as any }
+      { expiresIn: expiresIn as any },
     );
 
     res.status(201).json({
@@ -64,8 +64,8 @@ export const register = async (req: any, res: Response) => {
         email: user.email,
         nombre: user.nombre,
         createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString()
-      }
+        updatedAt: user.updatedAt.toISOString(),
+      },
     });
   } catch (error: any) {
     if (error instanceof MissingEnvVarError) {
@@ -83,7 +83,7 @@ export const register = async (req: any, res: Response) => {
     
     res.status(500).json({ 
       error: errorMessage,
-      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message }),
     });
   }
 };
@@ -102,8 +102,8 @@ export const login = async (req: any, res: Response) => {
         nombre: true,
         password: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     if (!user) {
@@ -123,7 +123,7 @@ export const login = async (req: any, res: Response) => {
     const token = jwt.sign(
       { userId: user.id },
       secret,
-      { expiresIn: expiresIn as any }
+      { expiresIn: expiresIn as any },
     );
 
     res.json({
@@ -133,8 +133,8 @@ export const login = async (req: any, res: Response) => {
         email: user.email,
         nombre: user.nombre,
         createdAt: user.createdAt.toISOString(),
-        updatedAt: user.updatedAt.toISOString()
-      }
+        updatedAt: user.updatedAt.toISOString(),
+      },
     });
   } catch (error: any) {
     if (error instanceof MissingEnvVarError) {
@@ -152,7 +152,7 @@ export const login = async (req: any, res: Response) => {
     
     res.status(500).json({ 
       error: errorMessage,
-      ...(process.env.NODE_ENV === 'development' && { details: error?.message })
+      ...(process.env.NODE_ENV === 'development' && { details: error?.message }),
     });
   }
 };
@@ -166,8 +166,8 @@ export const getMe = async (req: any & { userId?: string }, res: Response) => {
         email: true,
         nombre: true,
         createdAt: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     if (!user) {

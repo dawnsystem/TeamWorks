@@ -14,7 +14,7 @@ export const configureSecurityMiddleware = (app: Express) => {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Necesario para React en desarrollo
-        imgSrc: ["'self'", "data:", "https:"],
+        imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
       },
     },

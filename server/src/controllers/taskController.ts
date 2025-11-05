@@ -61,7 +61,7 @@ export const getTasks = async (req: any, res: Response) => {
     if (search) {
       where.OR = [
         { titulo: { contains: search as string, mode: 'insensitive' } },
-        { descripcion: { contains: search as string, mode: 'insensitive' } }
+        { descripcion: { contains: search as string, mode: 'insensitive' } },
       ];
     }
 
@@ -74,7 +74,7 @@ export const getTasks = async (req: any, res: Response) => {
 
       where.fechaVencimiento = {
         gte: today,
-        lt: tomorrow
+        lt: tomorrow,
       };
       where.completada = false;
     }
@@ -87,7 +87,7 @@ export const getTasks = async (req: any, res: Response) => {
 
       where.fechaVencimiento = {
         gte: today,
-        lt: nextWeek
+        lt: nextWeek,
       };
       where.completada = false;
     }
@@ -147,7 +147,7 @@ export const createTask = async (req: any, res: Response) => {
       sectionId,
       parentTaskId,
       orden,
-      labelIds
+      labelIds,
     } = req.body;
 
     // Validación de formato ya realizada por middleware
@@ -206,15 +206,15 @@ export const createTask = async (req: any, res: Response) => {
         createdBy: userId,
         ...(labelIds && labelIds.length > 0 && {
           task_labels: {
-            create: labelIds.map((labelId: string) => ({ labelId }))
-          }
-        })
+            create: labelIds.map((labelId: string) => ({ labelId })),
+          },
+        }),
       } as any,
       include: {
         task_labels: {
-          include: { labels: true }
-        }
-      }
+          include: { labels: true },
+        },
+      },
     });
 
     // Auto-subscribe creator to the task
@@ -255,7 +255,7 @@ export const updateTask = async (req: any, res: Response) => {
       completada,
       sectionId,
       orden,
-      labelIds
+      labelIds,
     } = req.body;
 
     // Verificar que la tarea pertenece al usuario
@@ -263,7 +263,7 @@ export const updateTask = async (req: any, res: Response) => {
       where: {
         id,
         ...projectAccessWhere(userId),
-      }
+      },
     });
 
     if (!existingTask) {
@@ -387,7 +387,7 @@ export const deleteTask = async (req: any, res: Response) => {
       where: {
         id,
         ...projectAccessWhere((req as AuthRequest).userId!),
-      }
+      },
     });
 
     if (!existingTask) {
@@ -401,7 +401,7 @@ export const deleteTask = async (req: any, res: Response) => {
     }
 
     await prisma.tasks.delete({
-      where: { id }
+      where: { id },
     });
 
     // Enviar evento SSE
@@ -429,7 +429,7 @@ export const toggleTask = async (req: any, res: Response) => {
       where: {
         id,
         ...projectAccessWhere((req as AuthRequest).userId!),
-      }
+      },
     });
 
     if (!existingTask) {
@@ -445,14 +445,14 @@ export const toggleTask = async (req: any, res: Response) => {
     const taskUpdated = await prisma.tasks.update({
       where: { id },
       data: {
-        completada: !existingTask.completada
+        completada: !existingTask.completada,
       },
       include: {
         task_labels: { include: { labels: true } },
         _count: {
-          select: { other_tasks: true, comments: true, reminders: true }
-        }
-      }
+          select: { other_tasks: true, comments: true, reminders: true },
+        },
+      },
     });
 
     const clientTask = (await fetchSingleTask(prisma, taskUpdated.id, (req as AuthRequest).userId!)) ?? toClientTask(taskUpdated);
@@ -481,7 +481,7 @@ export const toggleTask = async (req: any, res: Response) => {
           metadata: {
             completedAt: new Date(),
           },
-        }
+        },
       );
     }
 
@@ -526,7 +526,7 @@ export const reorderTasks = async (req: any, res: Response) => {
       where: {
         id: { in: taskIds },
         ...projectAccessWhere((req as AuthRequest).userId!),
-      }
+      },
     });
 
     if (tasks.length !== taskIds.length) {
@@ -542,10 +542,10 @@ export const reorderTasks = async (req: any, res: Response) => {
             orden: update.orden,
             ...(update.projectId && { projectId: update.projectId }),
             ...(update.sectionId !== undefined && { sectionId: update.sectionId }),
-            ...(update.parentTaskId !== undefined && { parentTaskId: update.parentTaskId })
-          }
-        })
-      )
+            ...(update.parentTaskId !== undefined && { parentTaskId: update.parentTaskId }),
+          },
+        }),
+      ),
     );
 
     // Enviar evento SSE (usar projectId de la primera tarea)
