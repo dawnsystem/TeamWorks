@@ -7,6 +7,7 @@
  * - providers.ts: AI provider management (Groq, Gemini)
  * - dateParser.ts: Natural language date parsing
  * - actionParser.ts: Action parsing from AI responses
+ * - actionExecutor.ts: Action execution logic
  * 
  * The main aiService.ts still contains the core business logic but now
  * uses these extracted utilities for better maintainability.
@@ -40,3 +41,8 @@ export {
   isValidAction,
   sanitizeActions,
 } from './actionParser';
+
+// Re-export action executor
+export {
+  executeAIActions,
+} from './actionExecutor';
