@@ -44,13 +44,14 @@ export function useTasksTree({ projectId, labelId = null, enabled = true }: UseT
   const rootTasks = query.data ?? [];
 
   const { tasksMap, sectionMap, tasksWithoutSection } = useMemo(() => {
+    const tasks = query.data ?? [];
     const map: TasksMap = new Map();
     const sections = new Map<string, Task[]>();
     const withoutSection: Task[] = [];
 
-    traverseTasks(rootTasks, map);
+    traverseTasks(tasks, map);
 
-    for (const task of rootTasks) {
+    for (const task of tasks) {
       if (task.sectionId) {
         if (!sections.has(task.sectionId)) {
           sections.set(task.sectionId, []);
@@ -66,7 +67,7 @@ export function useTasksTree({ projectId, labelId = null, enabled = true }: UseT
       sectionMap: sections,
       tasksWithoutSection: withoutSection,
     };
-  }, [rootTasks]);
+  }, [query.data]);
 
   return {
     ...query,
