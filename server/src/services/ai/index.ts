@@ -8,9 +8,12 @@
  * - dateParser.ts: Natural language date parsing
  * - actionParser.ts: Action parsing from AI responses
  * - actionExecutor.ts: Action execution logic
+ * - prompts.ts: AI prompt templates
+ * - nlpProcessor.ts: Natural language processing
+ * - planGenerator.ts: AI plan generation
  * 
- * The main aiService.ts still contains the core business logic but now
- * uses these extracted utilities for better maintainability.
+ * The main aiService.ts can now import from these focused modules
+ * for better maintainability and testability.
  */
 
 // Re-export provider utilities
@@ -46,3 +49,25 @@ export {
 export {
   executeAIActions,
 } from './actionExecutor';
+
+// Re-export NLP processor
+export {
+  type ProcessNaturalLanguageResult,
+  processNaturalLanguage,
+} from './nlpProcessor';
+
+// Re-export plan generator
+export {
+  type AIPlanTask,
+  type AIPlanPhase,
+  type AIPlan,
+  type GenerateAIPlanOptions,
+  generateAIPlan,
+} from './planGenerator';
+
+// Re-export prompts (for customization if needed)
+export {
+  buildNLPPrompt,
+  buildPlannerQuestionsPrompt,
+  buildPlannerPlanPrompt,
+} from './prompts';
