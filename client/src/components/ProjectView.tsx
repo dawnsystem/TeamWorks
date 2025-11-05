@@ -19,6 +19,7 @@ import {
 import TaskList from './TaskList';
 import TaskItem from './TaskItem';
 import LabelFilter from './LabelFilter';
+import SectionManager from './SectionManager';
 import { projectsAPI, tasksAPI, projectSharesAPI } from '@/lib/api';
 import { useTaskEditorStore, useUIStore } from '@/store/useStore';
 import { useContextMenu } from '@/hooks/useContextMenu';
@@ -44,6 +45,10 @@ export default function ProjectView() {
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isShareModalOpen, setShareModalOpen] = useState(false);
+  const [isSectionManagerOpen, setSectionManagerOpen] = useState(false);
+  const [editingSection, setEditingSection] = useState<any | null>(null);
+  const [isEditingProjectName, setIsEditingProjectName] = useState(false);
+  const [projectNameInput, setProjectNameInput] = useState('');
 
   // Sensors for drag and drop
   // MouseSensor for desktop (no delay) and TouchSensor for mobile (with delay for scrolling)
@@ -114,6 +119,20 @@ export default function ProjectView() {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Tareas completadas archivadas');
+    },
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: (data: { nombre?: string; color?: string }) =>
+      projectsAPI.update(projectId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Proyecto actualizado');
+      setIsEditingProjectName(false);
+    },
+    onError: () => {
+      toast.error('Error al actualizar el proyecto');
     },
   });
 
@@ -198,13 +217,19 @@ export default function ProjectView() {
           id: 'edit',
           label: 'Editar proyecto',
           icon: Edit,
-          onClick: () => toast.success('Función próximamente'),
+          onClick: () => {
+            setIsEditingProjectName(true);
+            setProjectNameInput(project.nombre);
+          },
         },
         {
           id: 'add-section',
           label: 'Añadir sección',
           icon: ListPlus,
-          onClick: () => toast.success('Función próximamente'),
+          onClick: () => {
+            setEditingSection(null);
+            setSectionManagerOpen(true);
+          },
           separator: true,
         },
       );
@@ -224,7 +249,16 @@ export default function ProjectView() {
         id: 'stats',
         label: 'Ver estadísticas',
         icon: BarChart3,
-        onClick: () => toast.success('Función próximamente'),
+        onClick: () => {
+          // Show basic statistics
+          const totalTasks = tasks?.length || 0;
+          const completedTasks = tasks?.filter(t => t.completada).length || 0;
+          const pendingTasks = totalTasks - completedTasks;
+          toast.success(
+            `📊 Estadísticas: ${totalTasks} total, ${completedTasks} completadas, ${pendingTasks} pendientes`,
+            { duration: 5000 }
+          );
+        },
       },
     );
 
@@ -254,7 +288,10 @@ export default function ProjectView() {
         id: 'edit',
         label: 'Editar nombre',
         icon: Edit,
-        onClick: () => toast.success('Función próximamente'),
+        onClick: () => {
+          setEditingSection(section);
+          setSectionManagerOpen(true);
+        },
         disabled: !canManageProject,
       },
       {
@@ -306,9 +343,34 @@ export default function ProjectView() {
                   style={{ backgroundColor: project.color }}
                 />
               )}
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu truncate">
-                {project?.nombre || 'Inbox'}
-              </h1>
+              {isEditingProjectName && project ? (
+                <input
+                  type="text"
+                  value={projectNameInput}
+                  onChange={(e) => setProjectNameInput(e.target.value)}
+                  onBlur={() => {
+                    if (projectNameInput.trim() && projectNameInput !== project.nombre) {
+                      updateProjectMutation.mutate({ nombre: projectNameInput.trim() });
+                    } else {
+                      setIsEditingProjectName(false);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.currentTarget.blur();
+                    } else if (e.key === 'Escape') {
+                      setIsEditingProjectName(false);
+                      setProjectNameInput(project.nombre);
+                    }
+                  }}
+                  autoFocus
+                  className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white bg-transparent border-b-2 border-red-500 outline-none px-1"
+                />
+              ) : (
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition cursor-context-menu truncate">
+                  {project?.nombre || 'Inbox'}
+                </h1>
+              )}
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -490,6 +552,19 @@ export default function ProjectView() {
           </div>
         ) : null}
       </DragOverlay>
+
+      {/* Section Manager Modal */}
+      {projectId && (
+        <SectionManager
+          isOpen={isSectionManagerOpen}
+          onClose={() => {
+            setSectionManagerOpen(false);
+            setEditingSection(null);
+          }}
+          projectId={projectId}
+          section={editingSection}
+        />
+      )}
     </DndContext>
   );
 }
