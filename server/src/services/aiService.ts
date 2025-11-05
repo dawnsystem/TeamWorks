@@ -880,16 +880,14 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               // Buscar sección si se especifica
               let targetSectionId: string | null = null;
               if (taskData.sectionName) {
-                if (resolvedProject) {
-                  const sectionInProject = await prisma.sections.findFirst({
-                    where: {
-                      projectId: resolvedProject.id,
-                      nombre: { equals: taskData.sectionName, mode: 'insensitive' }
-                    }
-                  });
-                  if (sectionInProject) {
-                    targetSectionId = sectionInProject.id;
+                const sectionInProject = await prisma.sections.findFirst({
+                  where: {
+                    projectId: resolvedProject.id,
+                    nombre: { equals: taskData.sectionName, mode: 'insensitive' }
                   }
+                });
+                if (sectionInProject) {
+                  targetSectionId = sectionInProject.id;
                 }
 
                 if (!targetSectionId) {
