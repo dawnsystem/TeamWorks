@@ -23,10 +23,18 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
   - Ejemplo: *"añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"*
 - 🔗 **Subtareas vía IA** - Crea subtareas directamente con comandos
   - Ejemplo: *"añadir diseñar mockups como subtarea de proyecto web"*
+- 🌳 **Subtareas anidadas ilimitadas** ⭐ NUEVO - Crea tareas con subtareas que a su vez tienen subtareas, sin límite de profundidad
+  - Ejemplo: *"crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"*
 - 🎯 **Bulk actions** - Crea múltiples tareas a la vez
   - Ejemplo: *"crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"*
 - 🔄 **Actualización inteligente** - Cambia prioridad, fecha, proyecto de tareas existentes
   - Ejemplo: *"cambiar prioridad de comprar leche a alta"*
+- 📦 **Operaciones en bulk avanzadas** ⭐ NUEVO - Mueve, actualiza o elimina múltiples tareas con filtros sofisticados
+  - Ejemplo: *"mover todas las tareas de alta prioridad al proyecto Urgente"*
+  - Ejemplo: *"eliminar todas las tareas completadas del proyecto Personal de la semana pasada"*
+- ↕️ **Reorganización de tareas** ⭐ NUEVO - Reordena tareas en listas, muévelas arriba/abajo
+  - Ejemplo: *"mover la tarea comprar leche arriba de sacar basura"*
+  - Ejemplo: *"reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"*
 - 📅 **Fechas inteligentes** - Entiende "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"
 - 🔍 **Consultas** - Pregunta por tareas pendientes, de hoy, de la semana, etc.
 - 🎉 **Auto-creación** - Proyectos, secciones y etiquetas se crean automáticamente si no existen
@@ -35,9 +43,9 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
   - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
 - 🧠 **Motores IA seleccionables** - Cambia entre Groq (LLaMA 3.1) y Google Gemini 1.5 según tu caso de uso
-- 🗺️ **AI Planner** ⭐ NUEVO: genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
-- 🔁 **Fallback automático** ⭐ NUEVO: si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
-- ⚙️ **Automatizaciones inteligentes** ⭐ NUEVO: al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
+- 🗺️ **AI Planner** - Genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
+- 🔁 **Fallback automático** - Si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
+- ⚙️ **Automatizaciones inteligentes** - Al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
 
 ### Gestión Inteligente de Relaciones 🧠 (Próximamente)
 - 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
@@ -320,6 +328,21 @@ El asistente de IA puede interpretar comandos en lenguaje natural:
 
 "crear proyecto de trabajo"
 → Crea un nuevo proyecto llamado "trabajo"
+
+⭐ "crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"
+→ Crea tarea con subtareas anidadas en múltiples niveles
+
+⭐ "mover todas las tareas de alta prioridad al proyecto Urgente"
+→ Mueve en bulk todas las tareas P1 a otro proyecto
+
+⭐ "eliminar todas las tareas completadas del proyecto Personal de la semana pasada"
+→ Elimina tareas con filtros avanzados (proyecto, estado, fecha)
+
+⭐ "mover la tarea comprar leche arriba de sacar basura"
+→ Reordena tareas en la lista
+
+⭐ "reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"
+→ Reordena múltiples tareas en orden específico
 
 "generar plan para lanzar campaña de marketing"
 → Abre el AI Planner; puedes elegir modo automático o responder preguntas antes de obtener el plan.
