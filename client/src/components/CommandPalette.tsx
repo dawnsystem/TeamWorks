@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, FileText, Folder, Tag, Zap, Eye, Settings as SettingsIcon,
-  Moon, Sun, HelpCircle, Sparkles, Plus, X
+  Moon, Sun, HelpCircle, Sparkles, Plus, X, ClipboardList, Brain
 } from 'lucide-react';
 import { tasksAPI, projectsAPI, labelsAPI } from '@/lib/api';
 import { searchAll, type Action } from '@/utils/search';
@@ -24,6 +24,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
   const toggleDarkMode = useUIStore(state => state.toggleDarkMode);
   const openEditor = useTaskEditorStore(state => state.openEditor);
   const toggleAI = useAIStore(state => state.toggleAI);
+  const setMode = useAIStore(state => state.setMode);
   const openTaskDetail = useTaskDetailStore(state => state.openDetail);
   
   // Fetch data for search
@@ -62,6 +63,42 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
       icon: 'sparkles',
       keywords: ['ia', 'asistente', 'ai', 'inteligencia'],
       handler: () => {
+        toggleAI();
+        onClose();
+      }
+    },
+    {
+      id: 'open-ai-ask',
+      title: 'IA: Modo ASK (Preguntar)',
+      description: 'Resolver dudas sin ejecutar acciones',
+      icon: 'help-circle',
+      keywords: ['ia', 'preguntar', 'ask', 'ayuda', 'consulta'],
+      handler: () => {
+        setMode('ASK');
+        toggleAI();
+        onClose();
+      }
+    },
+    {
+      id: 'open-ai-plan',
+      title: 'IA: Modo PLAN (Planificar)',
+      description: 'Crear planes estructurados',
+      icon: 'clipboard-list',
+      keywords: ['ia', 'plan', 'planificar', 'estrategia'],
+      handler: () => {
+        setMode('PLAN');
+        toggleAI();
+        onClose();
+      }
+    },
+    {
+      id: 'open-ai-agent',
+      title: 'IA: Modo AGENT (Agente)',
+      description: 'Ejecutar acciones automáticamente',
+      icon: 'brain',
+      keywords: ['ia', 'agente', 'agent', 'automatico', 'ejecutar'],
+      handler: () => {
+        setMode('AGENT');
         toggleAI();
         onClose();
       }
@@ -194,6 +231,9 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
     const icons: Record<string, JSX.Element> = {
       plus: <Plus className="w-4 h-4" />,
       sparkles: <Sparkles className="w-4 h-4" />,
+      'help-circle': <HelpCircle className="w-4 h-4" />,
+      'clipboard-list': <ClipboardList className="w-4 h-4" />,
+      brain: <Brain className="w-4 h-4" />,
       sun: <Sun className="w-4 h-4" />,
       moon: <Moon className="w-4 h-4" />,
       eye: <Eye className="w-4 h-4" />,
