@@ -300,6 +300,18 @@ export interface AIPlan {
   phases: AIPlanPhase[];
 }
 
+interface TaskDataForCreation {
+  titulo: string;
+  descripcion?: string;
+  prioridad?: number;
+  fechaVencimiento?: string;
+  labelNames?: string[];
+  projectName?: string;
+  sectionName?: string;
+  orden?: number;
+  subtasks?: TaskDataForCreation[];
+}
+
 interface PlannerQuestionsResponse {
   status: 'questions';
   questions: string[];
@@ -1573,7 +1585,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
           if (action.entity === 'task') {
             // Función helper recursiva para crear tareas con subtareas
             const createTaskWithSubtasks = async (
-              taskData: any,
+              taskData: TaskDataForCreation,
               parentId: string | null = null,
               projectId?: string,
               sectionId?: string | null,
@@ -1745,21 +1757,21 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
 
               switch (action.data.filter.dateRange.type) {
                 case 'lastWeek':
-                  endDate = new Date(now);
-                  endDate.setDate(now.getDate() - 7);
-                  endDate.setHours(23, 59, 59, 999);
-                  startDate = new Date(endDate);
-                  startDate.setDate(endDate.getDate() - 7);
+                  // Last week = from 7 days ago until today
+                  startDate = new Date(now);
+                  startDate.setDate(now.getDate() - 7);
                   startDate.setHours(0, 0, 0, 0);
+                  endDate = new Date(now);
+                  endDate.setHours(23, 59, 59, 999);
                   where.createdAt = { gte: startDate, lte: endDate };
                   break;
                 case 'lastMonth':
-                  endDate = new Date(now);
-                  endDate.setMonth(now.getMonth() - 1);
-                  endDate.setHours(23, 59, 59, 999);
-                  startDate = new Date(endDate);
-                  startDate.setMonth(endDate.getMonth() - 1);
+                  // Last month = from 30 days ago until today
+                  startDate = new Date(now);
+                  startDate.setDate(now.getDate() - 30);
                   startDate.setHours(0, 0, 0, 0);
+                  endDate = new Date(now);
+                  endDate.setHours(23, 59, 59, 999);
                   where.createdAt = { gte: startDate, lte: endDate };
                   break;
                 case 'older':
@@ -1955,10 +1967,12 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   });
 
                   if (referenceTask) {
+                    // Use larger gaps to avoid precision issues with floating point
+                    // This allows for ~1000 reorders between tasks before precision degrades
                     const newOrden =
                       action.data.position === 'before'
-                        ? referenceTask.orden - 0.5
-                        : referenceTask.orden + 0.5;
+                        ? referenceTask.orden - 1000
+                        : referenceTask.orden + 1000;
                     result = await prisma.tasks.update({
                       where: { id: task.id },
                       data: { orden: newOrden },
