@@ -30,6 +30,13 @@ vi.mock('@/store/useStore', () => ({
     };
     return selector ? selector(state) : state;
   }),
+  useAuthStore: vi.fn((selector) => {
+    const state = {
+      user: mockUser,
+      isAuthenticated: true,
+    };
+    return selector ? selector(state) : state;
+  }),
 }));
 
 // Mock API functions
