@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { processCommand, executeActions, generatePlan, agent } from '../controllers/aiController';
+import { processCommand, executeActions, generatePlan, agent, unified } from '../controllers/aiController';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
-import { aiProcessSchema, aiExecuteSchema, aiPlannerSchema, aiAgentSchema } from '../validation/schemas';
+import { aiProcessSchema, aiExecuteSchema, aiPlannerSchema, aiAgentSchema, aiUnifiedSchema } from '../validation/schemas';
 
 const router = Router();
 
@@ -13,6 +13,7 @@ router.post('/process', validateBody(aiProcessSchema), processCommand);
 router.post('/execute', validateBody(aiExecuteSchema), executeActions);
 router.post('/planner', validateBody(aiPlannerSchema), generatePlan);
 router.post('/agent', validateBody(aiAgentSchema), agent);
+router.post('/unified', validateBody(aiUnifiedSchema), unified);
 
 export default router;
 

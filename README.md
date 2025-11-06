@@ -18,23 +18,36 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 🎯 **Drag & Drop** - Reordena tareas arrastrándolas desde cualquier parte
 
 ### Asistente de IA Avanzado ✨
+
+#### 🎯 Tres Modos de Interacción ⭐ NUEVO
+- **ASK (Preguntar)** - Resuelve dudas y obtén consejos sin ejecutar acciones
+  - Ejemplo: *"¿Cómo organizo mejor mis tareas?"*
+- **PLAN (Planificar)** - Crea planes estructurados para proyectos complejos
+  - Ejemplo: *"Quiero lanzar una campaña de marketing en 3 meses"*
+- **AGENT (Agente Autónomo)** - Conversación natural que ejecuta acciones automáticamente
+  - Ejemplo: *"Necesito organizar mi mudanza" → La IA pregunta, entiende y crea todo*
+
+**La IA sugiere cambiar de modo** cuando es apropiado. [Ver guía completa de modos →](./docs/AI_MODES_GUIDE.md)
+
+#### Capacidades Avanzadas
 - 🤖 **Lenguaje natural** - Crea y gestiona tareas hablando normalmente
 - 📝 **Creación completa** - Especifica proyecto, sección, etiquetas, fechas y subtareas en un comando
   - Ejemplo: *"añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"*
 - 🔗 **Subtareas vía IA** - Crea subtareas directamente con comandos
   - Ejemplo: *"añadir diseñar mockups como subtarea de proyecto web"*
-- 🌳 **Subtareas anidadas ilimitadas** ⭐ NUEVO - Crea tareas con subtareas que a su vez tienen subtareas, sin límite de profundidad
+- 🌳 **Subtareas anidadas ilimitadas** - Crea tareas con subtareas que a su vez tienen subtareas, sin límite de profundidad
   - Ejemplo: *"crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"*
 - 🎯 **Bulk actions** - Crea múltiples tareas a la vez
   - Ejemplo: *"crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"*
 - 🔄 **Actualización inteligente** - Cambia prioridad, fecha, proyecto de tareas existentes
   - Ejemplo: *"cambiar prioridad de comprar leche a alta"*
-- 📦 **Operaciones en bulk avanzadas** ⭐ NUEVO - Mueve, actualiza o elimina múltiples tareas con filtros sofisticados
+- 📦 **Operaciones en bulk avanzadas** - Mueve, actualiza o elimina múltiples tareas con filtros sofisticados
   - Ejemplo: *"mover todas las tareas de alta prioridad al proyecto Urgente"*
   - Ejemplo: *"eliminar todas las tareas completadas del proyecto Personal de la semana pasada"*
-- ↕️ **Reorganización de tareas** ⭐ NUEVO - Reordena tareas en listas, muévelas arriba/abajo
+- ↕️ **Reorganización de tareas** - Reordena tareas en listas, muévelas arriba/abajo
   - Ejemplo: *"mover la tarea comprar leche arriba de sacar basura"*
   - Ejemplo: *"reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"*
+- 💬 **Conversacional inteligente** - Mantiene contexto de conversación y hace preguntas aclaratorias
 - 📅 **Fechas inteligentes** - Entiende "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"
 - 🔍 **Consultas** - Pregunta por tareas pendientes, de hoy, de la semana, etc.
 - 🎉 **Auto-creación** - Proyectos, secciones y etiquetas se crean automáticamente si no existen

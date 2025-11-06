@@ -2238,3 +2238,315 @@ IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional. Sé natural, amigable y 
 };
 
 
+
+
+// Unified AI Interaction with Mode Selection
+export type AIMode = "ASK" | "PLAN" | "AGENT";
+
+export interface UnifiedAIResponse {
+  mode: AIMode;
+  message: string;
+  conversationId: string;
+  canChangeMode?: boolean;
+  suggestedMode?: AIMode;
+  suggestedModeReason?: string;
+  
+  // For ASK mode
+  answer?: string;
+  
+  // For PLAN mode
+  plan?: AIPlan;
+  
+  // For AGENT mode
+  status?: "conversation" | "ready" | "executing";
+  requiresInput?: boolean;
+  suggestedActions?: AIAction[];
+  executedActions?: any[];
+  
+  providerUsed: SupportedAIProvider;
+}
+
+/**
+ * Unified AI Interaction Handler
+ * Handles three modes: ASK (questions), PLAN (planning), AGENT (autonomous execution)
+ */
+export const unifiedAI = async (
+  message: string,
+  mode: AIMode,
+  conversationHistory: Array<{ role: "user" | "assistant"; content: string }> = [],
+  context?: any,
+  autoExecute: boolean = false,
+  providerOverride?: string,
+  conversationId?: string,
+  prisma?: any,
+  userId?: string,
+): Promise<UnifiedAIResponse> => {
+  const preferred = resolveProvider(providerOverride);
+  const contextString = context ? JSON.stringify(context, null, 2) : "Sin contexto adicional";
+  const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  // Build conversation history
+  const historyString = conversationHistory.length > 0
+    ? conversationHistory
+        .map((msg) => `${msg.role === "user" ? "Usuario" : "Asistente"}: ${msg.content}`)
+        .join("\n")
+    : "Inicio de conversación";
+
+  try {
+    // Handle each mode differently
+    switch (mode) {
+      case "ASK": {
+        const prompt = `Eres un asistente experto en gestión de tareas y productividad. Tu único objetivo es responder preguntas y resolver dudas del usuario. NO ejecutas acciones, solo proporcionas información y consejos.
+
+Contexto del usuario:
+${contextString}
+
+Historial de conversación:
+${historyString}
+
+Pregunta del usuario: "${message}"
+
+Responde en formato JSON con esta estructura:
+
+{
+  "answer": "Tu respuesta clara y útil",
+  "canChangeMode": true/false,
+  "suggestedMode": "PLAN" | "AGENT" | null,
+  "suggestedModeReason": "Por qué sugieres cambiar de modo (si aplica)"
+}
+
+Directrices:
+1. Da respuestas claras, concisas y útiles
+2. Si el usuario pregunta cómo hacer algo, explica el proceso
+3. Si el usuario pide que hagas algo (crear, mover, eliminar tareas), sugiere cambiar a modo PLAN o AGENT:
+   - PLAN: Para planificar proyectos complejos
+   - AGENT: Para ejecutar acciones automáticamente
+4. Sé amable y profesional
+5. Si no estás seguro, di que no lo sabes
+
+IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.`;
+
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const jsonText = stripCodeFences(text);
+        
+        try {
+          const response = JSON.parse(jsonText);
+          
+          return {
+            mode: "ASK",
+            message: response.answer || text,
+            answer: response.answer || text,
+            conversationId: newConversationId,
+            canChangeMode: response.canChangeMode || false,
+            suggestedMode: response.suggestedMode || undefined,
+            suggestedModeReason: response.suggestedModeReason || undefined,
+            providerUsed,
+          };
+        } catch (parseError) {
+          // Fallback: treat entire response as answer
+          return {
+            mode: "ASK",
+            message: text,
+            answer: text,
+            conversationId: newConversationId,
+            providerUsed,
+          };
+        }
+      }
+
+      case "PLAN": {
+        const prompt = `Eres un planificador experto. Tu objetivo es ayudar al usuario a crear planes estructurados para sus proyectos y objetivos.
+
+Contexto del usuario:
+${contextString}
+
+Historial de conversación:
+${historyString}
+
+Mensaje del usuario: "${message}"
+
+Responde en formato JSON:
+
+Si necesitas más información:
+{
+  "status": "conversation",
+  "message": "Tu pregunta clarificadora",
+  "requiresInput": true
+}
+
+Si estás listo para crear el plan:
+{
+  "status": "ready",
+  "message": "Resumen del plan que crearás",
+  "plan": {
+    "goal": "Objetivo principal",
+    "summary": "Resumen ejecutivo",
+    "phases": [
+      {
+        "title": "Fase 1",
+        "description": "Descripción",
+        "duration": "Duración estimada",
+        "tasks": [
+          {
+            "title": "Tarea",
+            "description": "Descripción",
+            "priority": 1-4,
+            "dueInDays": 7
+          }
+        ]
+      }
+    ]
+  },
+  "canChangeMode": true,
+  "suggestedMode": "AGENT",
+  "suggestedModeReason": "Para ejecutar este plan automáticamente"
+}
+
+Directrices:
+1. Haz preguntas específicas para entender el alcance
+2. Crea planes detallados con fases y tareas
+3. Sugiere cambiar a modo AGENT para ejecutar el plan
+4. Incluye timelines realistas
+
+IMPORTANTE: Devuelve SOLO el JSON.`;
+
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const jsonText = stripCodeFences(text);
+        
+        try {
+          const response = JSON.parse(jsonText);
+          
+          return {
+            mode: "PLAN",
+            message: response.message,
+            status: response.status,
+            requiresInput: response.requiresInput || false,
+            plan: response.plan,
+            conversationId: newConversationId,
+            canChangeMode: response.canChangeMode,
+            suggestedMode: response.suggestedMode,
+            suggestedModeReason: response.suggestedModeReason,
+            providerUsed,
+          };
+        } catch (parseError) {
+          console.error("Error en modo PLAN:", parseError);
+          return {
+            mode: "PLAN",
+            message: text,
+            status: "conversation",
+            requiresInput: true,
+            conversationId: newConversationId,
+            providerUsed,
+          };
+        }
+      }
+
+      case "AGENT": {
+        const prompt = `Eres un agente autónomo de gestión de tareas. Tu objetivo es entender lo que el usuario quiere y EJECUTAR las acciones necesarias automáticamente.
+
+Contexto del usuario:
+${contextString}
+
+Historial de conversación:
+${historyString}
+
+Mensaje del usuario: "${message}"
+
+Responde en formato JSON:
+
+Si necesitas más información:
+{
+  "status": "conversation",
+  "message": "Tu pregunta al usuario",
+  "requiresInput": true
+}
+
+Si estás listo para ejecutar:
+{
+  "status": "ready",
+  "message": "Explicación de lo que vas a hacer",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "create_with_subtasks" | "create_project" | "create_section" | etc,
+      "entity": "task" | "project" | "section" | "label" | "reminder",
+      "data": { ... },
+      "confidence": 0.95,
+      "explanation": "Por qué esta acción"
+    }
+  ]
+}
+
+Directrices:
+1. Sé conversacional y amigable
+2. Haz preguntas específicas paso a paso
+3. Cuando tengas suficiente info, genera TODAS las acciones necesarias
+4. Usa create_with_subtasks para jerarquías complejas
+5. Crea proyectos, secciones, etiquetas según sea necesario
+6. Asigna prioridades y fechas lógicas
+7. Piensa en recordatorios para hitos importantes
+
+Tipos de acciones disponibles:
+- create, create_with_subtasks, create_bulk
+- update, update_bulk, delete, delete_bulk
+- move_bulk, reorder
+- create_project, create_section, create_label
+- add_comment, create_reminder
+
+IMPORTANTE: Devuelve SOLO el JSON.`;
+
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const jsonText = stripCodeFences(text);
+        
+        try {
+          const response = JSON.parse(jsonText);
+          
+          // If ready and autoExecute is true, execute actions
+          let executedActions;
+          if (response.status === "ready" && response.suggestedActions && autoExecute && prisma && userId) {
+            try {
+              executedActions = await executeAIActions(response.suggestedActions, userId, prisma);
+            } catch (execError) {
+              console.error("Error ejecutando acciones:", execError);
+            }
+          }
+          
+          return {
+            mode: "AGENT",
+            message: response.message,
+            status: response.status,
+            requiresInput: response.requiresInput !== false,
+            suggestedActions: response.suggestedActions,
+            executedActions,
+            conversationId: newConversationId,
+            providerUsed,
+          };
+        } catch (parseError) {
+          console.error("Error en modo AGENT:", parseError);
+          return {
+            mode: "AGENT",
+            message: text,
+            status: "conversation",
+            requiresInput: true,
+            conversationId: newConversationId,
+            providerUsed,
+          };
+        }
+      }
+
+      default:
+        throw new Error(`Modo desconocido: ${mode}`);
+    }
+  } catch (error: any) {
+    console.error("Error en unifiedAI:", error);
+    return {
+      mode,
+      message: error instanceof Error ? error.message : "Error al procesar el mensaje",
+      status: "conversation",
+      requiresInput: false,
+      conversationId: newConversationId,
+      providerUsed: preferred,
+    };
+  }
+};
+

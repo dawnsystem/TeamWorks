@@ -163,6 +163,20 @@ export const aiAgentSchema = z.object({
   provider: z.enum(['groq', 'gemini']).optional(),
 });
 
+// Unified AI Interaction Schema with modes
+export const aiUnifiedSchema = z.object({
+  message: z.string().min(1, 'El mensaje no puede estar vacío').max(2000, 'El mensaje es demasiado largo'),
+  mode: z.enum(['ASK', 'PLAN', 'AGENT']).default('ASK'),
+  conversationId: z.string().optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).optional().default([]),
+  autoExecute: z.boolean().optional().default(false),
+  context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
+});
+
 // Tipo de datos inferidos de los esquemas
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -182,6 +196,7 @@ export type AIProcessInput = z.infer<typeof aiProcessSchema>;
 export type AIExecuteInput = z.infer<typeof aiExecuteSchema>;
 export type AIPlannerInput = z.infer<typeof aiPlannerSchema>;
 export type AIAgentInput = z.infer<typeof aiAgentSchema>;
+export type AIUnifiedInput = z.infer<typeof aiUnifiedSchema>;
 
 // Esquemas de validación para plantillas
 export const createTemplateSchema = z.object({
