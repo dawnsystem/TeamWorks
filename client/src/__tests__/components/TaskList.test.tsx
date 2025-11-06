@@ -1,12 +1,14 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../utils/testUtils';
 import TaskList from '@/components/TaskList';
 import { mockTasks, mockTask } from '../mocks/mockData';
 
-// Mock TaskEditorStore
+// Mock all required stores
 const mockOpenEditor = vi.fn();
+const mockOpenDetail = vi.fn();
+const mockOpenRelationshipPopup = vi.fn();
 
 vi.mock('@/store/useStore', () => ({
   useTaskEditorStore: vi.fn((selector) => {
@@ -16,6 +18,35 @@ vi.mock('@/store/useStore', () => ({
       closeEditor: vi.fn(),
     };
     return selector ? selector(state) : state;
+  }),
+  useTaskDetailStore: vi.fn((selector) => {
+    const state = {
+      openDetail: mockOpenDetail,
+      isOpen: false,
+      taskId: null,
+      closeDetail: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+  useTaskRelationshipStore: vi.fn((selector) => {
+    const state = {
+      openPopup: mockOpenRelationshipPopup,
+      isOpen: false,
+      parentTaskId: null,
+      completedSubtaskTitle: null,
+      closePopup: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
+
+// Mock useContextMenu hook
+vi.mock('@/hooks/useContextMenu', () => ({
+  useContextMenu: () => ({
+    show: vi.fn(),
+    hide: vi.fn(),
+    position: { x: 0, y: 0 },
+    isVisible: false,
   }),
 }));
 

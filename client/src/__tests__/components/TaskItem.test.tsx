@@ -133,14 +133,31 @@ describe('TaskItem', () => {
     });
 
     it('opens context menu on right click', async () => {
+      // Mock window.ontouchstart to be undefined to ensure desktop behavior
+      const originalOntouchstart = window.ontouchstart;
+      delete (window as any).ontouchstart;
+      
       const { container } = render(<TaskItem task={mockTask} />);
       
       const taskElement = screen.getByText(mockTask.titulo).closest('.glass-card')!;
-      fireEvent.contextMenu(taskElement);
+      
+      // Create a proper right-click event
+      const event = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        button: 2,
+      });
+      
+      taskElement.dispatchEvent(event);
       
       await waitFor(() => {
         expect(mockShowMenu).toHaveBeenCalled();
       });
+      
+      // Restore original value
+      if (originalOntouchstart !== undefined) {
+        (window as any).ontouchstart = originalOntouchstart;
+      }
     });
 
     it('opens task editor when edit is triggered', async () => {
