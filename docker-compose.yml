@@ -1,0 +1,78 @@
+services:
+  # PostgreSQL Database
+  database:
+    image: postgres:16-alpine
+    container_name: teamworks-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-teamworks}
+      POSTGRES_USER: ${POSTGRES_USER:-teamworks}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teamworks}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-teamworks} -d ${POSTGRES_DB:-teamworks}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - teamworks-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: teamworks-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${BACKEND_PORT:-3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-teamworks}:${POSTGRES_PASSWORD:-teamworks}@database:5432/${POSTGRES_DB:-teamworks}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    networks:
+      - teamworks-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web App
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: teamworks-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:8080"
+    networks:
+      - teamworks-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  teamworks-network:
+    driver: bridge

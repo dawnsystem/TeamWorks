@@ -13,6 +13,8 @@ import {
 import type { Notification } from '../types/notification';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { commentsAPI } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -28,6 +30,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   onDelete
 }) => {
   const [showReply, setShowReply] = useState(false);
+  const [replyText, setReplyText] = useState('');
 
   const getIcon = () => {
     switch (notification.type) {
@@ -150,12 +153,14 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
       </div>
 
       {/* Quick Reply (for comments) */}
-      {showReply && notification.type === 'comment' && (
+      {showReply && notification.type === 'comment' && notification.taskId && (
         <div className="mt-3 ml-8 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
           <textarea
             className="w-full p-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
             rows={2}
             placeholder="Escribe una respuesta..."
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
             onClick={(e) => e.stopPropagation()}
           />
           <div className="flex justify-end gap-2 mt-2">
@@ -163,18 +168,33 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
               onClick={(e) => {
                 e.stopPropagation();
                 setShowReply(false);
+                setReplyText('');
               }}
               className="px-3 py-1 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
             >
               Cancelar
             </button>
             <button
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                // TODO: Implement reply
-                setShowReply(false);
+                if (!replyText.trim()) {
+                  toast.error('El comentario no puede estar vacío');
+                  return;
+                }
+                try {
+                  await commentsAPI.create(notification.taskId!, { contenido: replyText });
+                  toast.success('Respuesta enviada');
+                  setShowReply(false);
+                  setReplyText('');
+                  // Mark notification as read after replying
+                  onMarkAsRead();
+                } catch (error) {
+                  console.error('Error sending reply:', error);
+                  toast.error('Error al enviar respuesta');
+                }
               }}
-              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={!replyText.trim()}
+              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Enviar
             </button>

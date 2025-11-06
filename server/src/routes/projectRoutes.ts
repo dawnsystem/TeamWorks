@@ -7,7 +7,7 @@ import {
   deleteProject,
   createSection,
   updateSection,
-  deleteSection
+  deleteSection,
 } from '../controllers/projectController';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';

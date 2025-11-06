@@ -19,11 +19,13 @@ import projectShareRoutes from './routes/projectShareRoutes';
 import { metricsMiddleware, getMetricsSnapshot } from './middleware/metrics';
 import { addClientMetrics, getClientMetrics } from './services/clientMetricsService';
 import { authMiddleware } from './middleware/auth';
+import { log } from './lib/logger';
 
 dotenv.config();
 
-// Log para verificar DATABASE_URL después de cargar .env
-console.log('📊 DATABASE_URL configurada:', process.env.DATABASE_URL?.replace(/password@[^/]+/, 'password@***') || 'NO CONFIGURADA');
+// Log database configuration (with password masked)
+const dbUrl = process.env.DATABASE_URL?.replace(/password@[^/]+/, 'password@***') || 'NOT_CONFIGURED';
+log.info('Database configuration loaded', { databaseUrl: dbUrl });
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
@@ -79,14 +81,14 @@ app.use(cors({
       }
       
       // Log rejected origins for debugging
-      console.warn(`CORS: Origin not allowed: ${origin}`);
+      log.warn('CORS: Origin not allowed', { origin });
       return callback(null, false);
     } catch (e) {
-      console.error(`CORS: Invalid origin URL: ${origin}`);
+      log.error('CORS: Invalid origin URL', e, { origin });
       return callback(null, false);
     }
   },
-  credentials: true
+  credentials: true,
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -97,7 +99,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    service: 'TeamWorks API'
+    service: 'TeamWorks API',
   });
 });
 
@@ -122,8 +124,8 @@ app.post('/api/metrics/client', (req, res) => {
     addClientMetrics(req.body);
     res.status(202).json({ status: 'accepted' });
   } catch (error) {
-    console.error('Error guardando métricas de cliente:', error);
-    res.status(400).json({ error: 'Formato de métricas inválido' });
+    log.error('Error saving client metrics', error);
+    res.status(400).json({ error: 'Invalid metrics format' });
   }
 });
 
@@ -147,18 +149,23 @@ app.use('/api/templates', templateRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error(err.stack);
+  log.error('Unhandled error', err, { 
+    method: req.method,
+    path: req.path,
+    status: err.status,
+  });
   res.status(err.status || 500).json({
-    error: err.message || 'Internal server error'
+    error: err.message || 'Internal server error',
   });
 });
 
 // Escuchar en 0.0.0.0 para acceso en red local
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
-  console.log(`📡 Accessible on local network`);
-  console.log(`🔌 SSE enabled for real-time updates`);
-  console.log(`🔔 Notification system enabled`);
+  log.info('Server started', {
+    port: PORT,
+    host: '0.0.0.0',
+    features: ['SSE', 'Notifications', 'Local Network Access'],
+  });
   
   // Iniciar checker de recordatorios
   reminderService.startReminderChecker();
@@ -168,34 +175,31 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 // Handle server startup errors
 server.on('error', (error: NodeJS.ErrnoException) => {
   if (error.code === 'EADDRINUSE') {
-    console.error(`❌ Error: Port ${PORT} is already in use`);
-    console.error(`   Please stop the other server or use a different port`);
-    console.error(`   You can set PORT in the .env file`);
+    log.error('Port already in use', error, { port: PORT });
   } else if (error.code === 'EACCES') {
-    console.error(`❌ Error: Permission denied to bind to port ${PORT}`);
-    console.error(`   Try using a port number above 1024`);
+    log.error('Permission denied to bind to port', error, { port: PORT });
   } else {
-    console.error(`❌ Server error:`, error.message);
+    log.error('Server startup error', error);
   }
   process.exit(1);
 });
 
 // Manejar cierre graceful
 process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, closing server gracefully...');
+  log.info('SIGTERM received, closing server gracefully');
   reminderService.stopReminderChecker();
   server.close(() => {
-    console.log('✅ Server closed');
+    log.info('Server closed successfully');
     sseService.cleanup();
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('\n🛑 SIGINT received, closing server gracefully...');
+  log.info('SIGINT received, closing server gracefully');
   reminderService.stopReminderChecker();
   server.close(() => {
-    console.log('✅ Server closed');
+    log.info('Server closed successfully');
     sseService.cleanup();
     process.exit(0);
   });

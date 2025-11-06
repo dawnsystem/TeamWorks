@@ -4,7 +4,7 @@ import {
   getLabel,
   createLabel,
   updateLabel,
-  deleteLabel
+  deleteLabel,
 } from '../controllers/labelController';
 import { authMiddleware } from '../middleware/auth';
 import { validateBody } from '../middleware/validation';
