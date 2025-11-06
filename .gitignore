@@ -33,7 +33,8 @@ yarn-error.log*
 *~
 
 # Prisma
-server/prisma/migrations/
+# Migrations are now tracked in version control for deployment reliability
+
 
 # PWA
 client/public/sw.js

@@ -130,7 +130,7 @@ export const aiExecuteSchema = z.object({
       'create_section', 
       'create_label', 
       'add_comment', 
-      'create_reminder'
+      'create_reminder',
     ]),
     entity: z.enum(['task', 'project', 'label', 'section', 'comment', 'reminder']),
     data: z.any().optional(),

@@ -21,22 +21,22 @@ export const processCommand = async (req: any, res: Response) => {
     if (!userContext) {
       const projects = await prisma.projects.findMany({
         where: projectAccessWhere((req as AuthRequest).userId!),
-        select: { id: true, nombre: true }
+        select: { id: true, nombre: true },
       });
 
       const recentTasks = await prisma.tasks.findMany({
         where: {
           projects: projectAccessWhere((req as AuthRequest).userId!),
-          completada: false
+          completada: false,
         },
         take: 10,
         orderBy: { createdAt: 'desc' },
-        select: { id: true, titulo: true, prioridad: true }
+        select: { id: true, titulo: true, prioridad: true },
       });
 
       userContext = {
         projects,
-        recentTasks
+        recentTasks,
       };
     }
 
@@ -60,7 +60,7 @@ export const processCommand = async (req: any, res: Response) => {
       ...(result.fallback && { fallback: true, message: result.errorMessage }),
       ...(result.raw && !result.fallback && { raw: result.raw }),
       ...(results && { results }),
-      autoExecuted: autoExecute
+      autoExecuted: autoExecute,
     });
   } catch (error: any) {
     console.error('Error en processCommand:', error);
