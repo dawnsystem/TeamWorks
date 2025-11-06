@@ -4,6 +4,7 @@ Este documento detalla las capacidades completas del asistente de IA de TeamWork
 
 ## 📋 Índice
 
+- [Entendiendo la Jerarquía de Entidades](#entendiendo-la-jerarquía-de-entidades)
 - [Creación de Tareas](#creación-de-tareas)
 - [Subtareas Anidadas](#subtareas-anidadas)
 - [Operaciones en Bulk](#operaciones-en-bulk)
@@ -12,6 +13,96 @@ Este documento detalla las capacidades completas del asistente de IA de TeamWork
 - [Gestión de Proyectos y Secciones](#gestión-de-proyectos-y-secciones)
 - [Etiquetas y Comentarios](#etiquetas-y-comentarios)
 - [Recordatorios](#recordatorios)
+
+## Entendiendo la Jerarquía de Entidades
+
+⭐ **IMPORTANTE**: La IA de TeamWorks ha sido mejorada para comprender claramente la diferencia entre los distintos tipos de entidades en tu organización de tareas.
+
+### 🗂️ Modelo de Datos
+
+TeamWorks organiza tu trabajo en una jerarquía clara:
+
+#### 1. **PROYECTO** (Project)
+- **Qué es**: Contenedor de alto nivel para organizar trabajo relacionado
+- **Ejemplos**: "Trabajo", "Personal", "Desarrollo Web", "Marketing 2024"
+- **Puede contener**: Secciones y Tareas
+- **No puede**: Ser hijo de otro proyecto
+- **Comando ejemplo**: `"crear proyecto Desarrollo Web"`
+
+#### 2. **SECCIÓN** (Section)
+- **Qué es**: Subdivisión dentro de un proyecto específico
+- **Ejemplos**: "Frontend", "Backend", "Diseño", "Testing"
+- **Pertenece a**: Siempre a un proyecto específico
+- **No puede**: Existir sin un proyecto
+- **Comando ejemplo**: `"crear sección Frontend en proyecto Desarrollo Web"`
+
+#### 3. **TAREA** (Task)
+- **Qué es**: Unidad de trabajo específica que debes completar
+- **Ejemplos**: "Implementar autenticación", "Diseñar landing page"
+- **Pertenece a**: Un proyecto (obligatorio), opcionalmente a una sección
+- **Puede tener**: Subtareas (tareas hijas)
+- **Comando ejemplo**: `"añadir implementar navbar en proyecto Desarrollo Web sección Frontend"`
+
+#### 4. **SUBTAREA** (Subtask)
+- **Qué es**: Una tarea que depende de otra tarea (tarea padre)
+- **Ejemplos**: "Diseñar mockups" como subtarea de "Implementar navbar"
+- **Pertenece a**: Una tarea padre
+- **Hereda**: El proyecto de su tarea padre
+- **Puede tener**: Sus propias subtareas (anidamiento ilimitado)
+- **Comando ejemplo**: `"crear subtarea diseñar mockups de la tarea implementar navbar"`
+
+### 📊 Visualización de la Jerarquía
+
+```
+🗂️ PROYECTO: Desarrollo Web
+│
+├── 📂 SECCIÓN: Frontend
+│   ├── ✅ TAREA: Implementar navbar
+│   │   ├── ✅ SUBTAREA: Diseñar mockups
+│   │   │   └── ✅ SUBTAREA: Investigar tendencias
+│   │   └── ✅ SUBTAREA: Desarrollar componente
+│   └── ✅ TAREA: Crear página de inicio
+│
+└── 📂 SECCIÓN: Backend
+    └── ✅ TAREA: Configurar base de datos
+        └── ✅ SUBTAREA: Diseñar esquema
+```
+
+### 🎯 Reglas Importantes
+
+1. **Las SECCIONES siempre necesitan un proyecto**
+   - ✅ Correcto: `"crear sección Testing en proyecto App Móvil"`
+   - ❌ Incorrecto: `"crear sección Testing"` (falta el proyecto)
+
+2. **Las SUBTAREAS siempre necesitan una tarea padre**
+   - ✅ Correcto: `"añadir subtarea revisar código de la tarea implementar feature"`
+   - ❌ Incorrecto: `"añadir subtarea revisar código"` (falta la tarea padre)
+
+3. **Las TAREAS sin proyecto especificado van a "Inbox"**
+   - `"añadir comprar leche"` → Se crea en Inbox
+   - `"añadir comprar leche en proyecto Personal"` → Se crea en proyecto Personal
+
+4. **Una SECCIÓN no es una TAREA**
+   - Las secciones solo agrupan tareas dentro de un proyecto
+   - Las secciones no tienen estado (completada/pendiente)
+   - Las secciones no tienen fechas de vencimiento
+
+### 💡 Ejemplos de Comandos Claros
+
+**Crear estructura completa:**
+```
+"crear proyecto Lanzamiento App con secciones: Diseño, Desarrollo, Marketing"
+```
+
+**Crear tarea con subtareas:**
+```
+"añadir implementar autenticación en proyecto Lanzamiento App con subtareas: diseñar UI de login, configurar JWT, añadir tests"
+```
+
+**Crear subtareas anidadas:**
+```
+"crear tarea migrar base de datos con subtareas: backup (con subtarea: verificar integridad), migración (con subtareas: ejecutar scripts y verificar datos), rollback plan"
+```
 
 ## Creación de Tareas
 
