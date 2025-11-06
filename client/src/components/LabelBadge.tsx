@@ -10,10 +10,19 @@ interface LabelBadgeProps {
 export default function LabelBadge({ label, onClick, onRemove, removable }: LabelBadgeProps) {
   // Calculate text color based on background color for contrast
   const getTextColor = (hexColor: string) => {
+    // Ensure hex color starts with #
+    const cleanHex = hexColor.startsWith('#') ? hexColor : `#${hexColor}`;
+    
+    // Validate hex color format
+    if (!/^#[0-9A-F]{6}$/i.test(cleanHex)) {
+      // Return black as fallback for invalid colors
+      return '#000000';
+    }
+    
     // Convert hex to RGB
-    const r = parseInt(hexColor.slice(1, 3), 16);
-    const g = parseInt(hexColor.slice(3, 5), 16);
-    const b = parseInt(hexColor.slice(5, 7), 16);
+    const r = parseInt(cleanHex.slice(1, 3), 16);
+    const g = parseInt(cleanHex.slice(3, 5), 16);
+    const b = parseInt(cleanHex.slice(5, 7), 16);
     
     // Calculate luminance
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;

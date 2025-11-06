@@ -15,7 +15,9 @@ export default function ProjectCard({ project, userRole }: ProjectCardProps) {
 
   // Calculate task completion
   const taskCount = project._count?.tasks || project.tasks?.length || 0;
-  const completedTasks = project.tasks?.filter(t => t.completed || t.completada).length || 0;
+  // Note: 'completada' is the Spanish property name used in the database,
+  // while 'completed' might be used in TypeScript types. Supporting both for compatibility.
+  const completedTasks = project.tasks?.filter(t => t.completada || t.completed).length || 0;
   const progress = taskCount > 0 ? Math.round((completedTasks / taskCount) * 100) : 0;
 
   const handleClick = () => {
