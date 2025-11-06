@@ -66,6 +66,7 @@ export interface Task {
   labels?: TaskLabel[];
   subTasks?: Task[];
   parentTask?: Task;
+  project?: Project;
   comments?: Comment[];
   reminders?: Reminder[];
   automationNotes?: string[];

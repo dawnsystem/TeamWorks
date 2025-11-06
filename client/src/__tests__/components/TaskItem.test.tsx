@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { render } from '../utils/testUtils';
 import TaskItem from '@/components/TaskItem';
@@ -137,7 +137,7 @@ describe('TaskItem', () => {
       const originalOntouchstart = window.ontouchstart;
       delete (window as any).ontouchstart;
       
-      const { container } = render(<TaskItem task={mockTask} />);
+      render(<TaskItem task={mockTask} />);
       
       const taskElement = screen.getByText(mockTask.titulo).closest('.glass-card')!;
       
@@ -163,7 +163,6 @@ describe('TaskItem', () => {
     it('opens task editor when edit is triggered', async () => {
       // This test would need the full context menu to be rendered
       // For now, we'll test that the store function can be called directly
-      const user = userEvent.setup();
       render(<TaskItem task={mockTask} role="owner" />);
       
       // Simulate context menu and edit action by calling openEditor directly

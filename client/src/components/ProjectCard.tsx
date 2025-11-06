@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import type { Project, ProjectRole } from '@/types';
-import { FolderOpen, Calendar, CheckCircle2, Users, MoreVertical, Edit, Archive } from 'lucide-react';
+import { CheckCircle2, Users, Edit, Archive } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -30,7 +30,7 @@ export default function ProjectCard({ project, userRole, onEdit, onArchive }: Pr
   const canEdit = userRole === 'owner' || userRole === 'manager' || userRole === 'editor';
   const canArchive = userRole === 'owner' || userRole === 'manager';
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = () => {
     // Don't navigate if clicking context menu
     if (showContextMenu) return;
     navigate(`/projects/${project.id}`);
