@@ -392,7 +392,7 @@ export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
   };
 
   return (
-    <div className="group" ref={setNodeRef} style={style}>
+    <div className="group" ref={setNodeRef} style={style} data-task-role={effectiveRole}>
       <div
         className={`glass-card ${priorityColors[task.prioridad]} rounded-xl p-5 transition-smooth soft-shadow ${
           task.completada ? 'opacity-60' : ''
@@ -414,7 +414,7 @@ export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
         <div className="flex items-start gap-3 min-w-0">
           {/* Drag Handle - visual indicator for depth 0 (root tasks) */}
           {depth === 0 && canWrite && (
-            <div className="mt-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+            <div className="mt-0.5 opacity-0 group-hover:opacity-100 transition pointer-events-none" data-testid="drag-handle">
               <GripVertical className="w-4 h-4 text-gray-400" />
             </div>
           )}
@@ -427,6 +427,8 @@ export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
             }}
             className={`mt-0.5 ${!canWrite ? 'cursor-not-allowed opacity-60' : ''}`}
             disabled={!canWrite}
+            role="checkbox"
+            aria-checked={task.completada}
           >
             {task.completada ? (
               <CheckCircle2 className="w-5 h-5 text-green-600" />

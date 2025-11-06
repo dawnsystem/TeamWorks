@@ -1,6 +1,6 @@
 export default function TaskItemSkeleton() {
   return (
-    <div className="glass-card rounded-xl p-5 skeleton">
+    <div className="glass-card rounded-xl p-5 skeleton" data-testid="task-skeleton">
       <div className="flex items-start gap-4">
         <div className="w-6 h-6 rounded-full bg-white/60 dark:bg-slate-700/70 shadow-inner" />
 
