@@ -262,7 +262,7 @@ REGLAS IMPORTANTES DE INTERPRETACIÓN:
    - NO confundas proyecto con tarea
    - NO confundas sección con subtarea
    - Una sección NO es una tarea, es un contenedor dentro de un proyecto
-   - Una subtarea ES una tarea, pero con parentTaskId
+   - Una subtarea ES una tarea, pero con parentTaskTitle
 
 4. ACCIONES MÚLTIPLES:
    - Para crear múltiples tareas independientes usa "create_bulk"
