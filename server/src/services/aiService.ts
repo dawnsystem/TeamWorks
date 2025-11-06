@@ -2003,3 +2003,238 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
   return results;
 };
 
+// Conversational Agent Types and Interfaces
+export interface ConversationMessage {
+  role: 'user' | 'agent';
+  content: string;
+}
+
+export interface AgentResponse {
+  status: 'conversation' | 'ready' | 'error';
+  message: string;
+  conversationId?: string;
+  requiresInput?: boolean;
+  suggestedActions?: AIAction[];
+  summary?: string;
+  providerUsed: SupportedAIProvider;
+}
+
+/**
+ * Conversational Agent - Interacts with user to understand requirements
+ * and creates comprehensive plans with tasks, subtasks, reminders, etc.
+ */
+export const conversationalAgent = async (
+  message: string,
+  conversationHistory: ConversationMessage[] = [],
+  context?: any,
+  providerOverride?: string,
+  conversationId?: string,
+): Promise<AgentResponse> => {
+  const preferred = resolveProvider(providerOverride);
+  const contextString = context ? JSON.stringify(context, null, 2) : 'Sin contexto adicional';
+  
+  // Build conversation history for the prompt
+  const historyString = conversationHistory.length > 0
+    ? conversationHistory
+        .map((msg) => `${msg.role === 'user' ? 'Usuario' : 'Agente'}: ${msg.content}`)
+        .join('\n')
+    : 'Inicio de conversación';
+
+  const prompt = `Eres un agente inteligente de gestión de tareas conversacional. Tu objetivo es entender EXACTAMENTE lo que el usuario quiere lograr y luego crear un plan completo con tareas, subtareas, recordatorios, prioridades, proyectos y secciones necesarias.
+
+Contexto del usuario:
+${contextString}
+
+Historial de conversación:
+${historyString}
+
+Mensaje actual del usuario: "${message}"
+
+Tu rol es:
+1. ENTENDER: Hacer preguntas clarificadoras para entender completamente la intención del usuario
+2. PLANIFICAR: Una vez que tengas suficiente información, proponer un plan detallado
+3. EJECUTAR: Generar las acciones necesarias para implementar el plan
+
+Debes responder con un JSON en uno de estos formatos:
+
+FORMATO 1 - Cuando necesitas más información:
+{
+  "status": "conversation",
+  "message": "Tu pregunta o comentario al usuario (sé natural y conversacional)",
+  "requiresInput": true
+}
+
+FORMATO 2 - Cuando tienes suficiente información y estás listo para crear el plan:
+{
+  "status": "ready",
+  "message": "Resumen de lo que entendiste y lo que vas a crear",
+  "summary": "Resumen breve del plan completo",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "create_project" | "create_section" | "create_with_subtasks" | "create" | etc,
+      "entity": "project" | "task" | "section" | "label" | "reminder",
+      "data": { ... datos necesarios ... },
+      "confidence": 0.95,
+      "explanation": "Explicación de la acción"
+    }
+  ]
+}
+
+Directrices importantes:
+
+1. **Sé conversacional**: Habla como un asistente amable, no como un robot
+2. **Haz preguntas específicas**: No preguntes todo a la vez, ve paso a paso
+3. **Confirma tu entendimiento**: Antes de generar acciones, resume lo que entendiste
+4. **Piensa en todo**: No solo tareas, también considera:
+   - ¿Necesita un proyecto nuevo o usar uno existente?
+   - ¿Qué secciones ayudarían a organizar?
+   - ¿Qué subtareas componen cada tarea?
+   - ¿Qué prioridades tienen sentido?
+   - ¿Qué fechas de vencimiento son apropiadas?
+   - ¿Necesita recordatorios?
+   - ¿Qué etiquetas facilitarían el seguimiento?
+
+5. **Usa create_with_subtasks**: Para tareas con múltiples niveles de subtareas
+6. **Estructura bien**: Organiza en proyectos > secciones > tareas > subtareas
+7. **Sé proactivo**: Sugiere mejoras y best practices de organización
+
+Ejemplos de conversaciones exitosas:
+
+Usuario: "Necesito organizar el lanzamiento de mi producto"
+Agente: {
+  "status": "conversation",
+  "message": "¡Excelente! Me encantaría ayudarte a organizar el lanzamiento. Para crear el mejor plan posible, cuéntame: ¿En qué fecha planeas lanzar el producto? ¿O tienes un marco de tiempo aproximado?",
+  "requiresInput": true
+}
+
+Usuario: "En aproximadamente 2 meses"
+Agente: {
+  "status": "conversation",
+  "message": "Perfecto, 2 meses es un buen plazo. ¿Qué tipo de producto es? (app, servicio, producto físico, etc.) Esto me ayudará a sugerirte las fases más relevantes.",
+  "requiresInput": true
+}
+
+Usuario: "Es una app móvil"
+Agente: {
+  "status": "conversation",
+  "message": "Entiendo, una app móvil con lanzamiento en 2 meses. Algunas preguntas finales: ¿Ya tienes equipo asignado o trabajas solo? ¿Hay algún aspecto específico que te preocupe más? (desarrollo, marketing, testing, etc.)",
+  "requiresInput": true
+}
+
+Usuario: "Trabajo solo y me preocupa más el marketing"
+Agente: {
+  "status": "ready",
+  "message": "¡Perfecto! He entendido tu situación. Voy a crear un plan completo para el lanzamiento de tu app móvil en 2 meses, con énfasis especial en marketing. El plan incluirá:\n\n- Proyecto 'Lanzamiento App Móvil' con secciones para Desarrollo, Marketing, Testing y Lanzamiento\n- Tareas prioritarias de marketing con subtareas detalladas\n- Timeline de 2 meses con fechas clave\n- Recordatorios para hitos importantes\n- Etiquetas para seguimiento (urgente, marketing, desarrollo, etc.)\n\n¿Procedo a crear este plan?",
+  "summary": "Lanzamiento app móvil en 2 meses, trabajo solo, foco en marketing",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "create_project",
+      "entity": "project",
+      "data": {
+        "nombre": "Lanzamiento App Móvil",
+        "color": "#3b82f6"
+      },
+      "confidence": 0.95,
+      "explanation": "Proyecto principal para el lanzamiento"
+    },
+    {
+      "type": "create_section",
+      "entity": "section",
+      "data": {
+        "nombre": "Marketing",
+        "projectName": "Lanzamiento App Móvil"
+      },
+      "confidence": 0.95,
+      "explanation": "Sección para tareas de marketing (foco principal)"
+    },
+    {
+      "type": "create_with_subtasks",
+      "entity": "task",
+      "data": {
+        "titulo": "Estrategia de marketing pre-lanzamiento",
+        "prioridad": 1,
+        "fechaVencimiento": "en 2 semanas",
+        "projectName": "Lanzamiento App Móvil",
+        "sectionName": "Marketing",
+        "labelNames": ["urgente", "marketing"],
+        "subtasks": [
+          {
+            "titulo": "Definir público objetivo",
+            "prioridad": 1,
+            "fechaVencimiento": "en 1 semana"
+          },
+          {
+            "titulo": "Crear landing page",
+            "prioridad": 1,
+            "subtasks": [
+              {
+                "titulo": "Diseñar mockup de landing",
+                "prioridad": 2
+              },
+              {
+                "titulo": "Implementar landing",
+                "prioridad": 2
+              }
+            ]
+          },
+          {
+            "titulo": "Configurar redes sociales",
+            "prioridad": 2,
+            "fechaVencimiento": "en 10 días"
+          }
+        ]
+      },
+      "confidence": 0.92,
+      "explanation": "Tarea principal de marketing con subtareas detalladas"
+    }
+  ]
+}
+
+IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional. Sé natural, amigable y ayuda al usuario a lograr sus objetivos de la mejor manera posible.`;
+
+  try {
+    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+    const jsonText = stripCodeFences(text);
+    
+    try {
+      const response = JSON.parse(jsonText);
+      
+      // Validate response structure
+      if (!response.status || !response.message) {
+        throw new Error('Respuesta inválida del agente');
+      }
+      
+      // Generate conversation ID if not provided
+      const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      return {
+        ...response,
+        conversationId: newConversationId,
+        providerUsed,
+      };
+    } catch (parseError) {
+      console.error('Error parseando respuesta del agente:', parseError, '\nRespuesta original:', text);
+      
+      // Fallback: treat as conversation message
+      return {
+        status: 'conversation',
+        message: text.trim() || 'Lo siento, no pude procesar tu mensaje. ¿Podrías reformularlo?',
+        requiresInput: true,
+        conversationId: conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        providerUsed,
+      };
+    }
+  } catch (error: any) {
+    console.error('Error en conversationalAgent:', error);
+    return {
+      status: 'error',
+      message: error instanceof Error ? error.message : 'Error al procesar el mensaje',
+      requiresInput: false,
+      providerUsed: preferred,
+    };
+  }
+};
+
+

@@ -125,7 +125,11 @@ export const aiExecuteSchema = z.object({
       'query', 
       'complete', 
       'create_bulk', 
-      'update_bulk', 
+      'update_bulk',
+      'delete_bulk',
+      'move_bulk',
+      'reorder',
+      'create_with_subtasks',
       'create_project', 
       'create_section', 
       'create_label', 
@@ -148,6 +152,17 @@ export const aiPlannerSchema = z.object({
   provider: z.enum(['groq', 'gemini']).optional(),
 });
 
+export const aiAgentSchema = z.object({
+  message: z.string().min(1, 'El mensaje no puede estar vacío').max(2000, 'El mensaje es demasiado largo'),
+  conversationId: z.string().optional(),
+  conversationHistory: z.array(z.object({
+    role: z.enum(['user', 'agent']),
+    content: z.string(),
+  })).optional().default([]),
+  context: z.any().optional(),
+  provider: z.enum(['groq', 'gemini']).optional(),
+});
+
 // Tipo de datos inferidos de los esquemas
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -166,6 +181,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type AIProcessInput = z.infer<typeof aiProcessSchema>;
 export type AIExecuteInput = z.infer<typeof aiExecuteSchema>;
 export type AIPlannerInput = z.infer<typeof aiPlannerSchema>;
+export type AIAgentInput = z.infer<typeof aiAgentSchema>;
 
 // Esquemas de validación para plantillas
 export const createTemplateSchema = z.object({

@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { processNaturalLanguage, executeAIActions, generateAIPlan } from '../services/aiService';
+import { processNaturalLanguage, executeAIActions, generateAIPlan, conversationalAgent } from '../services/aiService';
 import prisma from '../lib/prisma';
 
 const projectAccessWhere = (userId: string) => ({
@@ -126,6 +126,61 @@ export const generatePlan = async (req: any, res: Response) => {
     const message = error instanceof Error ? error.message : 'Error al generar plan';
     const status = /no se pudo interpretar/i.test(message) ? 422 : 500;
     res.status(status).json({ error: message });
+  }
+};
+
+export const agent = async (req: any, res: Response) => {
+  try {
+    const { message, conversationId, conversationHistory = [], context, provider } = req.body;
+    const userId = (req as AuthRequest).userId!;
+
+    let userContext = context;
+    if (!userContext) {
+      const projects = await prisma.projects.findMany({
+        where: projectAccessWhere(userId),
+        select: { id: true, nombre: true, color: true },
+        orderBy: { orden: 'asc' },
+      });
+
+      const activeTasks = await prisma.tasks.findMany({
+        where: {
+          projects: projectAccessWhere(userId),
+          completada: false,
+        },
+        take: 5,
+        orderBy: { prioridad: 'asc' },
+        select: { id: true, titulo: true, prioridad: true },
+      });
+
+      const sections = await prisma.sections.findMany({
+        where: {
+          projects: {
+            OR: [
+              { userId },
+              { shares: { some: { sharedWithId: userId } } },
+            ],
+          },
+        },
+        select: { id: true, nombre: true, projectId: true },
+        take: 10,
+      });
+
+      userContext = { projects, activeTasks, sections };
+    }
+
+    const response = await conversationalAgent(
+      message,
+      conversationHistory,
+      userContext,
+      provider,
+      conversationId,
+    );
+
+    res.json(response);
+  } catch (error: any) {
+    console.error('Error en agent:', error);
+    const message = error instanceof Error ? error.message : 'Error al procesar mensaje del agente';
+    res.status(500).json({ error: message });
   }
 };
 
