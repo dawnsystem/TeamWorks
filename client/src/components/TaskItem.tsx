@@ -477,25 +477,31 @@ export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
               )}
 
               {task.labels && task.labels.length > 0 && (
-                <div className="flex items-center gap-1 flex-wrap" title={`Etiquetas: ${task.labels.map(tl => tl.label.nombre).join(', ')}`}>
-                  {task.labels.slice(0, 3).map((tl) => (
-                    <span
-                      key={tl.labelId}
-                      className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-90 transition-smooth cursor-pointer flex-shrink-0 backdrop-blur-sm shadow-sm"
-                      style={{
-                        backgroundColor: `${tl.label.color}20`,
-                        color: tl.label.color,
-                      }}
-                      title={tl.label.nombre}
-                    >
-                      <Tag className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate max-w-[100px]">{tl.label.nombre}</span>
-                    </span>
-                  ))}
+                <div className="flex items-center gap-1 flex-wrap" title={`Etiquetas: ${task.labels.map(tl => (tl as any).label?.nombre || (tl as any).name || (tl as any).nombre).join(', ')}`}>
+                  {task.labels.slice(0, 3).map((tl: any) => {
+                    const labelName = tl.label?.nombre || tl.name || tl.nombre;
+                    const labelColor = tl.label?.color || tl.color;
+                    const labelId = tl.labelId || tl.id;
+                    
+                    return (
+                      <span
+                        key={labelId}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:opacity-90 transition-smooth cursor-pointer flex-shrink-0 backdrop-blur-sm shadow-sm"
+                        style={{
+                          backgroundColor: `${labelColor}20`,
+                          color: labelColor,
+                        }}
+                        title={labelName}
+                      >
+                        <Tag className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate max-w-[100px]">{labelName}</span>
+                      </span>
+                    );
+                  })}
                   {task.labels.length > 3 && (
                     <span
                       className="px-2 py-0.5 rounded text-xs text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-slate-800/70 cursor-pointer hover:bg-white/90 dark:hover:bg-slate-700 transition-smooth backdrop-blur-sm shadow-sm"
-                      title={`Más etiquetas: ${task.labels.slice(3).map(tl => tl.label.nombre).join(', ')}`}
+                      title={`Más etiquetas: ${task.labels.slice(3).map((tl: any) => tl.label?.nombre || tl.name || tl.nombre).join(', ')}`}
                     >
                       +{task.labels.length - 3}
                     </span>
@@ -512,12 +518,19 @@ export default function TaskItem({ task, depth = 0, role }: TaskItemProps) {
                 </span>
               )}
 
+              {task.project && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                  {task.project.nombre}
+                </span>
+              )}
+
               {task._count && task._count.subTasks > 0 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setSubTasksOpen(!subTasksOpen);
                   }}
+                  aria-label={subTasksOpen ? 'collapse' : 'expand'}
                   className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex-shrink-0"
                 >
                   <ChevronRight

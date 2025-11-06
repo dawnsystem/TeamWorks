@@ -71,7 +71,7 @@ export default function ProjectCard({ project, userRole, onEdit, onArchive }: Pr
         onContextMenu={handleContextMenu}
       >
         <div className="flex items-start gap-3">
-          <span className="text-2xl">{project.icono || '📋'}</span>
+          <span className="text-2xl">{(project as any).icon || project.icono || '📋'}</span>
           
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">

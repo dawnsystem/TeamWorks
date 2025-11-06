@@ -3,6 +3,34 @@ import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { render } from '../utils/testUtils';
 import TaskDetailView from '../../components/TaskDetailView';
 import { mockTask, mockUser } from '../mocks/mockData';
+import * as api from '@/lib/api';
+
+// Mock API
+vi.mock('@/lib/api');
+
+// Mock stores
+const mockOpenEditor = vi.fn();
+const mockCloseDetail = vi.fn();
+
+vi.mock('@/store/useStore', () => ({
+  useTaskDetailStore: vi.fn((selector) => {
+    const state = {
+      isOpen: true,
+      taskId: mockTask.id,
+      closeDetail: mockCloseDetail,
+      openDetail: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+  useTaskEditorStore: vi.fn((selector) => {
+    const state = {
+      openEditor: mockOpenEditor,
+      isOpen: false,
+      closeEditor: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
 
 // Mock API functions
 const mockOnClose = vi.fn();
@@ -12,23 +40,23 @@ const mockOnTaskDelete = vi.fn();
 describe('TaskDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Mock tasksAPI.getOne to return mockTask
+    vi.spyOn(api.tasksAPI, 'getOne').mockResolvedValue({ data: mockTask } as any);
   });
 
   // Rendering Tests
   describe('Rendering', () => {
-    it('renders task with complete information', () => {
-      render(
-        <TaskDetailView
-          task={mockTask}
-          isOpen={true}
-          onClose={mockOnClose}
-          currentUserRole="owner"
-        />
-      );
-
-      expect(screen.getByText(mockTask.title)).toBeInTheDocument();
-      expect(screen.getByText(mockTask.description)).toBeInTheDocument();
-      expect(screen.getByText('Alta')).toBeInTheDocument(); // Priority
+    it('renders task with complete information', async () => {
+      render(<TaskDetailView />);
+      
+      await waitFor(() => {
+        expect(screen.getByText(mockTask.titulo)).toBeInTheDocument();
+      });
+      
+      if (mockTask.descripcion) {
+        expect(screen.getByText(mockTask.descripcion)).toBeInTheDocument();
+      }
+      expect(screen.getByText(/Alta/i)).toBeInTheDocument(); // Priority P1
     });
 
     it('displays task metadata', () => {

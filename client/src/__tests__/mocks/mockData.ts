@@ -52,7 +52,7 @@ export const mockTask: Task = {
   titulo: 'Test Task',
   descripcion: 'A test task description',
   completada: false,
-  prioridad: 'P2',
+  prioridad: 2,
   fechaVencimiento: new Date('2024-12-31'),
   projectId: 'project-1',
   sectionId: null,
@@ -81,7 +81,7 @@ export const mockHighPriorityTask: Task = {
   ...mockTask,
   id: 'task-3',
   titulo: 'High Priority Task',
-  prioridad: 'P1',
+  prioridad: 1,
   fechaVencimiento: new Date(Date.now() + 86400000), // Tomorrow
 };
 

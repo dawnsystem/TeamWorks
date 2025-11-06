@@ -5,7 +5,24 @@ import { render } from '../utils/testUtils';
 import TaskList from '@/components/TaskList';
 import { mockTasks, mockTask } from '../mocks/mockData';
 
+// Mock TaskEditorStore
+const mockOpenEditor = vi.fn();
+
+vi.mock('@/store/useStore', () => ({
+  useTaskEditorStore: vi.fn((selector) => {
+    const state = {
+      openEditor: mockOpenEditor,
+      isOpen: false,
+      closeEditor: vi.fn(),
+    };
+    return selector ? selector(state) : state;
+  }),
+}));
+
 describe('TaskList', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
   describe('Rendering', () => {
     it('renders all tasks in the list', () => {
       render(<TaskList tasks={mockTasks} />);
@@ -59,8 +76,8 @@ describe('TaskList', () => {
       const createButton = screen.getByRole('button', { name: /crear/i });
       await user.click(createButton);
       
-      // Task editor modal should open
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      // Task editor store should be called
+      expect(mockOpenEditor).toHaveBeenCalled();
     });
   });
 
