@@ -2,12 +2,13 @@ import type { Label } from '@/types';
 
 interface LabelBadgeProps {
   label: Label & { icon?: string };
-  onClick?: () => void;
-  onRemove?: () => void;
+  onClick?: (label: Label) => void;
+  onRemove?: (labelId: string) => void;
   removable?: boolean;
+  size?: 'small' | 'medium' | 'large';
 }
 
-export default function LabelBadge({ label, onClick, onRemove, removable }: LabelBadgeProps) {
+export default function LabelBadge({ label, onClick, onRemove, removable, size = 'medium' }: LabelBadgeProps) {
   // Calculate text color based on background color for contrast
   const getTextColor = (hexColor: string) => {
     // Ensure hex color starts with #
@@ -35,29 +36,36 @@ export default function LabelBadge({ label, onClick, onRemove, removable }: Labe
   const isClickable = Boolean(onClick);
   const hasRemove = Boolean(removable && onRemove);
 
+  // Size classes
+  const sizeClasses = {
+    small: 'label-badge-small px-1.5 py-0.5 text-xs',
+    medium: 'px-2 py-1 text-xs',
+    large: 'label-badge-large px-3 py-1.5 text-sm'
+  };
+
   return (
     <span
       data-testid="label-badge"
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+      className={`inline-flex items-center gap-1 rounded-full font-medium ${sizeClasses[size]} ${
         isClickable ? 'cursor-pointer hover:opacity-80' : ''
       }`}
       style={{ 
         backgroundColor: label.color,
         color: textColor
       }}
-      onClick={onClick}
+      onClick={() => onClick?.(label)}
     >
       {label.icon && <span>{label.icon}</span>}
-      <span>{label.name}</span>
+      <span>{label.nombre}</span>
       {hasRemove && (
         <button
           data-testid="remove-label"
           onClick={(e) => {
             e.stopPropagation();
-            onRemove?.();
+            onRemove?.(label.id);
           }}
           className="ml-1 hover:opacity-70"
-          aria-label="Remove label"
+          aria-label="Eliminar"
         >
           ×
         </button>

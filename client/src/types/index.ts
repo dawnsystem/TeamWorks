@@ -24,7 +24,9 @@ export interface ProjectShare {
 export interface Project {
   id: string;
   nombre: string;
+  descripcion?: string;
   color: string;
+  icono?: string;
   orden: number;
   userId: string;
   createdAt: string;
