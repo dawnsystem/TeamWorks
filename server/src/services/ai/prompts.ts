@@ -15,6 +15,43 @@ ${contextString}
 
 Comando del usuario: "${input}"
 
+=== MODELO DE DATOS Y JERARQUÍA ===
+
+Entiende claramente la diferencia entre estos conceptos:
+
+1. PROYECTO (Project):
+   - Es un CONTENEDOR de alto nivel (ej: "Trabajo", "Personal", "Estudios")
+   - Sirve para ORGANIZAR tareas relacionadas
+   - Puede contener SECCIONES y TAREAS
+   - No puede ser hijo de otro proyecto
+   - Ejemplo: "crear proyecto Desarrollo Web"
+
+2. SECCIÓN (Section):
+   - Es una SUBDIVISIÓN dentro de un proyecto específico
+   - Sirve para AGRUPAR tareas dentro de un proyecto
+   - SIEMPRE pertenece a un proyecto
+   - No puede existir sin un proyecto
+   - Ejemplo: "crear sección Frontend en proyecto Desarrollo Web"
+
+3. TAREA (Task):
+   - Es una UNIDAD DE TRABAJO específica
+   - DEBE pertenecer a un proyecto (si no se especifica, va a "Inbox")
+   - PUEDE pertenecer opcionalmente a una sección
+   - PUEDE tener subtareas (tareas hijas)
+   - Ejemplo: "añadir implementar navbar en proyecto Desarrollo Web sección Frontend"
+
+4. SUBTAREA (Subtask):
+   - Es una TAREA que depende de otra tarea (tarea padre)
+   - Se crea usando parentTaskTitle para referenciar la tarea padre
+   - Hereda el proyecto de su tarea padre
+   - Puede tener sus propias subtareas (anidamiento ilimitado)
+   - Ejemplo: "crear subtarea diseñar mockups de la tarea implementar navbar"
+
+RELACIONES JERÁRQUICAS:
+- Proyecto > Sección > Tarea > Subtarea > Subtarea (n niveles)
+- Las secciones son opcionales, las tareas pueden estar directamente en un proyecto
+- Las subtareas siempre necesitan una tarea padre
+
 Analiza el comando y devuelve un JSON con un array de acciones a realizar. Cada acción debe tener:
 - type: "create", "update", "update_bulk", "delete", "query", "complete", "create_bulk", "create_project", "create_section", "create_label", "add_comment" o "create_reminder"
 - entity: "task", "project", "label", "section", "comment" o "reminder"
@@ -33,25 +70,107 @@ PROPIEDADES DISPONIBLES PARA TAREAS:
 - labelNames: array de strings (nombres de etiquetas)
 - parentTaskTitle: string (si es subtarea, título de la tarea padre)
 
-Ejemplos de comandos y respuestas:
+Ejemplos de comandos y respuestas mostrando la diferencia entre entidades:
 
-1. "añadir comprar leche para mañana prioridad alta en proyecto Personal"
+EJEMPLO 1 - Crear PROYECTO:
+Comando: "crear proyecto Desarrollo Web"
+{
+  "actions": [{
+    "type": "create_project",
+    "entity": "project",
+    "data": {
+      "nombre": "Desarrollo Web"
+    },
+    "confidence": 0.95,
+    "explanation": "Crear proyecto 'Desarrollo Web' (contenedor de alto nivel)"
+  }]
+}
+
+EJEMPLO 2 - Crear SECCIÓN dentro de un proyecto:
+Comando: "crear sección Frontend en proyecto Desarrollo Web"
+{
+  "actions": [{
+    "type": "create_section",
+    "entity": "section",
+    "data": {
+      "nombre": "Frontend",
+      "projectName": "Desarrollo Web"
+    },
+    "confidence": 0.95,
+    "explanation": "Crear sección 'Frontend' dentro del proyecto 'Desarrollo Web'"
+  }]
+}
+
+EJEMPLO 3 - Crear TAREA en proyecto y sección:
+Comando: "añadir implementar navbar en proyecto Desarrollo Web sección Frontend para mañana prioridad alta"
 {
   "actions": [{
     "type": "create",
     "entity": "task",
     "data": {
-      "titulo": "Comprar leche",
+      "titulo": "Implementar navbar",
       "prioridad": 1,
       "fechaVencimiento": "mañana",
-      "projectName": "Personal"
+      "projectName": "Desarrollo Web",
+      "sectionName": "Frontend"
     },
     "confidence": 0.95,
-    "explanation": "Crear tarea 'Comprar leche' con prioridad alta para mañana en proyecto Personal"
+    "explanation": "Crear tarea 'Implementar navbar' en proyecto 'Desarrollo Web' sección 'Frontend'"
   }]
 }
 
-2. "completar la tarea de comprar pan"
+EJEMPLO 4 - Crear SUBTAREA de una tarea existente:
+Comando: "crear subtarea diseñar mockups de la tarea implementar navbar"
+{
+  "actions": [{
+    "type": "create",
+    "entity": "task",
+    "data": {
+      "titulo": "Diseñar mockups",
+      "parentTaskTitle": "implementar navbar"
+    },
+    "confidence": 0.9,
+    "explanation": "Crear subtarea 'Diseñar mockups' como hija de la tarea 'implementar navbar'"
+  }]
+}
+
+EJEMPLO 5 - Crear tarea con SUBTAREAS anidadas:
+Comando: "crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"
+{
+  "actions": [
+    {
+      "type": "create",
+      "entity": "task",
+      "data": { "titulo": "Proyecto web" },
+      "confidence": 0.95,
+      "explanation": "Crear tarea padre 'Proyecto web'"
+    },
+    {
+      "type": "create",
+      "entity": "task",
+      "data": { "titulo": "Diseñar mockups", "parentTaskTitle": "Proyecto web" },
+      "confidence": 0.95,
+      "explanation": "Crear subtarea nivel 1"
+    },
+    {
+      "type": "create",
+      "entity": "task",
+      "data": { "titulo": "Investigar tendencias", "parentTaskTitle": "Diseñar mockups" },
+      "confidence": 0.9,
+      "explanation": "Crear subtarea nivel 2 (anidada)"
+    },
+    {
+      "type": "create",
+      "entity": "task",
+      "data": { "titulo": "Desarrollar backend", "parentTaskTitle": "Proyecto web" },
+      "confidence": 0.95,
+      "explanation": "Crear subtarea nivel 1"
+    }
+  ]
+}
+
+EJEMPLO 6 - Completar tarea:
+Comando: "completar la tarea de comprar pan"
 {
   "actions": [{
     "type": "complete",
@@ -64,7 +183,8 @@ Ejemplos de comandos y respuestas:
   }]
 }
 
-3. "qué tengo pendiente esta semana"
+EJEMPLO 7 - Consultar tareas:
+Comando: "qué tengo pendiente esta semana"
 {
   "actions": [{
     "type": "query",
@@ -79,20 +199,8 @@ Ejemplos de comandos y respuestas:
   }]
 }
 
-4. "eliminar todas las tareas completadas"
-{
-  "actions": [{
-    "type": "delete",
-    "entity": "task",
-    "data": {
-      "filter": { "completada": true }
-    },
-    "confidence": 0.9,
-    "explanation": "Eliminar todas las tareas marcadas como completadas"
-  }]
-}
-
-5. "crear 3 tareas: escribir informe, revisar correos, llamar a Juan"
+EJEMPLO 8 - Crear múltiples tareas (bulk):
+Comando: "crear 3 tareas: escribir informe, revisar correos, llamar a Juan"
 {
   "actions": [{
     "type": "create_bulk",
@@ -109,7 +217,8 @@ Ejemplos de comandos y respuestas:
   }]
 }
 
-6. "cambiar todas las tareas de alta prioridad del proyecto Trabajo a prioridad media"
+EJEMPLO 9 - Actualización masiva de tareas:
+Comando: "cambiar todas las tareas de alta prioridad del proyecto Trabajo a prioridad media"
 {
   "actions": [{
     "type": "update_bulk",
@@ -124,7 +233,7 @@ Ejemplos de comandos y respuestas:
       }
     },
     "confidence": 0.9,
-    "explanation": "Cambiar prioridad de tareas filtradas"
+    "explanation": "Cambiar prioridad de tareas filtradas del proyecto 'Trabajo'"
   }]
 }
 
@@ -135,13 +244,35 @@ FORMATOS DE FECHA SOPORTADOS:
 - Períodos: "esta semana", "próxima semana", "fin de mes"
 - Formato estándar: "2024-12-25", "25/12/2024"
 
-REGLAS IMPORTANTES:
-- Si no entiendes el comando, devuelve una acción de tipo "query" con baja confidence
-- Para crear múltiples tareas similares, usa "create_bulk"
-- Para actualizar múltiples tareas, usa "update_bulk"
-- Siempre incluye una explanation clara de lo que se va a hacer
-- Si mencionan un proyecto o sección, intenta encontrarlo en el contexto
-- Si no hay contexto de proyecto, las tareas se crearán en "Inbox"
+REGLAS IMPORTANTES DE INTERPRETACIÓN:
+
+1. IDENTIFICACIÓN DE ENTIDADES:
+   - Si el usuario dice "crear proyecto X" → usa create_project
+   - Si el usuario dice "crear sección X en/del proyecto Y" → usa create_section
+   - Si el usuario dice "añadir/crear tarea X" → usa create (tipo task)
+   - Si el usuario dice "subtarea de/en la tarea X" → usa create con parentTaskTitle
+   
+2. CONTEXTO Y JERARQUÍA:
+   - Las SECCIONES siempre necesitan un proyecto padre
+   - Las SUBTAREAS siempre necesitan una tarea padre (parentTaskTitle)
+   - Las TAREAS sin proyecto especificado van a "Inbox"
+   - Si mencionan un proyecto o sección, búscalo en el contexto
+
+3. CONSISTENCIA:
+   - NO confundas proyecto con tarea
+   - NO confundas sección con subtarea
+   - Una sección NO es una tarea, es un contenedor dentro de un proyecto
+   - Una subtarea ES una tarea, pero con parentTaskId
+
+4. ACCIONES MÚLTIPLES:
+   - Para crear múltiples tareas independientes usa "create_bulk"
+   - Para actualizar múltiples tareas usa "update_bulk"
+   - Para crear tareas con subtareas anidadas usa múltiples acciones "create" con parentTaskTitle
+
+5. CLARIDAD:
+   - Si no entiendes el comando, devuelve una acción de tipo "query" con baja confidence
+   - Siempre incluye una explanation clara de lo que se va a hacer
+   - Indica en la explanation qué tipo de entidad estás creando/modificando
 
 Devuelve ÚNICAMENTE el JSON, sin texto adicional antes o después.`;
 };
@@ -189,6 +320,16 @@ ${contextString}
 
 ${answers.length ? `Respuestas del usuario a preguntas anteriores:\n${answersBlock}` : 'No se proporcionaron respuestas adicionales.'}
 
+IMPORTANTE - Entendimiento del modelo de datos:
+Al crear un plan, considera que el usuario organizará su trabajo en:
+- PROYECTOS: Contenedores de alto nivel (ej: "Lanzar app móvil")
+- SECCIONES: Subdivisiones dentro de proyectos (ej: "Backend", "Frontend")
+- TAREAS: Unidades de trabajo específicas (ej: "Implementar autenticación")
+- SUBTAREAS: Tareas dependientes de otras tareas (ej: "Diseñar esquema de BD" como subtarea de "Implementar autenticación")
+
+Las fases del plan se convertirán en secciones o tareas dependiendo del contexto.
+Las tareas dentro de cada fase pueden tener dependencias entre ellas.
+
 Devuelve un JSON con el siguiente formato estricto:
 {
   "status": "plan",
@@ -223,5 +364,6 @@ Reglas:
 - Incluye al menos 2 fases si el objetivo amerita dividirse.
 - Cada fase debe tener al menos una tarea.
 - Mantén las descripciones concisas.
+- Las dependencias deben referenciar títulos de otras tareas en el plan.
 - No incluyas texto fuera del JSON.`;
 };
