@@ -295,6 +295,26 @@ export const aiAPI = {
   
   planner: (payload: { goal: string; mode: 'auto' | 'interactive'; answers?: string[]; provider?: string; context?: any; }) =>
     api.post('/ai/planner', payload),
+  
+  unified: (payload: {
+    message: string;
+    mode: 'ASK' | 'PLAN' | 'AGENT';
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    conversationId?: string;
+    autoExecute?: boolean;
+    provider?: string;
+    context?: any;
+  }) =>
+    api.post('/ai/unified', payload),
+  
+  agent: (payload: {
+    message: string;
+    conversationId?: string;
+    conversationHistory?: Array<{ role: 'user' | 'agent'; content: string }>;
+    provider?: string;
+    context?: any;
+  }) =>
+    api.post('/ai/agent', payload),
 };
 
 export default api;

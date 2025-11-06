@@ -9,7 +9,7 @@ import WeekView from '@/components/WeekView';
 import LabelView from '@/components/LabelView';
 import TaskEditor from '@/components/TaskEditor';
 import TaskDetailView from '@/components/TaskDetailView';
-import AIAssistant from '@/components/AIAssistant';
+import AIAgentEnhanced from '@/components/AIAgentEnhanced';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import TaskRelationshipPopup from '@/components/TaskRelationshipPopup';
 import CommandPalette from '@/components/CommandPalette';
@@ -65,7 +65,7 @@ export default function Dashboard() {
       <TaskDetailView />
 
       {/* AI Assistant */}
-      <AIAssistant />
+      <AIAgentEnhanced />
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp />
