@@ -38,11 +38,45 @@ interface TaskEditorState {
   closeEditor: () => void;
 }
 
+export type AIMode = 'ASK' | 'PLAN' | 'AGENT';
+export type AIViewType = 'modal' | 'sidebar';
+
+interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  mode: AIMode;
+  messages: ConversationMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface AIState {
   isOpen: boolean;
   autoExecute: boolean;
+  mode: AIMode;
+  viewType: AIViewType;
+  isPinned: boolean;
+  currentConversationId: string | null;
+  conversations: Conversation[];
+  customInstructions: string;
   toggleAI: () => void;
   setAutoExecute: (value: boolean) => void;
+  setMode: (mode: AIMode) => void;
+  setViewType: (viewType: AIViewType) => void;
+  togglePin: () => void;
+  setCustomInstructions: (instructions: string) => void;
+  createConversation: (mode: AIMode) => string;
+  setCurrentConversation: (id: string | null) => void;
+  addMessage: (conversationId: string, message: ConversationMessage) => void;
+  updateConversation: (id: string, updates: Partial<Conversation>) => void;
+  deleteConversation: (id: string) => void;
+  clearAllConversations: () => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -130,11 +164,71 @@ export const useTaskEditorStore = create<TaskEditorState>()((set) => ({
 
 export const useAIStore = create<AIState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isOpen: false,
       autoExecute: false,
+      mode: 'ASK',
+      viewType: 'modal',
+      isPinned: false,
+      currentConversationId: null,
+      conversations: [],
+      customInstructions: '',
       toggleAI: () => set((state) => ({ isOpen: !state.isOpen })),
       setAutoExecute: (value) => set({ autoExecute: value }),
+      setMode: (mode) => set({ mode }),
+      setViewType: (viewType) => set({ viewType }),
+      togglePin: () => set((state) => ({ isPinned: !state.isPinned })),
+      setCustomInstructions: (instructions) => set({ customInstructions: instructions }),
+      createConversation: (mode) => {
+        const id = `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const conversation: Conversation = {
+          id,
+          title: `Nueva conversación ${mode}`,
+          mode,
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set((state) => ({
+          conversations: [conversation, ...state.conversations],
+          currentConversationId: id,
+        }));
+        return id;
+      },
+      setCurrentConversation: (id) => set({ currentConversationId: id }),
+      addMessage: (conversationId, message) => {
+        set((state) => ({
+          conversations: state.conversations.map((conv) =>
+            conv.id === conversationId
+              ? {
+                  ...conv,
+                  messages: [...conv.messages, message],
+                  updatedAt: Date.now(),
+                  // Update title from first user message if title is default
+                  title: conv.messages.length === 0 && message.role === 'user'
+                    ? message.content.substring(0, 50) + (message.content.length > 50 ? '...' : '')
+                    : conv.title,
+                }
+              : conv
+          ),
+        }));
+      },
+      updateConversation: (id, updates) => {
+        set((state) => ({
+          conversations: state.conversations.map((conv) =>
+            conv.id === id
+              ? { ...conv, ...updates, updatedAt: Date.now() }
+              : conv
+          ),
+        }));
+      },
+      deleteConversation: (id) => {
+        set((state) => ({
+          conversations: state.conversations.filter((conv) => conv.id !== id),
+          currentConversationId: state.currentConversationId === id ? null : state.currentConversationId,
+        }));
+      },
+      clearAllConversations: () => set({ conversations: [], currentConversationId: null }),
     }),
     {
       name: 'ai-storage',
