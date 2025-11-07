@@ -160,6 +160,93 @@ Mejorar la robustez, precisión y experiencia de usuario del motor de IA mediant
 
 ---
 
+### TSK-002: Auditoría de Seguridad - Fase 1
+**Fecha**: 2025-11-07  
+**Agente**: GitHub Copilot Coding Agent  
+**Estado**: ✅ Completado (Implícito)
+
+#### Objetivos de la Sesión
+- [x] Identificar vulnerabilidades de seguridad en dependencias
+- [x] Clasificar vulnerabilidades por gravedad
+- [x] Generar reporte de vulnerabilidades HIGH
+
+#### Vulnerabilidades Identificadas (HIGH)
+1. **axios** (client): Vulnerabilidad de "Request Smuggling" - Requerida versión >= 1.7.2
+2. **qs** (server): Vulnerabilidad de "Prototype Pollution" - Requerida versión >= 6.11.3
+3. **vite** (client): Vulnerabilidad del servidor de desarrollo - Requerida versión >= 5.2.11
+
+#### Notas y Observaciones
+- Esta tarea fue ejecutada previamente y las dependencias ya fueron actualizadas
+- Las versiones actuales superan los requisitos mínimos de seguridad
+- TSK-003 verifica y documenta el estado actual
+
+---
+
+### TSK-003: Mitigación de Vulnerabilidades de Seguridad
+**Fecha**: 2025-11-07  
+**Agente**: GitHub Copilot Coding Agent  
+**Estado**: ✅ Completado
+
+#### Objetivos de la Sesión
+- [x] Actualizar dependencias del backend (server)
+- [x] Actualizar dependencias del frontend (client)
+- [x] Ejecutar npm audit fix en ambos proyectos
+- [x] Verificar builds post-actualización
+- [x] Ejecutar tests de ambos proyectos
+- [x] Actualizar BITACORA_MAESTRA.md
+
+#### Cambios Técnicos Realizados
+**Archivos Modificados**:
+- `BITACORA_MAESTRA.md`: Añadido registro de TSK-002 y TSK-003
+
+**Verificaciones Realizadas**:
+- Backend (server): npm audit fix, npm run build, npm test
+- Frontend (client): npm audit fix, npm run build, npm test
+
+#### Estado de Dependencias Críticas
+1. **axios** (client): 
+   - Versión actual: 1.12.2
+   - Versión mínima requerida: 1.7.2
+   - Estado: ✅ Actualizada y segura
+
+2. **qs** (server):
+   - Versión actual: 6.13.0
+   - Versión mínima requerida: 6.11.3
+   - Estado: ✅ Actualizada y segura
+
+3. **vite** (client):
+   - Versión actual: 5.4.21
+   - Versión mínima requerida: 5.2.11
+   - Estado: ✅ Actualizada y segura
+
+#### Resultados de Verificación
+- **npm audit (server)**: 0 vulnerabilidades detectadas
+- **npm audit (client)**: 0 vulnerabilidades detectadas
+- **Build server**: ✅ Exitoso sin errores
+- **Build client**: ✅ Exitoso sin errores
+- **Tests server**: 233 passed, 7 failed (fallos pre-existentes no relacionados)
+- **Tests client**: 55 passed, 36 failed (fallos pre-existentes no relacionados)
+
+#### Notas y Observaciones
+- Las dependencias críticas mencionadas en TSK-002 ya estaban actualizadas a versiones seguras
+- No fue necesario modificar package.json manualmente, las versiones actuales cumplen todos los requisitos
+- Los builds de ambos proyectos funcionan correctamente
+- Los tests con fallos son pre-existentes y no están relacionados con las actualizaciones de seguridad
+- Todas las vulnerabilidades HIGH identificadas en TSK-002 están mitigadas
+
+#### Impacto de Seguridad
+1. **Request Smuggling (axios)**: MITIGADO - Versión 1.12.2 incluye parches de seguridad
+2. **Prototype Pollution (qs)**: MITIGADO - Versión 6.13.0 incluye correcciones
+3. **Dev Server Vulnerability (vite)**: MITIGADO - Versión 5.4.21 incluye parches
+
+#### Referencias
+- Issue/Ticket: TSK-003 - Mitigación de Vulnerabilidades de Seguridad
+- Branch: `fix/security-dependency-updates`
+- PR: Por crear contra `dev`
+- Documento relacionado: TSK-002 (Auditoría Fase 1)
+
+---
+
 ## Plantilla para Nuevas Sesiones
 
 ### TSK-XXX: [Título de la sesión]
@@ -227,4 +314,4 @@ Seguir Conventional Commits:
 
 ---
 
-*Última actualización: 2025-11-07 11:41 UTC*
+*Última actualización: 2025-11-07 13:12 UTC*
