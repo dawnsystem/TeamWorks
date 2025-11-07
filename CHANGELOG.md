@@ -2,6 +2,68 @@
 
 Registro de cambios importantes del proyecto TeamWorks.
 
+## [Unreleased] - 7 de Noviembre de 2025
+
+### 🔄 Integración y Sincronización
+
+#### Merge con rama main
+- **Sincronización completa con main**: Integración de todos los cambios desarrollados en las PRs #53, #54 y #55
+- **Resolución de historias no relacionadas**: Se resolvió el conflicto de historias divergentes entre la rama de desarrollo y main
+
+#### Cambios integrados desde main:
+
+##### ✅ Cobertura de Tests (PR #53, #54, #55)
+- **100% de cobertura en tests**: Se alcanzó cobertura completa con 114 tests de cliente y 172 tests de servidor pasando
+- **Tests de componentes**: 
+  - LabelBadge y ProjectCard con tests completos
+  - TaskItem, TaskList y TaskDetailView mejorados
+  - Mock de useAuthStore añadido para tests
+- **Infraestructura de testing frontend**: Setup completo de testing con utilidades y mocks
+- **Tests del backend**: 
+  - Tests de autenticación y autorización (49 tests)
+  - Tests de controladores (task, project, label)
+  - Tests de middleware de validación
+  - Tests del servicio de IA (60 tests)
+  - Tests de parseo de acciones
+
+##### 🔧 Mejoras de TypeScript y Linting
+- **Corrección de errores de linting**: Todos los errores de ESLint resueltos
+- **Build de TypeScript**: Problemas de compilación corregidos para CI/CD
+- **Consistencia del sistema de tipos**: Verificación completa y correcciones aplicadas
+
+##### 📦 Actualizaciones de Dependencias
+- **yarn.lock actualizado**: Nuevos paquetes de esbuild y rollup para varias arquitecturas y plataformas
+- **Compatibilidad mejorada**: Soporte de build mejorado para diferentes entornos
+
+##### 🏗️ Infraestructura y DevOps
+- **Docker**: Configuración completa de contenedorización con docker-compose
+- **Logging estructurado**: Integración de Pino para logging profesional
+- **CI/CD**: Mejoras en los workflows de GitHub Actions
+
+##### 📚 Documentación Añadida
+- **Nuevos archivos de documentación**:
+  - `RESUMEN_TESTS.md`: Resumen en español de los resultados de tests
+  - `TEST_RESULTS_REPORT.md`: Reporte detallado de resultados de tests
+  - Reportes de fases de auditoría y refactorización
+  - Guías de configuración de Docker
+  - Documentación de capacidades de IA
+
+##### 🎨 Componentes Nuevos
+- **LabelBadge**: Componente para mostrar etiquetas con estilo
+- **ProjectCard**: Componente de tarjeta de proyecto
+
+#### Cambios Técnicos del Merge
+- **Estrategia de merge**: Se utilizó `--allow-unrelated-histories` con `--strategy-option=theirs` para resolver conflictos
+- **313 commits integrados**: Todo el historial de main ha sido incorporado
+- **Archivos modificados**: 48 archivos cambiados, +1789 inserciones, -3951 eliminaciones
+- **Simplificación del código**: Reducción de complejidad en varios módulos, especialmente en el servicio de IA
+
+### 📊 Estadísticas del Merge
+- **Tests**: De 87/115 a 114/114 (cliente) + 172/172 (servidor)
+- **Cobertura**: 100% en ambos client y server
+- **Líneas de código**: Optimización significativa (-2162 líneas netas)
+- **Componentes**: +2 nuevos componentes con tests completos
+
 ## [1.2.0] - 17 de Octubre de 2025
 
 ### ✨ Nuevas Funcionalidades
