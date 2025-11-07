@@ -350,9 +350,11 @@ describe('Enhanced AI Actions', () => {
         explanation: 'Move task to start of list',
       };
 
-      const mockTask = { id: 'task1', titulo: 'Urgent task' };
+      const mockTask = { id: 'task1', titulo: 'Urgent task', projectId: 'proj1', sectionId: null, parentTaskId: null };
       
-      (mockPrisma.tasks.findFirst as jest.Mock).mockResolvedValue(mockTask);
+      (mockPrisma.tasks.findFirst as jest.Mock)
+        .mockResolvedValueOnce(mockTask)
+        .mockResolvedValueOnce(null); // No task before, so return null
       (mockPrisma.tasks.update as jest.Mock).mockResolvedValue({ ...mockTask, orden: -1 });
 
       const results = await executeAIActions([action], mockUserId, mockPrisma);
