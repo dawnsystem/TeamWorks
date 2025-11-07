@@ -5,27 +5,28 @@
 
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AIProviderKeys, SupportedAIProvider } from './types';
 
-export type SupportedAIProvider = 'groq' | 'gemini';
-
-export interface AIProviderKeys {
-  groqApiKey?: string;
-  geminiApiKey?: string;
-}
+// Re-export types for external use
+export type { SupportedAIProvider, AIProviderKeys };
 
 /**
  * Get API key with fallback priority:
  * 1. User-provided key (from client settings)
  * 2. Environment variable (from .env or docker-compose)
+ * Filters out placeholder values
  */
 const getApiKey = (provider: SupportedAIProvider, userKeys?: AIProviderKeys): string | undefined => {
+  let key: string | undefined;
+  
   if (provider === 'groq') {
-    return userKeys?.groqApiKey || process.env.GROQ_API_KEY;
+    key = userKeys?.groqApiKey || process.env.GROQ_API_KEY;
+  } else if (provider === 'gemini') {
+    key = userKeys?.geminiApiKey || process.env.GEMINI_API_KEY;
   }
-  if (provider === 'gemini') {
-    return userKeys?.geminiApiKey || process.env.GEMINI_API_KEY;
-  }
-  return undefined;
+  
+  // Filter out placeholder values
+  return (key && key !== 'YOUR_GROQ_API_KEY_HERE' && key !== 'YOUR_GEMINI_API_KEY_HERE') ? key : undefined;
 };
 
 /**

@@ -131,7 +131,8 @@ api.interceptors.request.use((config) => {
         config.headers['X-Gemini-Api-Key'] = settings.state.geminiApiKey;
       }
     } catch (e) {
-      // Silently ignore parsing errors
+      // Log parsing errors for debugging but don't block the request
+      console.warn('Failed to parse settings storage for API keys:', e);
     }
   }
   
