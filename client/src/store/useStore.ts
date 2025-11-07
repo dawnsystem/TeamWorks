@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, ViewType, ProjectViewMode } from '@/types';
+import { authAPI } from '@/lib/api';
 
 interface AuthState {
   user: User | null;
   token: string | null;
-  setAuth: (user: User, token: string) => void;
+  refreshToken: string | null;
+  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
@@ -84,13 +86,23 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       token: null,
-      setAuth: (user, token) => {
-        localStorage.setItem('token', token);
-        set({ user, token });
+      refreshToken: null,
+      setAuth: (user, accessToken, refreshToken) => {
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        set({ user, token: accessToken, refreshToken });
       },
       logout: () => {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+          // Intentar revocar el refresh token en el servidor (fire and forget)
+          authAPI.logout(refreshToken).catch(() => {
+            // Ignorar errores de logout en el servidor
+          });
+        }
         localStorage.removeItem('token');
-        set({ user: null, token: null });
+        localStorage.removeItem('refreshToken');
+        set({ user: null, token: null, refreshToken: null });
       },
     }),
     {
