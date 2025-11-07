@@ -7,6 +7,7 @@
  */
 
 import { conversationalAgent, ConversationMessage } from '../services/aiService';
+import Groq from 'groq-sdk';
 
 // Mock environment variables for AI providers
 process.env.GROQ_API_KEY = 'test-groq-key';
@@ -37,7 +38,6 @@ describe('Conversational Agent UX', () => {
 
       // The prompt should emphasize using names, not IDs
       // We'll check the prompt construction by mocking the generate function
-      const Groq = require('groq-sdk');
       const mockCreate = jest.fn().mockResolvedValue({
         choices: [
           {
@@ -66,13 +66,14 @@ describe('Conversational Agent UX', () => {
         ],
       });
 
-      Groq.mockImplementation(() => ({
+      (Groq as jest.MockedClass<typeof Groq>).mockImplementation(() => ({
         chat: {
           completions: {
             create: mockCreate,
           },
         },
-      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any));
 
       await conversationalAgent(
         'elimina todas las tareas en Inbox, dentro de la sección Seccion de test',
@@ -82,7 +83,14 @@ describe('Conversational Agent UX', () => {
       );
 
       // Check that the prompt passed to the AI doesn't ask for IDs
+      expect(mockCreate.mock.calls).toHaveLength(1);
+      expect(mockCreate.mock.calls[0]).toBeDefined();
+      expect(mockCreate.mock.calls[0][0]).toBeDefined();
+      
       const callArgs = mockCreate.mock.calls[0][0];
+      expect(callArgs.messages).toBeDefined();
+      expect(callArgs.messages[0]).toBeDefined();
+      
       const prompt = callArgs.messages[0].content;
 
       // Prompt should emphasize names over IDs
@@ -98,7 +106,6 @@ describe('Conversational Agent UX', () => {
 
     // These tests verify the behavior, not the prompt directly
     it('should generate actions using names not IDs', async () => {
-      const Groq = require('groq-sdk');
       const mockCreate = jest.fn().mockResolvedValue({
         choices: [
           {
@@ -127,13 +134,14 @@ describe('Conversational Agent UX', () => {
         ],
       });
 
-      Groq.mockImplementation(() => ({
+      (Groq as jest.MockedClass<typeof Groq>).mockImplementation(() => ({
         chat: {
           completions: {
             create: mockCreate,
           },
         },
-      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any));
 
       const result = await conversationalAgent(
         'del proyecto Work sección Testing',
@@ -161,7 +169,6 @@ describe('Conversational Agent UX', () => {
     });
 
     it('should not ask for confirmation after user provides information', async () => {
-      const Groq = require('groq-sdk');
       const mockCreate = jest.fn().mockResolvedValue({
         choices: [
           {
@@ -177,13 +184,14 @@ describe('Conversational Agent UX', () => {
         ],
       });
 
-      Groq.mockImplementation(() => ({
+      (Groq as jest.MockedClass<typeof Groq>).mockImplementation(() => ({
         chat: {
           completions: {
             create: mockCreate,
           },
         },
-      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any));
 
       const result = await conversationalAgent('sí, hazlo', [], {}, 'groq');
 
@@ -195,7 +203,6 @@ describe('Conversational Agent UX', () => {
 
   describe('Action generation', () => {
     it('should generate delete_bulk action with projectName and sectionName', async () => {
-      const Groq = require('groq-sdk');
       const mockResponse = {
         status: 'ready',
         message: 'Eliminando tareas en Inbox > Seccion de test',
@@ -226,13 +233,14 @@ describe('Conversational Agent UX', () => {
         ],
       });
 
-      Groq.mockImplementation(() => ({
+      (Groq as jest.MockedClass<typeof Groq>).mockImplementation(() => ({
         chat: {
           completions: {
             create: mockCreate,
           },
         },
-      }));
+      } as any));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
       const context = {
         projects: [{ id: 'proj1', nombre: 'Inbox' }],
@@ -256,8 +264,6 @@ describe('Conversational Agent UX', () => {
 
   describe('Conversation flow', () => {
     it('should not get stuck in confirmation loop', async () => {
-      const Groq = require('groq-sdk');
-
       // Simulate the problematic conversation from the issue
       const conversationHistory: ConversationMessage[] = [
         { role: 'user', content: 'elimina todas las tareas en Inbox, dentro de la sección Seccion de test' },
@@ -299,13 +305,13 @@ describe('Conversational Agent UX', () => {
         ],
       });
 
-      Groq.mockImplementation(() => ({
+      (Groq as jest.MockedClass<typeof Groq>).mockImplementation(() => ({
         chat: {
           completions: {
             create: mockCreate,
           },
         },
-      }));
+      } as any));
 
       const result = await conversationalAgent('sí, confirmo', conversationHistory, {}, 'groq');
 
