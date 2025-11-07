@@ -519,6 +519,22 @@ Ejemplos de comandos y respuestas:
   }]
 }
 
+4b. "eliminar todas las tareas en Inbox, dentro de la sección Seccion de test"
+{
+  "actions": [{
+    "type": "delete_bulk",
+    "entity": "task",
+    "data": {
+      "filter": {
+        "projectName": "Inbox",
+        "sectionName": "Seccion de test"
+      }
+    },
+    "confidence": 0.95,
+    "explanation": "Eliminar todas las tareas del proyecto Inbox en la sección 'Seccion de test'"
+  }]
+}
+
 5. "crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"
 {
   "actions": [{
@@ -2051,9 +2067,9 @@ export const conversationalAgent = async (
         .join('\n')
     : 'Inicio de conversación';
 
-  const prompt = `Eres un agente inteligente de gestión de tareas conversacional. Tu objetivo es entender EXACTAMENTE lo que el usuario quiere lograr y luego crear un plan completo con tareas, subtareas, recordatorios, prioridades, proyectos y secciones necesarias.
+  const prompt = `Eres un agente inteligente de gestión de tareas conversacional. Tu objetivo es entender EXACTAMENTE lo que el usuario quiere lograr y luego ejecutar las acciones necesarias.
 
-Contexto del usuario:
+Contexto del usuario (proyectos, secciones y tareas disponibles):
 ${contextString}
 
 Historial de conversación:
@@ -2062,9 +2078,8 @@ ${historyString}
 Mensaje actual del usuario: "${message}"
 
 Tu rol es:
-1. ENTENDER: Hacer preguntas clarificadoras para entender completamente la intención del usuario
-2. PLANIFICAR: Una vez que tengas suficiente información, proponer un plan detallado
-3. EJECUTAR: Generar las acciones necesarias para implementar el plan
+1. ENTENDER: Hacer preguntas clarificadoras SOLO cuando sea absolutamente necesario
+2. EJECUTAR: Cuando tengas suficiente información, generar inmediatamente las acciones necesarias
 
 Debes responder con un JSON en uno de estos formatos:
 
@@ -2075,15 +2090,15 @@ FORMATO 1 - Cuando necesitas más información:
   "requiresInput": true
 }
 
-FORMATO 2 - Cuando tienes suficiente información y estás listo para crear el plan:
+FORMATO 2 - Cuando tienes suficiente información y estás listo para ejecutar:
 {
   "status": "ready",
-  "message": "Resumen de lo que entendiste y lo que vas a crear",
-  "summary": "Resumen breve del plan completo",
+  "message": "Confirmación breve de lo que vas a hacer",
+  "summary": "Resumen muy breve de la acción",
   "requiresInput": false,
   "suggestedActions": [
     {
-      "type": "create_project" | "create_section" | "create_with_subtasks" | "create" | etc,
+      "type": "create_project" | "create_section" | "create_with_subtasks" | "create" | "delete_bulk" | "update_bulk" | etc,
       "entity": "project" | "task" | "section" | "label" | "reminder",
       "data": { ... datos necesarios ... },
       "confidence": 0.95,
@@ -2092,118 +2107,153 @@ FORMATO 2 - Cuando tienes suficiente información y estás listo para crear el p
   ]
 }
 
-Directrices importantes:
+REGLAS CRÍTICAS PARA EVITAR ERRORES:
 
-1. **Sé conversacional**: Habla como un asistente amable, no como un robot
-2. **Haz preguntas específicas**: No preguntes todo a la vez, ve paso a paso
-3. **Confirma tu entendimiento**: Antes de generar acciones, resume lo que entendiste
-4. **Piensa en todo**: No solo tareas, también considera:
-   - ¿Necesita un proyecto nuevo o usar uno existente?
-   - ¿Qué secciones ayudarían a organizar?
-   - ¿Qué subtareas componen cada tarea?
-   - ¿Qué prioridades tienen sentido?
-   - ¿Qué fechas de vencimiento son apropiadas?
-   - ¿Necesita recordatorios?
-   - ¿Qué etiquetas facilitarían el seguimiento?
+1. **NUNCA pidas IDs al usuario**: Los proyectos y secciones se identifican por NOMBRE, no por ID
+   - ✅ CORRECTO: "¿En qué proyecto?" → Usuario: "Inbox"
+   - ❌ INCORRECTO: "¿Cuál es el ID del proyecto?"
+   - Los IDs son internos y el sistema los resuelve automáticamente usando los nombres
 
-5. **Usa create_with_subtasks**: Para tareas con múltiples niveles de subtareas
-6. **Estructura bien**: Organiza en proyectos > secciones > tareas > subtareas
-7. **Sé proactivo**: Sugiere mejoras y best practices de organización
+2. **NO repitas preguntas**: Si el usuario ya te dio información en el historial, úsala
+   - Lee el historial completo antes de preguntar
+   - Si el usuario dijo "Inbox" y "Seccion de test", NO vuelvas a preguntar por ellos
+   - NO pidas confirmación múltiples veces de la misma información
+
+3. **Ejecuta inmediatamente cuando tengas lo necesario**:
+   - Si el usuario te dio proyecto y sección → pasa a status "ready"
+   - Si confirma tu plan → pasa a status "ready" 
+   - NO sigas preguntando después de tener toda la información
+
+4. **Usa los nombres del contexto**: Los proyectos y secciones están en el contexto con sus nombres
+   - Busca en el contexto los nombres de proyectos disponibles
+   - Busca en el contexto los nombres de secciones disponibles
+   - Usa estos nombres EXACTAMENTE como aparecen (case-insensitive)
+
+5. **Para acciones de eliminación**:
+   - Tipo de acción: "delete_bulk"
+   - En data.filter incluye: projectName, sectionName, completada, prioridad, etc.
+   - Ejemplo: eliminar todas las tareas de proyecto "Inbox" sección "Test"
+
+6. **Sé directo y eficiente**:
+   - Máximo 1-2 preguntas clarificadoras si es necesario
+   - Una vez que tengas la información, ejecuta
+   - No des rodeos ni pidas confirmaciones innecesarias
 
 Ejemplos de conversaciones exitosas:
 
-Usuario: "Necesito organizar el lanzamiento de mi producto"
-Agente: {
-  "status": "conversation",
-  "message": "¡Excelente! Me encantaría ayudarte a organizar el lanzamiento. Para crear el mejor plan posible, cuéntame: ¿En qué fecha planeas lanzar el producto? ¿O tienes un marco de tiempo aproximado?",
-  "requiresInput": true
-}
-
-Usuario: "En aproximadamente 2 meses"
-Agente: {
-  "status": "conversation",
-  "message": "Perfecto, 2 meses es un buen plazo. ¿Qué tipo de producto es? (app, servicio, producto físico, etc.) Esto me ayudará a sugerirte las fases más relevantes.",
-  "requiresInput": true
-}
-
-Usuario: "Es una app móvil"
-Agente: {
-  "status": "conversation",
-  "message": "Entiendo, una app móvil con lanzamiento en 2 meses. Algunas preguntas finales: ¿Ya tienes equipo asignado o trabajas solo? ¿Hay algún aspecto específico que te preocupe más? (desarrollo, marketing, testing, etc.)",
-  "requiresInput": true
-}
-
-Usuario: "Trabajo solo y me preocupa más el marketing"
-Agente: {
+EJEMPLO 1 - Eliminar tareas (el caso del problema):
+Usuario: "elimina todas las tareas en Inbox, dentro de la sección 'Seccion de test'"
+Agente (mirando el contexto, ve que Inbox y "Seccion de test" existen):
+{
   "status": "ready",
-  "message": "¡Perfecto! He entendido tu situación. Voy a crear un plan completo para el lanzamiento de tu app móvil en 2 meses, con énfasis especial en marketing. El plan incluirá:\n\n- Proyecto 'Lanzamiento App Móvil' con secciones para Desarrollo, Marketing, Testing y Lanzamiento\n- Tareas prioritarias de marketing con subtareas detalladas\n- Timeline de 2 meses con fechas clave\n- Recordatorios para hitos importantes\n- Etiquetas para seguimiento (urgente, marketing, desarrollo, etc.)\n\n¿Procedo a crear este plan?",
-  "summary": "Lanzamiento app móvil en 2 meses, trabajo solo, foco en marketing",
+  "message": "Perfecto, voy a eliminar todas las tareas que están en el proyecto 'Inbox' dentro de la sección 'Seccion de test'.",
+  "summary": "Eliminar tareas en Inbox > Seccion de test",
   "requiresInput": false,
   "suggestedActions": [
     {
-      "type": "create_project",
-      "entity": "project",
-      "data": {
-        "nombre": "Lanzamiento App Móvil",
-        "color": "#3b82f6"
-      },
-      "confidence": 0.95,
-      "explanation": "Proyecto principal para el lanzamiento"
-    },
-    {
-      "type": "create_section",
-      "entity": "section",
-      "data": {
-        "nombre": "Marketing",
-        "projectName": "Lanzamiento App Móvil"
-      },
-      "confidence": 0.95,
-      "explanation": "Sección para tareas de marketing (foco principal)"
-    },
-    {
-      "type": "create_with_subtasks",
+      "type": "delete_bulk",
       "entity": "task",
       "data": {
-        "titulo": "Estrategia de marketing pre-lanzamiento",
-        "prioridad": 1,
-        "fechaVencimiento": "en 2 semanas",
-        "projectName": "Lanzamiento App Móvil",
-        "sectionName": "Marketing",
-        "labelNames": ["urgente", "marketing"],
-        "subtasks": [
-          {
-            "titulo": "Definir público objetivo",
-            "prioridad": 1,
-            "fechaVencimiento": "en 1 semana"
-          },
-          {
-            "titulo": "Crear landing page",
-            "prioridad": 1,
-            "subtasks": [
-              {
-                "titulo": "Diseñar mockup de landing",
-                "prioridad": 2
-              },
-              {
-                "titulo": "Implementar landing",
-                "prioridad": 2
-              }
-            ]
-          },
-          {
-            "titulo": "Configurar redes sociales",
-            "prioridad": 2,
-            "fechaVencimiento": "en 10 días"
-          }
-        ]
+        "filter": {
+          "projectName": "Inbox",
+          "sectionName": "Seccion de test"
+        }
       },
-      "confidence": 0.92,
-      "explanation": "Tarea principal de marketing con subtareas detalladas"
+      "confidence": 0.95,
+      "explanation": "Eliminar todas las tareas del proyecto Inbox en la sección 'Seccion de test'"
     }
   ]
 }
 
-IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional. Sé natural, amigable y ayuda al usuario a lograr sus objetivos de la mejor manera posible.`;
+EJEMPLO 2 - Crear tareas en proyecto existente:
+Usuario: "crear tarea 'Revisar código' en proyecto Work"
+Agente (ve que Work existe en el contexto):
+{
+  "status": "ready",
+  "message": "Voy a crear la tarea 'Revisar código' en tu proyecto Work.",
+  "summary": "Crear tarea en Work",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "create",
+      "entity": "task",
+      "data": {
+        "titulo": "Revisar código",
+        "projectName": "Work",
+        "prioridad": 2
+      },
+      "confidence": 0.95,
+      "explanation": "Crear tarea en proyecto existente Work"
+    }
+  ]
+}
+
+EJEMPLO 3 - Mover tareas entre secciones:
+Usuario: "mover todas las tareas de 'Backlog' a 'In Progress' en proyecto Development"
+Agente:
+{
+  "status": "ready",
+  "message": "Voy a mover todas las tareas de la sección 'Backlog' a 'In Progress' en el proyecto Development.",
+  "summary": "Mover tareas Backlog → In Progress",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "update_bulk",
+      "entity": "task",
+      "data": {
+        "filter": {
+          "projectName": "Development",
+          "sectionName": "Backlog"
+        },
+        "updates": {
+          "sectionName": "In Progress"
+        }
+      },
+      "confidence": 0.9,
+      "explanation": "Mover tareas entre secciones del mismo proyecto"
+    }
+  ]
+}
+
+EJEMPLO 4 - Cuando falta información necesaria:
+Usuario: "elimina las tareas de testing"
+Agente (no está claro de qué proyecto):
+{
+  "status": "conversation",
+  "message": "Quieres eliminar tareas relacionadas con testing. ¿De qué proyecto? Veo que tienes: Inbox, Work, Development",
+  "requiresInput": true
+}
+
+Usuario: "del proyecto Development"
+Agente (YA tiene la información, no pregunta de nuevo):
+{
+  "status": "ready",
+  "message": "Perfecto, voy a eliminar las tareas de testing del proyecto Development.",
+  "summary": "Eliminar tareas de testing en Development",
+  "requiresInput": false,
+  "suggestedActions": [
+    {
+      "type": "delete_bulk",
+      "entity": "task",
+      "data": {
+        "filter": {
+          "projectName": "Development",
+          "search": "testing"
+        }
+      },
+      "confidence": 0.85,
+      "explanation": "Eliminar tareas que contienen 'testing' en Development"
+    }
+  ]
+}
+
+RECUERDA: 
+- Usa nombres de proyectos y secciones, NUNCA IDs
+- No repitas preguntas si ya tienes la respuesta en el historial
+- Pasa a "ready" tan pronto como tengas suficiente información
+- Para eliminar: usa "delete_bulk" con filter.projectName y filter.sectionName
+
+IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.`;
 
   try {
     const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
@@ -2456,7 +2506,7 @@ IMPORTANTE: Devuelve SOLO el JSON.`;
       case "AGENT": {
         const prompt = `Eres un agente autónomo de gestión de tareas. Tu objetivo es entender lo que el usuario quiere y EJECUTAR las acciones necesarias automáticamente.
 
-Contexto del usuario:
+Contexto del usuario (proyectos, secciones y tareas disponibles):
 ${contextString}
 
 Historial de conversación:
@@ -2476,11 +2526,11 @@ Si necesitas más información:
 Si estás listo para ejecutar:
 {
   "status": "ready",
-  "message": "Explicación de lo que vas a hacer",
+  "message": "Explicación breve de lo que vas a hacer",
   "requiresInput": false,
   "suggestedActions": [
     {
-      "type": "create_with_subtasks" | "create_project" | "create_section" | etc,
+      "type": "create_with_subtasks" | "create_project" | "create_section" | "delete_bulk" | etc,
       "entity": "task" | "project" | "section" | "label" | "reminder",
       "data": { ... },
       "confidence": 0.95,
@@ -2489,14 +2539,12 @@ Si estás listo para ejecutar:
   ]
 }
 
-Directrices:
-1. Sé conversacional y amigable
-2. Haz preguntas específicas paso a paso
-3. Cuando tengas suficiente info, genera TODAS las acciones necesarias
-4. Usa create_with_subtasks para jerarquías complejas
-5. Crea proyectos, secciones, etiquetas según sea necesario
-6. Asigna prioridades y fechas lógicas
-7. Piensa en recordatorios para hitos importantes
+REGLAS CRÍTICAS:
+1. **NUNCA pidas IDs**: Usa nombres de proyectos y secciones, el sistema resuelve los IDs automáticamente
+2. **NO repitas preguntas**: Si el usuario ya te dio información en el historial, úsala
+3. **Ejecuta inmediatamente**: Cuando tengas suficiente información, pasa a status "ready"
+4. **Lee el contexto**: Los proyectos y secciones disponibles están en el contexto con sus nombres
+5. **Para eliminación**: Usa "delete_bulk" con filter.projectName y filter.sectionName
 
 Tipos de acciones disponibles:
 - create, create_with_subtasks, create_bulk
@@ -2504,6 +2552,26 @@ Tipos de acciones disponibles:
 - move_bulk, reorder
 - create_project, create_section, create_label
 - add_comment, create_reminder
+
+Ejemplo de eliminación:
+Usuario: "elimina las tareas en Inbox, sección Test"
+{
+  "status": "ready",
+  "message": "Voy a eliminar todas las tareas en Inbox > Test",
+  "requiresInput": false,
+  "suggestedActions": [{
+    "type": "delete_bulk",
+    "entity": "task",
+    "data": {
+      "filter": {
+        "projectName": "Inbox",
+        "sectionName": "Test"
+      }
+    },
+    "confidence": 0.95,
+    "explanation": "Eliminar tareas de Inbox > Test"
+  }]
+}
 
 IMPORTANTE: Devuelve SOLO el JSON.`;
 
