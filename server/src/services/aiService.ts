@@ -8,48 +8,74 @@ type SupportedAIProvider = (typeof SUPPORTED_AI_PROVIDERS)[number];
 const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
+// Cache for clients (only for env-based keys)
 let groqClient: Groq | null = null;
 let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
 
-const isProviderConfigured = (provider: SupportedAIProvider) => {
+export interface AIProviderKeys {
+  groqApiKey?: string;
+  geminiApiKey?: string;
+}
+
+/**
+ * Get API key with fallback priority:
+ * 1. User-provided key (from client settings)
+ * 2. Environment variable (from .env or docker-compose)
+ */
+const getApiKey = (provider: SupportedAIProvider, userKeys?: AIProviderKeys): string | undefined => {
   if (provider === 'groq') {
-    const apiKey = process.env.GROQ_API_KEY;
-    return Boolean(apiKey && apiKey !== 'YOUR_GROQ_API_KEY_HERE');
+    const key = userKeys?.groqApiKey || process.env.GROQ_API_KEY;
+    return (key && key !== 'YOUR_GROQ_API_KEY_HERE') ? key : undefined;
   }
   if (provider === 'gemini') {
-    const apiKey = process.env.GEMINI_API_KEY;
-    return Boolean(apiKey && apiKey !== 'YOUR_GEMINI_API_KEY_HERE');
+    const key = userKeys?.geminiApiKey || process.env.GEMINI_API_KEY;
+    return (key && key !== 'YOUR_GEMINI_API_KEY_HERE') ? key : undefined;
   }
-  return false;
+  return undefined;
 };
 
-const getConfiguredProviders = () =>
-  SUPPORTED_AI_PROVIDERS.filter((provider) => isProviderConfigured(provider));
+const isProviderConfigured = (provider: SupportedAIProvider, userKeys?: AIProviderKeys) => {
+  return Boolean(getApiKey(provider, userKeys));
+};
 
-const getGroqClient = () => {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey || apiKey === 'YOUR_GROQ_API_KEY_HERE') {
+const getConfiguredProviders = (userKeys?: AIProviderKeys) =>
+  SUPPORTED_AI_PROVIDERS.filter((provider) => isProviderConfigured(provider, userKeys));
+
+const getGroqClient = (userKeys?: AIProviderKeys) => {
+  const apiKey = getApiKey('groq', userKeys);
+  if (!apiKey) {
     throw new Error('El proveedor Groq está seleccionado pero GROQ_API_KEY no está configurada. Obtén una en https://console.groq.com');
   }
-  if (!groqClient) {
-    groqClient = new Groq({ apiKey });
+  // Only use cache if using env key (not user-provided)
+  if (!userKeys?.groqApiKey) {
+    if (!groqClient) {
+      groqClient = new Groq({ apiKey });
+    }
+    return groqClient;
   }
-  return groqClient;
+  // Create new client for user-provided key
+  return new Groq({ apiKey });
 };
 
-const getGeminiModel = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'YOUR_GEMINI_API_KEY_HERE') {
+const getGeminiModel = (userKeys?: AIProviderKeys) => {
+  const apiKey = getApiKey('gemini', userKeys);
+  if (!apiKey) {
     throw new Error('El proveedor Gemini está seleccionado pero GEMINI_API_KEY no está configurada. Genera una en https://makersuite.google.com/app/apikey');
   }
-  if (!geminiModel) {
-    const client = new GoogleGenerativeAI(apiKey);
-    geminiModel = client.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+  // Only use cache if using env key (not user-provided)
+  if (!userKeys?.geminiApiKey) {
+    if (!geminiModel) {
+      const client = new GoogleGenerativeAI(apiKey);
+      geminiModel = client.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
+    }
+    return geminiModel;
   }
-  return geminiModel;
+  // Create new model for user-provided key
+  const client = new GoogleGenerativeAI(apiKey);
+  return client.getGenerativeModel({ model: DEFAULT_GEMINI_MODEL });
 };
 
-const resolveProvider = (provider?: string): SupportedAIProvider => {
+const resolveProvider = (provider?: string, userKeys?: AIProviderKeys): SupportedAIProvider => {
   const selected = (provider || process.env.AI_PROVIDER || 'groq').toLowerCase();
   if (!SUPPORTED_AI_PROVIDERS.includes(selected as SupportedAIProvider)) {
     throw new Error(`Proveedor IA '${selected}' no soportado. Usa uno de: ${SUPPORTED_AI_PROVIDERS.join(', ')}`);
@@ -57,12 +83,12 @@ const resolveProvider = (provider?: string): SupportedAIProvider => {
   return selected as SupportedAIProvider;
 };
 
-const getProviderOrder = (preferred: SupportedAIProvider, override?: string) => {
+const getProviderOrder = (preferred: SupportedAIProvider, override?: string, userKeys?: AIProviderKeys) => {
   if (override) {
     return [preferred];
   }
 
-  const configured = getConfiguredProviders();
+  const configured = getConfiguredProviders(userKeys);
   const ordered = configured.filter((p) => p === preferred);
   for (const provider of configured) {
     if (!ordered.includes(provider)) {
@@ -76,14 +102,14 @@ const getProviderOrder = (preferred: SupportedAIProvider, override?: string) => 
   return ordered;
 };
 
-const generateWithProvider = async (prompt: string, provider: SupportedAIProvider): Promise<string> => {
+const generateWithProvider = async (prompt: string, provider: SupportedAIProvider, userKeys?: AIProviderKeys): Promise<string> => {
   if (provider === 'gemini') {
-    const model = getGeminiModel();
+    const model = getGeminiModel(userKeys);
     const result = await model.generateContent(prompt);
     return result.response.text() || '';
   }
 
-  const client = getGroqClient();
+  const client = getGroqClient(userKeys);
   const completion = await client.chat.completions.create({
     messages: [{ role: 'user', content: prompt }],
     model: DEFAULT_GROQ_MODEL,
@@ -98,13 +124,14 @@ const generateWithFallback = async (
   prompt: string,
   preferred: SupportedAIProvider,
   override?: string,
+  userKeys?: AIProviderKeys,
 ): Promise<{ text: string; providerUsed: SupportedAIProvider }> => {
-  const providersToTry = getProviderOrder(preferred, override);
+  const providersToTry = getProviderOrder(preferred, override, userKeys);
   const errors: string[] = [];
 
   for (const provider of providersToTry) {
     try {
-      const text = await generateWithProvider(prompt, provider);
+      const text = await generateWithProvider(prompt, provider, userKeys);
       if (!text.trim()) {
         throw new Error('Respuesta vacía');
       }
@@ -421,9 +448,10 @@ export const processNaturalLanguage = async (
   input: string,
   context?: any,
   providerOverride?: string,
+  userKeys?: AIProviderKeys,
 ): Promise<ProcessNaturalLanguageResult> => {
   const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
-  const preferred = resolveProvider(providerOverride);
+  const preferred = resolveProvider(providerOverride, userKeys);
 
   const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
 Tu trabajo es interpretar comandos en lenguaje natural y convertirlos en acciones estructuradas.
@@ -832,7 +860,7 @@ Colores disponibles:
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
 
   try {
-    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
     const actions = parseActionsFromText(text);
 
     if (!actions.length) {
@@ -861,6 +889,7 @@ interface GenerateAIPlanOptions {
   providerOverride?: string;
   answers?: string[];
   context?: any;
+  apiKeys?: AIProviderKeys;
 }
 
 const buildPlannerPrompt = (
@@ -942,12 +971,12 @@ export const generateAIPlan = async (
   mode: 'auto' | 'interactive',
   options: GenerateAIPlanOptions = {},
 ) => {
-  const preferred = resolveProvider(options.providerOverride);
+  const preferred = resolveProvider(options.providerOverride, options.apiKeys);
   const contextString = options.context ? JSON.stringify(options.context, null, 2) : 'Sin contexto adicional';
 
   const prompt = buildPlannerPrompt(goal, mode, options.answers, contextString);
 
-  const { text, providerUsed } = await generateWithFallback(prompt, preferred, options.providerOverride);
+  const { text, providerUsed } = await generateWithFallback(prompt, preferred, options.providerOverride, options.apiKeys);
   const parsed = parsePlanFromText(text);
 
   return {
@@ -2029,8 +2058,9 @@ export const conversationalAgent = async (
   context?: any,
   providerOverride?: string,
   conversationId?: string,
+  userKeys?: AIProviderKeys,
 ): Promise<AgentResponse> => {
-  const preferred = resolveProvider(providerOverride);
+  const preferred = resolveProvider(providerOverride, userKeys);
   const contextString = context ? JSON.stringify(context, null, 2) : 'Sin contexto adicional';
   
   // Build conversation history for the prompt
@@ -2195,7 +2225,7 @@ Agente: {
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional. Sé natural, amigable y ayuda al usuario a lograr sus objetivos de la mejor manera posible.`;
 
   try {
-    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
     const jsonText = stripCodeFences(text);
     
     try {
@@ -2280,8 +2310,9 @@ export const unifiedAI = async (
   conversationId?: string,
   prisma?: any,
   userId?: string,
+  userKeys?: AIProviderKeys,
 ): Promise<UnifiedAIResponse> => {
-  const preferred = resolveProvider(providerOverride);
+  const preferred = resolveProvider(providerOverride, userKeys);
   const contextString = context ? JSON.stringify(context, null, 2) : "Sin contexto adicional";
   const newConversationId = conversationId || `conv_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   
@@ -2326,7 +2357,7 @@ Directrices:
 
 IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional.`;
 
-        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
         const jsonText = stripCodeFences(text);
         
         try {
@@ -2410,7 +2441,7 @@ Directrices:
 
 IMPORTANTE: Devuelve SOLO el JSON.`;
 
-        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
         const jsonText = stripCodeFences(text);
         
         try {
@@ -2495,7 +2526,7 @@ Tipos de acciones disponibles:
 
 IMPORTANTE: Devuelve SOLO el JSON.`;
 
-        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride);
+        const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
         const jsonText = stripCodeFences(text);
         
         try {

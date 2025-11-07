@@ -112,12 +112,29 @@ export const updateApiUrl = (url: string) => {
   api.defaults.baseURL = url;
 };
 
-// Interceptor para agregar token a todas las peticiones
+// Interceptor para agregar token y API keys a todas las peticiones
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Add AI API keys from settings if available
+  const settingsStorage = localStorage.getItem('settings-storage');
+  if (settingsStorage) {
+    try {
+      const settings = JSON.parse(settingsStorage);
+      if (settings.state?.groqApiKey) {
+        config.headers['X-Groq-Api-Key'] = settings.state.groqApiKey;
+      }
+      if (settings.state?.geminiApiKey) {
+        config.headers['X-Gemini-Api-Key'] = settings.state.geminiApiKey;
+      }
+    } catch (e) {
+      // Silently ignore parsing errors
+    }
+  }
+  
   return config;
 });
 

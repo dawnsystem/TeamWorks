@@ -10,11 +10,28 @@ const projectAccessWhere = (userId: string) => ({
   ],
 });
 
+/**
+ * Extract API keys from request headers
+ * These keys are sent from the client's localStorage settings
+ */
+const extractApiKeys = (req: any): { groqApiKey?: string; geminiApiKey?: string } => {
+  const groqApiKey = req.headers['x-groq-api-key'];
+  const geminiApiKey = req.headers['x-gemini-api-key'];
+  
+  return {
+    ...(groqApiKey && typeof groqApiKey === 'string' && { groqApiKey }),
+    ...(geminiApiKey && typeof geminiApiKey === 'string' && { geminiApiKey }),
+  };
+};
+
 export const processCommand = async (req: any, res: Response) => {
   try {
     const { command, autoExecute = false, context, provider } = req.body;
 
     // Validación de formato ya realizada por middleware
+    
+    // Extract API keys from headers (client settings)
+    const apiKeys = extractApiKeys(req);
 
     // Obtener contexto del usuario si no se proporciona
     let userContext = context;
@@ -40,8 +57,8 @@ export const processCommand = async (req: any, res: Response) => {
       };
     }
 
-    // Procesar comando con IA
-    const result = await processNaturalLanguage(command, userContext, provider);
+    // Procesar comando con IA, passing API keys from headers
+    const result = await processNaturalLanguage(command, userContext, provider, apiKeys);
     const actions = result.actions;
 
     // Si autoExecute es true, ejecutar las acciones
@@ -92,6 +109,9 @@ export const generatePlan = async (req: any, res: Response) => {
   try {
     const { goal, mode, answers = [], context, provider } = req.body;
     const userId = (req as AuthRequest).userId!;
+    
+    // Extract API keys from headers (client settings)
+    const apiKeys = extractApiKeys(req);
 
     let userContext = context;
     if (!userContext) {
@@ -118,6 +138,7 @@ export const generatePlan = async (req: any, res: Response) => {
       providerOverride: provider,
       answers,
       context: userContext,
+      apiKeys,
     });
 
     res.json(plan);
@@ -133,6 +154,9 @@ export const agent = async (req: any, res: Response) => {
   try {
     const { message, conversationId, conversationHistory = [], context, provider } = req.body;
     const userId = (req as AuthRequest).userId!;
+    
+    // Extract API keys from headers (client settings)
+    const apiKeys = extractApiKeys(req);
 
     let userContext = context;
     if (!userContext) {
@@ -174,6 +198,7 @@ export const agent = async (req: any, res: Response) => {
       userContext,
       provider,
       conversationId,
+      apiKeys,
     );
 
     res.json(response);
@@ -189,6 +214,9 @@ export const unified = async (req: any, res: Response) => {
   try {
     const { message, mode = 'ASK', conversationId, conversationHistory = [], autoExecute = false, context, provider } = req.body;
     const userId = (req as AuthRequest).userId!;
+    
+    // Extract API keys from headers (client settings)
+    const apiKeys = extractApiKeys(req);
 
     let userContext = context;
     if (!userContext) {
@@ -234,6 +262,7 @@ export const unified = async (req: any, res: Response) => {
       conversationId,
       prisma,
       userId,
+      apiKeys,
     );
 
     res.json(response);
