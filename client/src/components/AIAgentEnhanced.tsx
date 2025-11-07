@@ -18,10 +18,9 @@ import {
   Plus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAIStore, useSettingsStore } from '@/store/useStore';
-import { useIsMobile } from '@/hooks/useMediaQuery';
+import { useAIStore } from '@/store/useStore';
 import { aiAPI } from '@/lib/api';
-import { Button, Input, ScrollArea, Card } from '@/components/ui';
+import { Button, Input, ScrollArea } from '@/components/ui';
 
 type AIMode = 'ASK' | 'PLAN' | 'AGENT';
 
@@ -54,8 +53,8 @@ export default function AIAgentEnhanced() {
     setAutoExecute,
   } = useAIStore();
 
-  const aiProvider = useSettingsStore((state) => state.aiProvider);
-  const isMobile = useIsMobile();
+  // const aiProvider = useSettingsStore((state) => state.aiProvider);
+  // const isMobile = useIsMobile();
 
   const [message, setMessage] = useState('');
   const [showSettings, setShowSettings] = useState(false);
@@ -88,7 +87,7 @@ export default function AIAgentEnhanced() {
       conversationId?: string;
       autoExecute?: boolean;
     }) => aiAPI.unified(payload),
-    onSuccess: (response, variables) => {
+    onSuccess: (response) => {
       const data = response.data;
 
       // Add AI response to conversation
@@ -173,7 +172,7 @@ export default function AIAgentEnhanced() {
   };
 
   const handleNewConversation = () => {
-    const newId = createConversation(mode);
+    createConversation(mode);
     toast.success('Nueva conversación creada');
   };
 
@@ -328,7 +327,7 @@ export default function AIAgentEnhanced() {
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => setShowConversations(!showConversations)}
               className="flex-1"
             >
@@ -451,7 +450,7 @@ export default function AIAgentEnhanced() {
           <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || unifiedMutation.isPending}
-            size="icon"
+            size="sm"
           >
             {unifiedMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />

@@ -24,12 +24,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install only production dependencies
+# Install only production dependencies (but keep prisma for migrations)
 COPY package*.json ./
 COPY prisma ./prisma/
 
+# Install postgresql-client for pg_isready and OpenSSL for Prisma
+RUN apk add --no-cache postgresql-client openssl libc6-compat
+
 RUN npm ci --omit=dev && \
-    npm cache clean --force
+    npm cache clean --force && \
+    npm install prisma --save-dev
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -38,6 +42,10 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./
+RUN chmod +x docker-entrypoint.sh
 
 # Set ownership
 RUN chown -R nodejs:nodejs /app
@@ -52,5 +60,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
 
-# Start application
-CMD ["node", "dist/index.js"]
+# Start application using entrypoint script
+CMD ["./docker-entrypoint.sh"]

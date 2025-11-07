@@ -36,7 +36,6 @@ Thumbs.db
 Dockerfile
 .dockerignore
 docker-compose*.yml
-nginx.conf
 
 # Documentation
 *.md
@@ -44,7 +43,3 @@ docs/
 
 # Misc
 *.log
-
-# Development
-src/
-public/

@@ -164,7 +164,7 @@ export const useTaskEditorStore = create<TaskEditorState>()((set) => ({
 
 export const useAIStore = create<AIState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       isOpen: false,
       autoExecute: false,
       mode: 'ASK',
