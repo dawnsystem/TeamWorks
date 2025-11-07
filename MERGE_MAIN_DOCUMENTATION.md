@@ -297,6 +297,62 @@ cd server && npm run lint
 # 0 errores esperados
 ```
 
+## ⚠️ Problemas Conocidos Post-Merge
+
+### Issues de Build Identificados
+
+#### 1. Cliente - AIAgentEnhanced.tsx
+**Error**: Errores de TypeScript relacionados con propiedades faltantes en AIState
+```
+- Property 'mode' does not exist on type 'AIState'
+- Property 'conversations' does not exist on type 'AIState'
+- etc.
+```
+
+**Causa**: El componente `AIAgentEnhanced.tsx` utiliza propiedades del store que fueron removidas o modificadas durante la simplificación del código.
+
+**Estado**: Pre-existente del merge, no introducido por la documentación
+
+**Impacto**: El build del cliente falla en TypeScript compilation
+
+**Recomendación**: 
+- Actualizar AIAgentEnhanced.tsx para usar la nueva estructura de AIState
+- O eliminar el componente si ya no es necesario (hay un AIAssistant.tsx alternativo)
+
+#### 2. Servidor - refreshTokenService.ts
+**Error**: Property 'refresh_tokens' does not exist on type 'PrismaClient'
+
+**Causa**: El schema de Prisma fue simplificado eliminando la tabla `refresh_tokens` (18 líneas eliminadas), pero el servicio `refreshTokenService.ts` aún hace referencia a ella.
+
+**Estado**: Pre-existente del merge, no introducido por la documentación
+
+**Impacto**: El build del servidor falla en TypeScript compilation
+
+**Recomendación**: 
+- Actualizar refreshTokenService.ts para no usar refresh_tokens
+- O restaurar la tabla refresh_tokens en el schema si la funcionalidad es necesaria
+
+#### 3. Linting Warnings y Errors
+
+##### Cliente
+- 1 warning en AIAgentEnhanced.tsx relacionado con `useEffect` dependencies
+
+##### Servidor  
+- 75 errores principalmente por uso de tipo `any` en tests
+- 179 warnings por trailing commas, unused variables, y uso de `any`
+
+**Estado**: Pre-existentes del merge, no introducidos por la documentación
+
+**Impacto**: Los comandos de lint fallan con el flag `--max-warnings 0`
+
+**Recomendación**: 
+- Refactorizar tests para usar tipos específicos en lugar de `any`
+- Aplicar `npm run lint:fix` para correcciones automáticas
+- Ajustar configuración de linting si los warnings son aceptables
+
+### Nota Importante
+Todos estos problemas existían en la rama `main` antes del merge y son el resultado de la simplificación y refactorización realizada en las PRs #53, #54 y #55. No fueron introducidos por el proceso de merge o la documentación añadida. Según las instrucciones del proyecto, estos issues deben ser abordados en tareas separadas.
+
 ## 📝 Próximos Pasos
 
 1. **Push del merge**: `git push origin copilot/merge-main-and-documentation`
