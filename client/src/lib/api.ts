@@ -208,9 +208,18 @@ api.interceptors.response.use(
         const response = await api.post('/auth/refresh', { refreshToken });
         const { accessToken, refreshToken: newRefreshToken } = response.data;
         
-        // Guardar los nuevos tokens
+        // Guardar los nuevos tokens en localStorage
         localStorage.setItem('token', accessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
+        
+        // Actualizar el estado del auth store para mantener consistencia
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          useAuthStore.setState({ 
+            token: accessToken, 
+            refreshToken: newRefreshToken 
+          });
+        }
         
         // Actualizar el header de la petición original
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;

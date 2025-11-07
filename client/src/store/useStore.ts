@@ -96,13 +96,9 @@ export const useAuthStore = create<AuthState>()(
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
           // Intentar revocar el refresh token en el servidor (fire and forget)
-          try {
-            authAPI.logout(refreshToken).catch(() => {
-              // Ignorar errores de logout en el servidor
-            });
-          } catch (e) {
-            // Ignorar errores
-          }
+          authAPI.logout(refreshToken).catch(() => {
+            // Ignorar errores de logout en el servidor
+          });
         }
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
