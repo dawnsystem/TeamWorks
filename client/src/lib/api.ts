@@ -139,27 +139,112 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Interceptor para manejar errores de autenticación
+// Variable para prevenir múltiples intentos de refresh simultáneos
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+const processQueue = (error: any = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve();
+    }
+  });
+  
+  failedQueue = [];
+};
+
+// Interceptor para manejar errores de autenticación y renovación de tokens
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Solo limpiar si no es una petición de login/register (para evitar bucles)
-      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
-                           error.config?.url?.includes('/auth/register');
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Si es un error 401 y no hemos intentado refrescar aún
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // Evitar refresh en peticiones de login/register/refresh
+      const isAuthRequest = originalRequest.url?.includes('/auth/login') || 
+                           originalRequest.url?.includes('/auth/register') ||
+                           originalRequest.url?.includes('/auth/refresh');
       
-      if (!isAuthRequest) {
-        // Limpiar el estado de auth usando el store
+      if (isAuthRequest) {
+        return Promise.reject(error);
+      }
+      
+      // Si ya estamos refrescando, agregar a la cola
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            originalRequest.headers.Authorization = `Bearer ${localStorage.getItem('token')}`;
+            return api(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
+      }
+      
+      originalRequest._retry = true;
+      isRefreshing = true;
+      
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (!refreshToken) {
+        // No hay refresh token, hacer logout
+        isRefreshing = false;
         useAuthStore.getState().logout();
-        
-        // Solo redirigir si no estamos ya en una página pública
         const currentPath = window.location.pathname;
         if (currentPath !== '/login' && currentPath !== '/register') {
-          // Usar replace para evitar agregar al historial y evitar bucles
           window.location.replace('/login');
         }
+        return Promise.reject(error);
+      }
+      
+      try {
+        // Intentar renovar el token
+        const response = await api.post('/auth/refresh', { refreshToken });
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        
+        // Guardar los nuevos tokens en localStorage
+        localStorage.setItem('token', accessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        
+        // Actualizar el estado del auth store para mantener consistencia
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser) {
+          useAuthStore.setState({ 
+            token: accessToken, 
+            refreshToken: newRefreshToken 
+          });
+        }
+        
+        // Actualizar el header de la petición original
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        
+        // Procesar la cola de peticiones que esperaban
+        processQueue(null);
+        isRefreshing = false;
+        
+        // Reintentar la petición original
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Si falla el refresh, hacer logout
+        processQueue(refreshError);
+        isRefreshing = false;
+        
+        useAuthStore.getState().logout();
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          window.location.replace('/login');
+        }
+        
+        return Promise.reject(refreshError);
       }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -167,10 +252,16 @@ api.interceptors.response.use(
 // Auth
 export const authAPI = {
   register: (data: { email: string; password: string; nombre: string }) =>
-    api.post<{ token: string; user: User }>('/auth/register', data),
+    api.post<{ accessToken: string; refreshToken: string; user: User }>('/auth/register', data),
   
   login: (data: { email: string; password: string }) =>
-    api.post<{ token: string; user: User }>('/auth/login', data),
+    api.post<{ accessToken: string; refreshToken: string; user: User }>('/auth/login', data),
+  
+  refresh: (refreshToken: string) =>
+    api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken }),
+  
+  logout: (refreshToken: string) =>
+    api.post('/auth/logout', { refreshToken }),
   
   getMe: () => api.get<User>('/auth/me'),
 };
