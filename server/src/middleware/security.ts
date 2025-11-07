@@ -13,7 +13,11 @@ export const configureSecurityMiddleware = (app: Express) => {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Necesario para React en desarrollo
+        // En producción, CSP más restrictivo sin 'unsafe-inline' ni 'unsafe-eval'
+        // En desarrollo, permite 'unsafe-inline' y 'unsafe-eval' para HMR y React DevTools
+        scriptSrc: process.env.NODE_ENV === 'production' 
+          ? ["'self'"]
+          : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
       },
