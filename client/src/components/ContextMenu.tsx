@@ -55,6 +55,7 @@ export default function ContextMenu({ items, position, onClose }: ContextMenuPro
   return (
     <>
       <div
+        role="menu"
         className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 min-w-[200px] z-50 animate-in fade-in zoom-in-95 duration-100"
         style={{ left: position.x, top: position.y }}
         onClick={(e) => e.stopPropagation()}

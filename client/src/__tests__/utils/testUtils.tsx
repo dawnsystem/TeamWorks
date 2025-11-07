@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // Test utilities for frontend testing
 import { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';

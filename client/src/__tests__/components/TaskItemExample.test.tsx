@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { screen } from '@testing-library/react';
 import { render } from '../utils/testUtils';
-import { mockTask, mockCompletedTask, mockHighPriorityTask } from '../mocks/mockData';
+import { mockTask } from '../mocks/mockData';
 import TaskItem from '../../components/TaskItem';
 
 // Mock the API

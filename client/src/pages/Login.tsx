@@ -21,7 +21,7 @@ export default function Login() {
 
     try {
       const response = await authAPI.login({ email, password });
-      setAuth(response.data.user, response.data.accessToken, response.data.refreshToken);
+      setAuth(response.data.user, response.data.token);
       toast.success('¡Bienvenido de nuevo!');
       navigate('/');
     } catch (error: any) {

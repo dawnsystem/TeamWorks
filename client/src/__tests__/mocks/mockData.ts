@@ -21,7 +21,11 @@ export const mockProject: Project = {
   orden: 0,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
-};
+  // Add aliases for tests that expect English property names
+  get name() { return this.nombre; },
+  get description() { return this.descripcion; },
+  get icon() { return this.icono; },
+} as any;
 
 export const mockLabel: Label = {
   id: 'label-1',
@@ -30,7 +34,9 @@ export const mockLabel: Label = {
   userId: 'user-1',
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
-};
+  // Add alias for tests that expect English property name
+  get name() { return this.nombre; },
+} as any;
 
 export const mockSection: Section = {
   id: 'section-1',
@@ -46,7 +52,7 @@ export const mockTask: Task = {
   titulo: 'Test Task',
   descripcion: 'A test task description',
   completada: false,
-  prioridad: 'P2',
+  prioridad: 2,
   fechaVencimiento: new Date('2024-12-31'),
   projectId: 'project-1',
   sectionId: null,
@@ -75,7 +81,7 @@ export const mockHighPriorityTask: Task = {
   ...mockTask,
   id: 'task-3',
   titulo: 'High Priority Task',
-  prioridad: 'P1',
+  prioridad: 1,
   fechaVencimiento: new Date(Date.now() + 86400000), // Tomorrow
 };
 

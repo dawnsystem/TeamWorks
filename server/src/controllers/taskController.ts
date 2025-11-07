@@ -1,18 +1,3 @@
-import { Response } from 'express';
-import { AuthRequest } from '../middleware/auth';
-import { Prisma } from '@prisma/client';
-import { sseService } from '../services/sseService';
-import { notificationService } from '../services/notificationService';
-import { taskSubscriptionService } from '../services/taskSubscriptionService';
-import { toClientTask as buildClientTask } from '../factories/taskFactory';
-import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
-import { applyTaskAutomations } from '../services/automationService';
-import { assertProjectPermission } from '../services/projectShareService';
-import { findUnauthorizedLabelIds } from '../services/labelDomainService';
-import prisma from '../lib/prisma';
-import { log } from '../lib/logger';
-import { CreateTaskPayload, UpdateTaskPayload, TaskOrderUpdate } from '../types';
-
 // Normaliza fechas desde 'dd/mm/yyyy' o 'yyyy-mm-dd' o ISO a Date | null
 function parseDateInput(input?: string | null): Date | null {
   if (!input) return null;
@@ -31,6 +16,18 @@ function parseDateInput(input?: string | null): Date | null {
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
 }
+import { Response } from 'express';
+import { AuthRequest } from '../middleware/auth';
+import { Prisma } from '@prisma/client';
+import { sseService } from '../services/sseService';
+import { notificationService } from '../services/notificationService';
+import { taskSubscriptionService } from '../services/taskSubscriptionService';
+import { toClientTask as buildClientTask } from '../factories/taskFactory';
+import { buildTaskTree, fetchSingleTask, fetchTasksForest } from '../services/taskDomainService';
+import { applyTaskAutomations } from '../services/automationService';
+import { assertProjectPermission } from '../services/projectShareService';
+import { findUnauthorizedLabelIds } from '../services/labelDomainService';
+import prisma from '../lib/prisma';
 
 const projectAccessWhere = (userId: string) => ({
   OR: [
@@ -41,10 +38,10 @@ const projectAccessWhere = (userId: string) => ({
 
 const toClientTask = buildClientTask;
 
-export const getTasks = async (req: AuthRequest, res: Response) => {
+export const getTasks = async (req: any, res: Response) => {
   try {
     const { projectId, sectionId, filter, search, labelId } = req.query;
-    const userId = req.userId!;
+    const userId = (req as AuthRequest).userId!;
 
     // Construir filtros
     const where: Prisma.tasksWhereInput = {};
@@ -122,25 +119,24 @@ export const getTasks = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const getTask = async (req: AuthRequest, res: Response) => {
+export const getTask = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
 
-    const task = await fetchSingleTask(prisma, id, req.userId!);
+    const task = await fetchSingleTask(prisma, id, (req as AuthRequest).userId!);
 
     if (!task) {
-      log.warn('Tarea no encontrada', { taskId: id, userId: req.userId });
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
     res.json(task);
-  } catch (error: unknown) {
-    log.error('Error en getTask', error, { taskId: req.params.id, userId: req.userId });
+  } catch (error) {
+    console.error('Error en getTask:', error);
     res.status(500).json({ error: 'Error al obtener tarea' });
   }
 };
 
-export const createTask = async (req: AuthRequest, res: Response) => {
+export const createTask = async (req: any, res: Response) => {
   try {
     const {
       titulo,
@@ -152,19 +148,17 @@ export const createTask = async (req: AuthRequest, res: Response) => {
       parentTaskId,
       orden,
       labelIds,
-    } = req.body as CreateTaskPayload & { fechaVencimiento?: string; parentTaskId?: string; orden?: number };
+    } = req.body;
 
     // Validación de formato ya realizada por middleware
     // Verificación de existencia del proyecto (validación de negocio)
-    const userId = req.userId!;
+    const userId = (req as AuthRequest).userId!;
 
     // Verificar que el proyecto pertenece al usuario
     try {
       await assertProjectPermission(prisma, projectId, userId, 'write');
-    } catch (error: unknown) {
-      const err = error as { status?: number; message?: string };
-      log.warn('Permiso denegado al crear tarea', { projectId, userId, error: err.message });
-      return res.status(err.status || 500).json({ error: err.message || 'Permisos insuficientes' });
+    } catch (error: any) {
+      return res.status(error.status || 500).json({ error: error.message || 'Permisos insuficientes' });
     }
 
     const parsedDueDate = parseDateInput(fechaVencimiento);
@@ -172,7 +166,6 @@ export const createTask = async (req: AuthRequest, res: Response) => {
     if (labelIds?.length) {
       const invalidLabelIds = await findUnauthorizedLabelIds(prisma, labelIds, userId);
       if (invalidLabelIds.length > 0) {
-        log.warn('Etiquetas no autorizadas en creación de tarea', { labelIds: invalidLabelIds, userId });
         return res.status(403).json({
           error: 'No tienes acceso a una o más etiquetas',
           invalidLabelIds,

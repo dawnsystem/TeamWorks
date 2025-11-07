@@ -174,24 +174,6 @@ model users {
   task_templates     task_templates[]
   ownedShares        project_shares[]     @relation("ProjectShareOwner")
   sharedProjects     project_shares[]     @relation("ProjectShareUser")
-  refreshTokens      refresh_tokens[]
-}
-
-model refresh_tokens {
-  id         String    @id @default(cuid())
-  userId     String
-  token      String    @unique
-  expiresAt  DateTime
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime  @default(now())
-  deviceInfo String?
-  ipAddress  String?
-  isRevoked  Boolean   @default(false)
-  revokedAt  DateTime?
-  user       users     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([token])
 }
 
 enum ProjectShareRole {

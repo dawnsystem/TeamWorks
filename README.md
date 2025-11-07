@@ -1,7 +1,5 @@
 # TeamWorks - Gestión de Tareas con IA
 
-> ⭐ **ACTUALIZACIÓN v2.3.0**: ¡Motor de IA mejorado con Intent Shield! Sistema robusto de parsing, análisis de intención y decisión automática. Mejor comprensión, menos errores, experiencia más fluida. [Ver cambios en el motor de IA →](./server/README.md#sistema-de-ia-mejorado)
-
 > ⭐ **ACTUALIZACIÓN v2.2.0**: ¡Nueva interfaz responsive optimizada para móviles y tablets! Diseño adaptativo que detecta automáticamente tu dispositivo y ajusta la UI para la mejor experiencia. [Ver documentación completa →](./DOCUMENTATION.md)
 
 Aplicación web de gestión de tareas inspirada en Todoist, con un potente asistente de IA integrado que permite crear, modificar y gestionar tareas usando lenguaje natural. **Ahora completamente optimizada para dispositivos móviles, tablets y escritorio.**
@@ -20,43 +18,15 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - 🎯 **Drag & Drop** - Reordena tareas arrastrándolas desde cualquier parte
 
 ### Asistente de IA Avanzado ✨
-
-#### 🛡️ Intent Shield - Inteligencia Adaptativa ⭐ NUEVO
-- **Ejecución automática** - Comandos claros (confidence >= 85%) se ejecutan inmediatamente
-- **Confirmación inteligente** - Comandos medianamente claros (60-85%) solicitan confirmación
-- **Clarificación proactiva** - Comandos ambiguos (<60%) piden más detalles
-- **Parsing robusto** - Maneja múltiples formatos de respuesta (JSON, texto mixto, bloques código)
-- **Telemetría integrada** - Métricas de calidad y rendimiento del motor de IA
-
-#### 🎯 Tres Modos de Interacción
-- **ASK (Preguntar)** - Resuelve dudas y obtén consejos sin ejecutar acciones
-  - Ejemplo: *"¿Cómo organizo mejor mis tareas?"*
-- **PLAN (Planificar)** - Crea planes estructurados para proyectos complejos
-  - Ejemplo: *"Quiero lanzar una campaña de marketing en 3 meses"*
-- **AGENT (Agente Autónomo)** - Conversación natural que ejecuta acciones automáticamente
-  - Ejemplo: *"Necesito organizar mi mudanza" → La IA pregunta, entiende y crea todo*
-
-**La IA sugiere cambiar de modo** cuando es apropiado. [Ver guía completa de modos →](./docs/AI_MODES_GUIDE.md)
-
-#### Capacidades Avanzadas
 - 🤖 **Lenguaje natural** - Crea y gestiona tareas hablando normalmente
 - 📝 **Creación completa** - Especifica proyecto, sección, etiquetas, fechas y subtareas en un comando
   - Ejemplo: *"añadir reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"*
 - 🔗 **Subtareas vía IA** - Crea subtareas directamente con comandos
   - Ejemplo: *"añadir diseñar mockups como subtarea de proyecto web"*
-- 🌳 **Subtareas anidadas ilimitadas** - Crea tareas con subtareas que a su vez tienen subtareas, sin límite de profundidad
-  - Ejemplo: *"crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"*
 - 🎯 **Bulk actions** - Crea múltiples tareas a la vez
   - Ejemplo: *"crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"*
 - 🔄 **Actualización inteligente** - Cambia prioridad, fecha, proyecto de tareas existentes
   - Ejemplo: *"cambiar prioridad de comprar leche a alta"*
-- 📦 **Operaciones en bulk avanzadas** - Mueve, actualiza o elimina múltiples tareas con filtros sofisticados
-  - Ejemplo: *"mover todas las tareas de alta prioridad al proyecto Urgente"*
-  - Ejemplo: *"eliminar todas las tareas completadas del proyecto Personal de la semana pasada"*
-- ↕️ **Reorganización de tareas** - Reordena tareas en listas, muévelas arriba/abajo
-  - Ejemplo: *"mover la tarea comprar leche arriba de sacar basura"*
-  - Ejemplo: *"reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"*
-- 💬 **Conversacional inteligente** - Mantiene contexto de conversación y hace preguntas aclaratorias
 - 📅 **Fechas inteligentes** - Entiende "hoy", "mañana", "próximo lunes", "en 3 días", "en 2 semanas"
 - 🔍 **Consultas** - Pregunta por tareas pendientes, de hoy, de la semana, etc.
 - 🎉 **Auto-creación** - Proyectos, secciones y etiquetas se crean automáticamente si no existen
@@ -65,9 +35,9 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 - ⏰ **Recordatorios** - Crea recordatorios directamente con la IA
   - Ejemplo: *"recordarme mañana a las 9am sobre reunión cliente"*
 - 🧠 **Motores IA seleccionables** - Cambia entre Groq (LLaMA 3.1) y Google Gemini 1.5 según tu caso de uso
-- 🗺️ **AI Planner** - Genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
-- 🔁 **Fallback automático** - Si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
-- ⚙️ **Automatizaciones inteligentes** - Al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
+- 🗺️ **AI Planner** ⭐ NUEVO: genera planes completos en modo automático o interactivo (la IA te hace preguntas antes de proponer fases y tareas). Convierte el plan en tareas con un clic.
+- 🔁 **Fallback automático** ⭐ NUEVO: si el proveedor configurado falla, el sistema intenta con el otro motor disponible antes de mostrar un error.
+- ⚙️ **Automatizaciones inteligentes** ⭐ NUEVO: al crear/editar tareas, se sugieren ajustes (ej. prioridad alta sin fecha → se vence hoy, único contenedor → se asigna sección). Las notas aparecen en el editor.
 
 ### Gestión Inteligente de Relaciones 🧠 (Próximamente)
 - 🎊 **Popup inteligente** - Al completar la última subtarea, te preguntará:
@@ -350,21 +320,6 @@ El asistente de IA puede interpretar comandos en lenguaje natural:
 
 "crear proyecto de trabajo"
 → Crea un nuevo proyecto llamado "trabajo"
-
-⭐ "crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"
-→ Crea tarea con subtareas anidadas en múltiples niveles
-
-⭐ "mover todas las tareas de alta prioridad al proyecto Urgente"
-→ Mueve en bulk todas las tareas P1 a otro proyecto
-
-⭐ "eliminar todas las tareas completadas del proyecto Personal de la semana pasada"
-→ Elimina tareas con filtros avanzados (proyecto, estado, fecha)
-
-⭐ "mover la tarea comprar leche arriba de sacar basura"
-→ Reordena tareas en la lista
-
-⭐ "reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"
-→ Reordena múltiples tareas en orden específico
 
 "generar plan para lanzar campaña de marketing"
 → Abre el AI Planner; puedes elegir modo automático o responder preguntas antes de obtener el plan.

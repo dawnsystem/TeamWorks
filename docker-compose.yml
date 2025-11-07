@@ -7,8 +7,6 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-teamworks}
       POSTGRES_USER: ${POSTGRES_USER:-teamworks}
-      # ⚠️ SECURITY WARNING: Change the default password in production!
-      # Set POSTGRES_PASSWORD in your .env file with a strong password
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teamworks}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
