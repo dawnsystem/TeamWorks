@@ -970,10 +970,6 @@ async function executeMoveBulk(action: AIAction, userId: string, prisma: any) {
  * Execute reorder operation
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-/**
- * Execute reorder operation
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeReorder(action: AIAction, userId: string, prisma: any) {
   if (action.entity !== 'task') return null;
 

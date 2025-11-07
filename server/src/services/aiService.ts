@@ -1811,6 +1811,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                         projectId: task.projectId,
                         sectionId: task.sectionId,
                         parentTaskId: task.parentTaskId,
+                        id: { not: task.id },
                       },
                       orderBy: { orden: 'desc' },
                     });
@@ -1823,6 +1824,7 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                       projectId: task.projectId,
                       sectionId: task.sectionId,
                       parentTaskId: task.parentTaskId,
+                      id: { not: task.id },
                     },
                     orderBy: { orden: 'desc' },
                   });
