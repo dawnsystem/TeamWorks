@@ -445,6 +445,123 @@ Listo para producción SI SE IMPLEMENTAN las 4 recomendaciones de prioridad alta
 
 ---
 
+### TSK-005: Implementación de Sistema de Refresh Tokens
+**Fecha**: 2025-11-07 (Planificado)  
+**Agente**: Por asignar  
+**Estado**: 📋 Planificado  
+**Prioridad**: MEDIA  
+**Esfuerzo Estimado**: 8 horas
+
+#### Objetivos de la Sesión
+- [ ] Diseñar e implementar sistema de refresh tokens
+- [ ] Crear schema de base de datos para refresh tokens
+- [ ] Modificar sistema de autenticación (register, login, refresh, logout)
+- [ ] Implementar renovación automática en cliente
+- [ ] Añadir gestión de sesiones activas
+- [ ] Implementar cron job de limpieza de tokens expirados
+- [ ] Tests completos (unitarios, integración, E2E)
+
+#### Contexto
+Esta tarea aborda la vulnerabilidad **MEDIUM-2** identificada en TSK-004:
+- **Problema**: JWT válido por 7 días sin mecanismo de revocación
+- **Riesgo**: Tokens robados permanecen válidos hasta expiración
+- **Solución**: Access tokens cortos (15-30 min) + Refresh tokens largos (7-30 días)
+
+#### Arquitectura Propuesta
+1. **Access Token**: JWT de corta duración (15-30 minutos)
+2. **Refresh Token**: Almacenado en BD (hash), duración larga (7-30 días)
+3. **Rotación**: Nuevo refresh token en cada renovación
+4. **Revocación**: Usuario puede invalidar sesiones activas
+5. **Device Tracking**: Registro de dispositivos y IPs
+
+#### Cambios Técnicos Planificados
+
+**Archivos a Crear**:
+- `TSK-005_REFRESH_TOKENS_PLAN.md` - Plan detallado (✅ completado)
+- `server/prisma/migrations/XXX_add_refresh_tokens/migration.sql`
+- `server/src/services/refreshTokenService.ts`
+- `server/src/types/auth.ts`
+- `server/src/cron/cleanExpiredTokens.ts`
+- `client/src/lib/tokenManager.ts`
+- `server/src/__tests__/refreshTokenService.test.ts`
+- `server/src/__tests__/authFlow.test.ts`
+
+**Archivos a Modificar**:
+- `server/src/controllers/authController.ts` - Añadir endpoints refresh, logout, logout-all
+- `server/src/middleware/auth.ts` - Manejar tokens de corta duración
+- `server/src/routes/authRoutes.ts` - Nuevas rutas
+- `client/src/lib/api.ts` - Interceptor para renovación automática
+- `.env.example` - Variables JWT_ACCESS_TOKEN_EXPIRES_IN, JWT_REFRESH_TOKEN_EXPIRES_IN
+- Prisma schema - Modelo RefreshToken
+
+#### Plan de Implementación
+
+**Sprint 1 (2h)**: Base de datos y servicio
+- Schema Prisma + migración
+- refreshTokenService.ts completo
+- Tests unitarios del servicio
+
+**Sprint 2 (3h)**: Backend auth
+- Modificar authController
+- Actualizar middleware
+- Nuevas rutas (refresh, logout, sessions)
+- Tests de integración
+
+**Sprint 3 (2h)**: Frontend
+- tokenManager.ts
+- Interceptor axios con renovación automática
+- Actualizar flujo de login/logout
+- Tests E2E
+
+**Sprint 4 (1h)**: Finalización
+- Cron job limpieza
+- Documentación
+- Testing en staging
+
+#### Decisiones de Diseño
+1. **Almacenamiento de Refresh Token en Cliente**:
+   - Decisión pendiente: HttpOnly Cookie (más seguro) vs localStorage (más simple)
+   - Recomendación: HttpOnly Cookie
+
+2. **Duración de Tokens**:
+   - Access Token: 15 minutos (configurable)
+   - Refresh Token: 7 días (configurable)
+
+3. **Estrategia de Rotación**:
+   - Rotar refresh token en cada renovación
+   - Detectar reutilización = posible robo
+
+4. **Migración**:
+   - Compatibilidad con tokens antiguos durante 30 días
+   - Flag de feature: ENABLE_REFRESH_TOKENS
+   - Migración automática en próximo login
+
+#### Notas y Observaciones
+- Esta tarea es resultado de TSK-004 (Auditoría de Seguridad)
+- Requiere coordinación entre backend y frontend
+- Cambio no-breaking con período de migración
+- Mejora significativa de seguridad con impacto mínimo en UX
+- Plan completo documentado en `TSK-005_REFRESH_TOKENS_PLAN.md`
+
+#### Criterios de Aceptación
+- [ ] Access tokens expiran en 15-30 minutos
+- [ ] Refresh tokens funcionan correctamente
+- [ ] Renovación automática en cliente sin intervención del usuario
+- [ ] Usuario puede ver y revocar sesiones activas
+- [ ] Logout revoca refresh token
+- [ ] Cron job limpia tokens expirados
+- [ ] Tests >= 80% cobertura
+- [ ] Documentación actualizada
+- [ ] Migración sin interrupciones
+
+#### Referencias
+- Issue/Ticket: TSK-005 - Sistema de Refresh Tokens
+- Relacionado: TSK-004 (Vulnerabilidad MEDIUM-2)
+- Documento: `TSK-005_REFRESH_TOKENS_PLAN.md`
+- Standards: RFC 6749 (OAuth 2.0), OWASP JWT Cheat Sheet
+
+---
+
 ## Plantilla para Nuevas Sesiones
 
 ### TSK-XXX: [Título de la sesión]
@@ -512,5 +629,5 @@ Seguir Conventional Commits:
 
 ---
 
-*Última actualización: 2025-11-07 13:12 UTC*
+*Última actualización: 2025-11-07 13:30 UTC*
 *Última auditoría de seguridad: 2025-11-07 - Ver INFORME_AUDITORIA_SEGURIDAD.md*
