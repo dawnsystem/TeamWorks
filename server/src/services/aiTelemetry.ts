@@ -183,11 +183,14 @@ export const recordFallback = (fromProvider: string, toProvider: string, reason:
 
 /**
  * Registra un confidence score
+ * Usa promedio incremental (Welford's method) para mejor precisión numérica
  */
 export const recordConfidence = (confidence: number) => {
-  metrics.confidenceSum += confidence;
   metrics.confidenceCount++;
-  metrics.averageConfidence = metrics.confidenceSum / metrics.confidenceCount;
+  const delta = confidence - metrics.averageConfidence;
+  metrics.averageConfidence += delta / metrics.confidenceCount;
+  // Mantener sum para compatibilidad con reseteo
+  metrics.confidenceSum = metrics.averageConfidence * metrics.confidenceCount;
   
   logEvent({
     type: 'confidence_recorded',

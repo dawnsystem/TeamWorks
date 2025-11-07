@@ -70,9 +70,10 @@ const detectAmbiguity = (actions: AIAction[], rawText: string): boolean => {
     return uncertaintyKeywords.some(keyword => explanation.includes(keyword));
   });
   
-  // Verificar si el texto original tiene múltiples interpretaciones posibles
-  const hasMultipleInterpretations = rawText.toLowerCase().includes('o') && 
-                                      rawText.toLowerCase().includes('?');
+  // Verificar si el texto original es una pregunta con alternativas (usando " o " con espacios)
+  const lowerRawText = rawText.toLowerCase();
+  const hasQuestionWithAlternatives = lowerRawText.includes('?') && 
+                                       (lowerRawText.includes(' o ') || lowerRawText.includes(' or '));
   
   // Verificar si hay acciones conflictivas (ej: create y delete para la misma entidad)
   const hasConflictingActions = actions.length > 1 && actions.some((action, i) => {
@@ -83,7 +84,7 @@ const detectAmbiguity = (actions: AIAction[], rawText: string): boolean => {
     );
   });
   
-  return hasUncertainExplanation || hasMultipleInterpretations || hasConflictingActions;
+  return hasUncertainExplanation || hasQuestionWithAlternatives || hasConflictingActions;
 };
 
 /**

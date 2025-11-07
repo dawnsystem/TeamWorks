@@ -190,43 +190,43 @@ const tryAggressiveJSONExtraction = (text: string): ParseResult => {
 };
 
 /**
- * Parsing heurístico verbal - último recurso
+ * Parsing heuristic verbal - último recurso
  * Intenta entender la intención sin JSON válido
  */
+
+// Constantes para heurística de parsing
+const HEURISTIC_CREATE_KEYWORDS = ['crear', 'añadir', 'agregar', 'nuevo', 'nueva', 'create', 'add', 'new'];
+const HEURISTIC_UPDATE_KEYWORDS = ['actualizar', 'modificar', 'cambiar', 'editar', 'update', 'modify', 'change', 'edit'];
+const HEURISTIC_DELETE_KEYWORDS = ['eliminar', 'borrar', 'quitar', 'delete', 'remove'];
+const HEURISTIC_QUERY_KEYWORDS = ['buscar', 'encontrar', 'listar', 'mostrar', 'ver', 'search', 'find', 'list', 'show'];
+
+const HEURISTIC_ENTITY_KEYWORDS: Record<string, string[]> = {
+  task: ['tarea', 'task'],
+  project: ['proyecto', 'project'],
+  label: ['etiqueta', 'label'],
+  section: ['sección', 'section'],
+  comment: ['comentario', 'comment'],
+  reminder: ['recordatorio', 'reminder']
+};
+
 const tryHeuristicParsing = (text: string): ParseResult => {
   const lowerText = text.toLowerCase();
   
-  // Palabras clave para detectar tipo de acción
-  const createKeywords = ['crear', 'añadir', 'agregar', 'nuevo', 'nueva', 'create', 'add', 'new'];
-  const updateKeywords = ['actualizar', 'modificar', 'cambiar', 'editar', 'update', 'modify', 'change', 'edit'];
-  const deleteKeywords = ['eliminar', 'borrar', 'quitar', 'delete', 'remove'];
-  const queryKeywords = ['buscar', 'encontrar', 'listar', 'mostrar', 'ver', 'search', 'find', 'list', 'show'];
-  
-  // Entidades
-  const entityKeywords = {
-    task: ['tarea', 'task'],
-    project: ['proyecto', 'project'],
-    label: ['etiqueta', 'label'],
-    section: ['sección', 'section'],
-    comment: ['comentario', 'comment'],
-    reminder: ['recordatorio', 'reminder']
-  };
-  
   // Detectar tipo de acción
   let actionType: string = 'query';
-  if (createKeywords.some(kw => lowerText.includes(kw))) {
+  if (HEURISTIC_CREATE_KEYWORDS.some(kw => lowerText.includes(kw))) {
     actionType = 'create';
-  } else if (updateKeywords.some(kw => lowerText.includes(kw))) {
+  } else if (HEURISTIC_UPDATE_KEYWORDS.some(kw => lowerText.includes(kw))) {
     actionType = 'update';
-  } else if (deleteKeywords.some(kw => lowerText.includes(kw))) {
+  } else if (HEURISTIC_DELETE_KEYWORDS.some(kw => lowerText.includes(kw))) {
     actionType = 'delete';
-  } else if (queryKeywords.some(kw => lowerText.includes(kw))) {
+  } else if (HEURISTIC_QUERY_KEYWORDS.some(kw => lowerText.includes(kw))) {
     actionType = 'query';
   }
   
   // Detectar entidad
   let entity: string = 'task';
-  for (const [ent, keywords] of Object.entries(entityKeywords)) {
+  for (const [ent, keywords] of Object.entries(HEURISTIC_ENTITY_KEYWORDS)) {
     if (keywords.some(kw => lowerText.includes(kw))) {
       entity = ent;
       break;

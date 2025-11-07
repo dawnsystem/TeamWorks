@@ -6,7 +6,6 @@ import { assessIntent, IntentAssessment } from './intentShield';
 import * as telemetry from './aiTelemetry';
 import { 
   parseActionsFromTextWithMetadata, 
-  parseActionsFromText as parseActionsOriginal,
   ParseResult
 } from './ai/actionParser';
 
@@ -609,9 +608,10 @@ export const processNaturalLanguage = async (
     }
     
     // Evaluar intención con Intent Shield
+    // Note: Type compatibility - both AIAction interfaces have same structure
     const intentAssessment: IntentAssessment = assessIntent(
       input,
-      actions as any, // Cast necesario debido a diferencias de tipos
+      actions,
       parseResult.parsingConfidence
     );
     
