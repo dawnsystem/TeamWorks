@@ -10,7 +10,14 @@
 export interface AIAction {
   type: string;
   entity: string;
-  data?: Record<string, unknown>;
+  /**
+   * Data contiene información específica de la acción
+   * TODO (TSK-005): Refactorizar para usar tipos específicos por action.type
+   * Por ejemplo: CreateTaskData, UpdateTaskData, QueryTaskData, etc.
+   * Actualmente usa `any` para mantener compatibilidad con código existente.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data?: any;
   query?: string;
   confidence: number;
   explanation: string;
