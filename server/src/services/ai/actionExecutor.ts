@@ -970,6 +970,10 @@ async function executeMoveBulk(action: AIAction, userId: string, prisma: any) {
  * Execute reorder operation
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+/**
+ * Execute reorder operation
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function executeReorder(action: AIAction, userId: string, prisma: any) {
   if (action.entity !== 'task') return null;
 
@@ -987,52 +991,90 @@ async function executeReorder(action: AIAction, userId: string, prisma: any) {
     throw new Error(`Task not found: ${data.taskTitle}`);
   }
 
-  // Find the reference task
-  const referenceTask = await prisma.tasks.findFirst({
-    where: {
-      titulo: { contains: data.referenceTaskTitle, mode: 'insensitive' },
-      projects: projectAccessQuery(userId),
-      projectId: taskToMove.projectId,
-    },
-  });
-
-  if (!referenceTask) {
-    throw new Error(`Reference task not found: ${data.referenceTaskTitle}`);
-  }
-
-  // Calculate new orden based on position
   let newOrden: number;
-  if (data.position === 'before') {
-    // Get task before reference
-    const taskBefore = await prisma.tasks.findFirst({
-      where: {
-        projectId: referenceTask.projectId,
-        sectionId: referenceTask.sectionId,
-        orden: { lt: referenceTask.orden },
-      },
-      orderBy: { orden: 'desc' },
-    });
 
-    if (taskBefore) {
-      newOrden = (taskBefore.orden + referenceTask.orden) / 2;
-    } else {
-      newOrden = referenceTask.orden - 1;
-    }
-  } else {
-    // position === 'after'
-    const taskAfter = await prisma.tasks.findFirst({
+  // Handle special positions: start, end
+  if (data.position === 'start') {
+    // Move to start - set orden to minimum - 1000
+    const minTask = await prisma.tasks.findFirst({
       where: {
-        projectId: referenceTask.projectId,
-        sectionId: referenceTask.sectionId,
-        orden: { gt: referenceTask.orden },
+        projectId: taskToMove.projectId,
+        sectionId: taskToMove.sectionId || null,
+        id: { not: taskToMove.id },
       },
       orderBy: { orden: 'asc' },
     });
 
-    if (taskAfter) {
-      newOrden = (referenceTask.orden + taskAfter.orden) / 2;
+    if (minTask) {
+      newOrden = minTask.orden - 1;
     } else {
-      newOrden = referenceTask.orden + 1;
+      newOrden = -1;
+    }
+  } else if (data.position === 'end') {
+    // Move to end - set orden to maximum + 1
+    const maxTask = await prisma.tasks.findFirst({
+      where: {
+        projectId: taskToMove.projectId,
+        sectionId: taskToMove.sectionId || null,
+        id: { not: taskToMove.id },
+      },
+      orderBy: { orden: 'desc' },
+    });
+
+    if (maxTask) {
+      newOrden = maxTask.orden + 1;
+    } else {
+      newOrden = 0;
+    }
+  } else {
+    // Handle before/after positions relative to a reference task
+    // Find the reference task
+    const referenceTask = await prisma.tasks.findFirst({
+      where: {
+        titulo: { contains: data.referenceTaskTitle, mode: 'insensitive' },
+        projects: projectAccessQuery(userId),
+        projectId: taskToMove.projectId,
+      },
+    });
+
+    if (!referenceTask) {
+      throw new Error(`Reference task not found: ${data.referenceTaskTitle}`);
+    }
+
+    if (data.position === 'before') {
+      // Get task before reference
+      const taskBefore = await prisma.tasks.findFirst({
+        where: {
+          projectId: referenceTask.projectId,
+          sectionId: referenceTask.sectionId,
+          orden: { lt: referenceTask.orden },
+          id: { not: taskToMove.id },
+        },
+        orderBy: { orden: 'desc' },
+      });
+
+      if (taskBefore) {
+        newOrden = (taskBefore.orden + referenceTask.orden) / 2;
+      } else {
+        newOrden = referenceTask.orden - 1;
+      }
+    } else {
+      // position === 'after'
+      const taskAfter = await prisma.tasks.findFirst({
+        where: {
+          projectId: referenceTask.projectId,
+          sectionId: referenceTask.sectionId,
+          orden: { gt: referenceTask.orden },
+          id: { not: taskToMove.id },
+        },
+        orderBy: { orden: 'asc' },
+      });
+
+      if (taskAfter) {
+        newOrden = (referenceTask.orden + taskAfter.orden) / 2;
+      } else {
+        newOrden = referenceTask.orden + 1;
+      }
     }
   }
 

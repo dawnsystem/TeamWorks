@@ -383,7 +383,9 @@ describe('Enhanced AI Actions', () => {
       const mockReferenceTask = { id: 'task2', titulo: 'Take out trash', orden: 3, projectId: 'proj1', sectionId: null };
       const mockTaskBefore = { id: 'task0', orden: 2, projectId: 'proj1', sectionId: null };
       
-      (mockPrisma.tasks.findFirst as jest.Mock)
+      const mockFindFirst = mockPrisma.tasks.findFirst as jest.Mock;
+      mockFindFirst.mockClear();
+      mockFindFirst
         .mockResolvedValueOnce(mockTask)
         .mockResolvedValueOnce(mockReferenceTask)
         .mockResolvedValueOnce(mockTaskBefore);
