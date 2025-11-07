@@ -1,10 +1,9 @@
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { assertProjectPermission } from './projectShareService';
-import { AIProviderKeys } from './ai/types';
+import { AIProviderKeys, SupportedAIProvider } from './ai/types';
 
-const SUPPORTED_AI_PROVIDERS = ['groq', 'gemini'] as const;
-type SupportedAIProvider = (typeof SUPPORTED_AI_PROVIDERS)[number];
+const SUPPORTED_AI_PROVIDERS: readonly SupportedAIProvider[] = ['groq', 'gemini'];
 
 const DEFAULT_GROQ_MODEL = process.env.GROQ_MODEL || 'llama-3.1-8b-instant';
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
@@ -14,7 +13,7 @@ let groqClient: Groq | null = null;
 let geminiModel: ReturnType<GoogleGenerativeAI['getGenerativeModel']> | null = null;
 
 // Re-export types for external use
-export type { AIProviderKeys };
+export type { AIProviderKeys, SupportedAIProvider };
 
 /**
  * Get API key with fallback priority:
