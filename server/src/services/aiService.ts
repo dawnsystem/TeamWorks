@@ -2,6 +2,13 @@ import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { assertProjectPermission } from './projectShareService';
 import { AIProviderKeys, SupportedAIProvider, getApiKey } from './ai/types';
+import { assessIntent, IntentAssessment } from './intentShield';
+import * as telemetry from './aiTelemetry';
+import { 
+  parseActionsFromTextWithMetadata, 
+  parseActionsFromText as parseActionsOriginal,
+  ParseResult
+} from './ai/actionParser';
 
 const SUPPORTED_AI_PROVIDERS: readonly SupportedAIProvider[] = ['groq', 'gemini'];
 
@@ -83,19 +90,150 @@ const getProviderOrder = (preferred: SupportedAIProvider, override?: string, use
   return ordered;
 };
 
-const generateWithProvider = async (prompt: string, provider: SupportedAIProvider, userKeys?: AIProviderKeys): Promise<string> => {
+/**
+ * Construye un system prompt robusto para el proveedor de IA
+ * 
+ * @param provider - Proveedor de IA (groq, gemini)
+ * @param context - Contexto del usuario (proyectos, tareas recientes, etc.)
+ * @param options - Opciones adicionales
+ * @returns System prompt estructurado
+ */
+interface SystemPromptOptions {
+  includeExamples?: boolean;
+  conversationHistory?: Array<{ role: string; content: string }>;
+}
+
+const buildSystemPrompt = (
+  provider: SupportedAIProvider,
+  context?: any,
+  options: SystemPromptOptions = {}
+): string => {
+  const { includeExamples = true, conversationHistory = [] } = options;
+  
+  // Construcción del prompt base
+  let systemPrompt = `Eres el Asistente de TeamWorks, una aplicación de gestión de tareas.
+
+TU ROL:
+Interpretas comandos en lenguaje natural para crear, editar, eliminar, consultar, completar tareas, proyectos, etiquetas, secciones, comentarios y recordatorios.
+
+FORMATO DE SALIDA OBLIGATORIO:
+Debes responder ÚNICAMENTE con un array JSON válido. No incluyas texto adicional, explicaciones previas ni bloques de código markdown.
+
+El array debe contener objetos con esta estructura:
+[
+  {
+    "type": "create" | "update" | "delete" | "query" | "complete" | "create_bulk" | "update_bulk" | "delete_bulk" | "move_bulk" | "reorder" | "create_project" | "create_section" | "create_label" | "add_comment" | "create_reminder" | "create_with_subtasks",
+    "entity": "task" | "project" | "label" | "section" | "comment" | "reminder",
+    "data": { /* datos específicos según la acción */ },
+    "query": "texto de consulta si aplica",
+    "confidence": 0.0 a 1.0,
+    "explanation": "breve explicación de tu interpretación"
+  }
+]
+
+CAMPOS OBLIGATORIOS:
+- type: tipo de acción
+- entity: entidad afectada
+- confidence: tu nivel de certeza (0.0 = muy incierto, 1.0 = muy seguro)
+- explanation: explicación breve en español
+
+CAMPOS OPCIONALES:
+- data: para create/update (ej: {"titulo": "Nueva tarea", "prioridad": 3})
+- query: para delete/query (criterio de búsqueda)`;
+
+  // Añadir contexto del usuario si está disponible
+  if (context) {
+    systemPrompt += `\n\nCONTEXTO DEL USUARIO:`;
+    
+    if (context.projects && Array.isArray(context.projects)) {
+      const projectNames = context.projects.slice(0, 5).map((p: any) => p.nombre).join(', ');
+      systemPrompt += `\nProyectos disponibles: ${projectNames}`;
+    }
+    
+    if (context.recentTasks && Array.isArray(context.recentTasks)) {
+      systemPrompt += `\nTareas recientes: ${context.recentTasks.length} tareas pendientes`;
+    }
+  }
+
+  // Añadir historial de conversación si existe
+  if (conversationHistory.length > 0) {
+    systemPrompt += `\n\nHISTORIAL DE CONVERSACIÓN RECIENTE:`;
+    conversationHistory.slice(-6).forEach(msg => {
+      systemPrompt += `\n${msg.role}: ${msg.content.substring(0, 100)}`;
+    });
+  }
+
+  // Añadir reglas de comportamiento
+  systemPrompt += `\n\nREGLAS DE COMPORTAMIENTO:
+1. Si el comando es AMBIGUO o NO ESTÁS SEGURO (confidence < 0.6):
+   - Establece confidence bajo (< 0.6)
+   - En explanation, menciona qué te falta para estar seguro
+   
+2. Si el comando es CLARO pero tienes DUDAS MENORES (confidence 0.6-0.85):
+   - Establece confidence medio
+   - Proporciona la mejor interpretación posible
+   
+3. Si el comando es COMPLETAMENTE CLARO (confidence >= 0.85):
+   - Establece confidence alto
+   - Procede con confianza
+
+4. SÉ CONCISO: Tus explanation deben ser breves (máximo 1-2 líneas)
+
+5. PRIORIDADES: Cuando el usuario mencione prioridad, usa:
+   - alta/high/urgente → prioridad: 1
+   - media/medium → prioridad: 2
+   - baja/low → prioridad: 3
+   - muy baja → prioridad: 4`;
+
+  // Añadir ejemplos si se solicita
+  if (includeExamples) {
+    systemPrompt += `\n\nEJEMPLOS:
+
+Entrada: "crear tarea comprar leche para mañana"
+Salida: [{"type":"create","entity":"task","data":{"titulo":"comprar leche","fechaVencimiento":"mañana"},"confidence":0.95,"explanation":"Crear tarea con fecha clara"}]
+
+Entrada: "añadir reunión con equipo en proyecto Trabajo para el lunes con prioridad alta"
+Salida: [{"type":"create","entity":"task","data":{"titulo":"reunión con equipo","projectName":"Trabajo","fechaVencimiento":"lunes","prioridad":1},"confidence":0.9,"explanation":"Crear tarea en proyecto con prioridad alta"}]
+
+Entrada: "eliminar las tareas completadas"
+Salida: [{"type":"delete_bulk","entity":"task","query":"completadas","confidence":0.85,"explanation":"Eliminar todas las tareas marcadas como completadas"}]
+
+Entrada: "hacer algo"
+Salida: [{"type":"query","entity":"task","query":"hacer algo","confidence":0.3,"explanation":"Comando muy vago, necesito más detalles sobre qué deseas hacer"}]`;
+  }
+
+  systemPrompt += `\n\nRECUERDA: Responde SOLO con el array JSON, sin texto adicional ni bloques de código markdown.`;
+
+  return systemPrompt;
+};
+
+const generateWithProvider = async (
+  prompt: string,
+  provider: SupportedAIProvider,
+  userKeys?: AIProviderKeys,
+  context?: any,
+  systemPromptOptions?: SystemPromptOptions
+): Promise<string> => {
+  telemetry.recordRequest(provider);
+  
   if (provider === 'gemini') {
     const model = getGeminiModel(userKeys);
     const result = await model.generateContent(prompt);
     return result.response.text() || '';
   }
 
+  // Para Groq, usar system prompt estructurado
   const client = getGroqClient(userKeys);
+  const systemPrompt = buildSystemPrompt(provider, context, systemPromptOptions);
+  
   const completion = await client.chat.completions.create({
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: prompt }
+    ],
     model: DEFAULT_GROQ_MODEL,
     temperature: 0.7,
-    max_tokens: 1000,
+    max_tokens: 1500,
   });
 
   return completion.choices[0]?.message?.content || '';
@@ -106,19 +244,30 @@ const generateWithFallback = async (
   preferred: SupportedAIProvider,
   override?: string,
   userKeys?: AIProviderKeys,
+  context?: any,
+  systemPromptOptions?: SystemPromptOptions
 ): Promise<{ text: string; providerUsed: SupportedAIProvider }> => {
   const providersToTry = getProviderOrder(preferred, override, userKeys);
   const errors: string[] = [];
+  let lastError: any = null;
 
   for (const provider of providersToTry) {
     try {
-      const text = await generateWithProvider(prompt, provider, userKeys);
+      const text = await generateWithProvider(prompt, provider, userKeys, context, systemPromptOptions);
       if (!text.trim()) {
         throw new Error('Respuesta vacía');
       }
+      
+      // Si usamos un fallback, registrarlo
+      if (provider !== preferred) {
+        telemetry.recordFallback(preferred, provider, lastError?.message || 'Error en provider preferido');
+      }
+      
       return { text, providerUsed: provider };
     } catch (error: any) {
+      lastError = error;
       errors.push(`${provider}: ${error?.message || error}`);
+      telemetry.logAIWarning(`Provider ${provider} falló`, { error: error?.message });
     }
   }
 
@@ -242,29 +391,21 @@ export interface AIAction {
   explanation: string;
 }
 
-// Funciones helper para procesamiento de IA
-const parseActionsFromText = (text: string): AIAction[] => {
-  let jsonText = text.trim();
+// Wrapper para usar el parser mejorado con tipado correcto
+interface ExtendedParseResult {
+  actions: AIAction[];
+  parsingConfidence: number;
+  method: string;
+  error?: string;
+}
 
-  if (jsonText.startsWith('```json')) {
-    jsonText = jsonText.substring(7);
-  } else if (jsonText.startsWith('```')) {
-    jsonText = jsonText.substring(3);
-  }
-
-  if (jsonText.endsWith('```')) {
-    jsonText = jsonText.substring(0, jsonText.length - 3);
-  }
-
-  jsonText = jsonText.trim();
-
-  try {
-    const parsed = JSON.parse(jsonText);
-    return parsed.actions || [];
-  } catch (error) {
-    console.error('Error parseando respuesta de IA:', error);
-    return [];
-  }
+const parseActionsWithMetadata = (text: string): ExtendedParseResult => {
+  const result = parseActionsFromTextWithMetadata(text);
+  // Type assertion safe porque validamos la estructura en el parser
+  return {
+    ...result,
+    actions: result.actions as AIAction[]
+  };
 };
 
 const createFallbackAction = (input: string): AIAction => ({
@@ -283,6 +424,8 @@ export interface ProcessNaturalLanguageResult {
   raw?: string;
   fallback?: boolean;
   errorMessage?: string;
+  intentAssessment?: IntentAssessment;
+  parseResult?: ParseResult;
 }
 
 export interface AIPlanTask {
@@ -431,437 +574,57 @@ export const processNaturalLanguage = async (
   providerOverride?: string,
   userKeys?: AIProviderKeys,
 ): Promise<ProcessNaturalLanguageResult> => {
-  const contextString = context ? JSON.stringify(context, null, 2) : 'No hay contexto disponible';
   const preferred = resolveProvider(providerOverride, userKeys);
 
-  const prompt = `Eres un asistente de IA para una aplicación de gestión de tareas tipo Todoist. 
-Tu trabajo es interpretar comandos en lenguaje natural y convertirlos en acciones estructuradas.
-
-Contexto actual del usuario:
-${contextString}
-
-Comando del usuario: "${input}"
-
-Analiza el comando y devuelve un JSON con un array de acciones a realizar. Cada acción debe tener:
-- type: "create", "update", "update_bulk", "delete", "delete_bulk", "move_bulk", "reorder", "query", "complete", "create_bulk", "create_with_subtasks", "create_project", "create_section", "create_label", "add_comment" o "create_reminder"
-- entity: "task", "project", "label", "section", "comment" o "reminder"
-- data: objeto con los datos necesarios para la acción
-- query: para consultas, la pregunta a responder
-- confidence: número entre 0 y 1 indicando tu confianza en la interpretación
-- explanation: explicación breve de qué se va a hacer
-
-PROPIEDADES DISPONIBLES PARA TAREAS:
-- titulo: string (requerido)
-- descripcion: string (opcional)
-- prioridad: 1-4 (1=alta, 2=media, 3=baja, 4=sin prioridad)
-- fechaVencimiento: string (ver formatos de fecha abajo)
-- projectName: string (nombre del proyecto, busca en el contexto)
-- sectionName: string (nombre de la sección dentro del proyecto)
-- labelNames: array de strings (nombres de etiquetas)
-- parentTaskTitle: string (si es subtarea, título de la tarea padre)
-
-Ejemplos de comandos y respuestas:
-
-1. "añadir comprar leche para mañana prioridad alta en proyecto Personal"
-{
-  "actions": [{
-    "type": "create",
-    "entity": "task",
-    "data": {
-      "titulo": "Comprar leche",
-      "prioridad": 1,
-      "fechaVencimiento": "mañana",
-      "projectName": "Personal"
-    },
-    "confidence": 0.95,
-    "explanation": "Crear tarea 'Comprar leche' con prioridad alta para mañana en proyecto Personal"
-  }]
-}
-
-2. "completar la tarea de comprar pan"
-{
-  "actions": [{
-    "type": "complete",
-    "entity": "task",
-    "data": {
-      "search": "comprar pan"
-    },
-    "confidence": 0.9,
-    "explanation": "Marcar como completada la tarea 'comprar pan'"
-  }]
-}
-
-3. "qué tengo pendiente esta semana"
-{
-  "actions": [{
-    "type": "query",
-    "entity": "task",
-    "query": "Tareas pendientes de esta semana",
-    "data": {
-      "filter": "week",
-      "completada": false
-    },
-    "confidence": 0.95,
-    "explanation": "Consultar tareas pendientes de esta semana"
-  }]
-}
-
-4. "eliminar todas las tareas completadas"
-{
-  "actions": [{
-    "type": "delete",
-    "entity": "task",
-    "data": {
-      "filter": { "completada": true }
-    },
-    "confidence": 0.9,
-    "explanation": "Eliminar todas las tareas marcadas como completadas"
-  }]
-}
-
-4b. "eliminar todas las tareas en Inbox, dentro de la sección Seccion de test"
-{
-  "actions": [{
-    "type": "delete_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "projectName": "Inbox",
-        "sectionName": "Seccion de test"
-      }
-    },
-    "confidence": 0.95,
-    "explanation": "Eliminar todas las tareas del proyecto Inbox en la sección 'Seccion de test'"
-  }]
-}
-
-5. "crear 3 tareas: comprar pan, sacar basura y lavar ropa todas para hoy"
-{
-  "actions": [{
-    "type": "create_bulk",
-    "entity": "task",
-    "data": {
-      "tasks": [
-        {"titulo": "Comprar pan", "fechaVencimiento": "hoy"},
-        {"titulo": "Sacar basura", "fechaVencimiento": "hoy"},
-        {"titulo": "Lavar ropa", "fechaVencimiento": "hoy"}
-      ]
-    },
-    "confidence": 0.92,
-    "explanation": "Crear 3 tareas para hoy"
-  }]
-}
-
-6. "añadir tarea reunión con cliente en proyecto Trabajo sección Reuniones con etiqueta urgente para el próximo lunes"
-{
-  "actions": [{
-    "type": "create",
-    "entity": "task",
-    "data": {
-      "titulo": "Reunión con cliente",
-      "projectName": "Trabajo",
-      "sectionName": "Reuniones",
-      "labelNames": ["urgente"],
-      "fechaVencimiento": "próximo lunes"
-    },
-    "confidence": 0.93,
-    "explanation": "Crear tarea 'Reunión con cliente' en proyecto Trabajo, sección Reuniones, con etiqueta urgente para el próximo lunes"
-  }]
-}
-
-Prioridades:
-- P1 o "alta" o "urgente" o "muy importante" = 1
-- P2 o "media" o "normal" = 2
-- P3 o "baja" = 3
-- P4 o sin prioridad o "opcional" = 4
-
-Fechas (devuelve el texto descriptivo exacto):
-- "hoy" = tarea para hoy
-- "mañana" = tarea para mañana  
-- "pasado mañana" = tarea para pasado mañana
-- "esta semana" = próximos 7 días
-- "próximo lunes", "próximo martes", etc. = día de la semana siguiente
-- "este lunes", "este viernes", etc. = día de esta semana
-- "en 3 días", "en 1 semana", "en 2 semanas" = fecha relativa
-- Fechas específicas como "25 de diciembre", "15/10/2025" = devolver como están
-- Si no hay fecha: no incluir el campo fechaVencimiento
-
-Proyectos y Secciones:
-- Si el usuario menciona un proyecto, busca en el contexto su nombre exacto
-- Si menciona una sección, incluye también el proyecto
-- Si no se especifica proyecto, se usará Inbox por defecto
-
-Etiquetas:
-- Puedes incluir múltiples etiquetas en labelNames
-- Si no existen, se crearán automáticamente
-
-Bulk actions:
-- Si el usuario menciona crear varias tareas (ej: "crear 5 tareas", "añadir X, Y y Z")
-- Usa type "create_bulk" con un array de tasks en data.tasks
-- Cada tarea en el array debe tener las propiedades necesarias
-
-Subtareas:
-- Si el usuario quiere crear una subtarea de otra tarea, usa parentTaskTitle
-- La subtarea heredará el proyecto y sección de la tarea padre si no se especifica
-
-Proyectos, Secciones y Etiquetas:
-7. "crear proyecto Marketing con color azul"
-{
-  "actions": [{
-    "type": "create_project",
-    "entity": "project",
-    "data": {
-      "nombre": "Marketing",
-      "color": "#3b82f6"
-    },
-    "confidence": 0.95,
-    "explanation": "Crear proyecto 'Marketing' con color azul"
-  }]
-}
-
-8. "añadir sección Backlog en proyecto Desarrollo"
-{
-  "actions": [{
-    "type": "create_section",
-    "entity": "section",
-    "data": {
-      "nombre": "Backlog",
-      "projectName": "Desarrollo"
-    },
-    "confidence": 0.93,
-    "explanation": "Crear sección 'Backlog' en proyecto Desarrollo"
-  }]
-}
-
-9. "crear etiqueta urgente con color rojo"
-{
-  "actions": [{
-    "type": "create_label",
-    "entity": "label",
-    "data": {
-      "nombre": "urgente",
-      "color": "#ef4444"
-    },
-    "confidence": 0.95,
-    "explanation": "Crear etiqueta 'urgente' con color rojo"
-  }]
-}
-
-Comentarios y Recordatorios:
-10. "añadir comentario en tarea comprar leche: verificar si queda algo"
-{
-  "actions": [{
-    "type": "add_comment",
-    "entity": "comment",
-    "data": {
-      "taskTitle": "comprar leche",
-      "contenido": "verificar si queda algo"
-    },
-    "confidence": 0.90,
-    "explanation": "Añadir comentario en tarea 'comprar leche'"
-  }]
-}
-
-11. "recordarme mañana a las 9am sobre reunión cliente"
-{
-  "actions": [{
-    "type": "create_reminder",
-    "entity": "reminder",
-    "data": {
-      "taskTitle": "reunión cliente",
-      "fecha": "mañana 09:00"
-    },
-    "confidence": 0.88,
-    "explanation": "Crear recordatorio para mañana a las 9am sobre tarea 'reunión cliente'"
-  }]
-}
-
-Modificaciones en Bulk:
-12. "cambiar todas las tareas del proyecto Personal a prioridad alta"
-{
-  "actions": [{
-    "type": "update_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "projectName": "Personal"
-      },
-      "updates": {
-        "prioridad": 1
-      }
-    },
-    "confidence": 0.90,
-    "explanation": "Cambiar prioridad a alta de todas las tareas del proyecto Personal"
-  }]
-}
-
-13. "añadir etiqueta urgente a todas las tareas de hoy"
-{
-  "actions": [{
-    "type": "update_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "fechaVencimiento": "hoy"
-      },
-      "updates": {
-        "addLabelNames": ["urgente"]
-      }
-    },
-    "confidence": 0.88,
-    "explanation": "Añadir etiqueta 'urgente' a todas las tareas de hoy"
-  }]
-}
-
-14. "mover todas las tareas de sección Backlog a En Progreso"
-{
-  "actions": [{
-    "type": "update_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "sectionName": "Backlog"
-      },
-      "updates": {
-        "sectionName": "En Progreso"
-      }
-    },
-    "confidence": 0.85,
-    "explanation": "Mover todas las tareas de sección Backlog a En Progreso"
-  }]
-}
-
-Creación de tareas con subtareas anidadas:
-15. "crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend y desarrollar frontend"
-{
-  "actions": [{
-    "type": "create_with_subtasks",
-    "entity": "task",
-    "data": {
-      "titulo": "Proyecto web",
-      "prioridad": 2,
-      "subtasks": [
-        {
-          "titulo": "Diseñar mockups",
-          "prioridad": 1,
-          "subtasks": [
-            {"titulo": "Investigar tendencias", "prioridad": 2}
-          ]
-        },
-        {"titulo": "Desarrollar backend", "prioridad": 2},
-        {"titulo": "Desarrollar frontend", "prioridad": 2}
-      ]
-    },
-    "confidence": 0.90,
-    "explanation": "Crear tarea 'Proyecto web' con subtareas anidadas en múltiples niveles"
-  }]
-}
-
-Eliminación en bulk con filtros avanzados:
-16. "eliminar todas las tareas completadas del proyecto Personal de la semana pasada"
-{
-  "actions": [{
-    "type": "delete_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "projectName": "Personal",
-        "completada": true,
-        "dateRange": {
-          "type": "lastWeek"
-        }
-      }
-    },
-    "confidence": 0.88,
-    "explanation": "Eliminar tareas completadas del proyecto Personal de la semana pasada"
-  }]
-}
-
-Mover tareas en bulk:
-17. "mover todas las tareas de alta prioridad al proyecto Urgente"
-{
-  "actions": [{
-    "type": "move_bulk",
-    "entity": "task",
-    "data": {
-      "filter": {
-        "prioridad": 1
-      },
-      "target": {
-        "projectName": "Urgente"
-      }
-    },
-    "confidence": 0.90,
-    "explanation": "Mover todas las tareas de prioridad alta al proyecto Urgente"
-  }]
-}
-
-Reorganizar orden de tareas:
-18. "mover la tarea comprar leche arriba de sacar basura"
-{
-  "actions": [{
-    "type": "reorder",
-    "entity": "task",
-    "data": {
-      "taskTitle": "comprar leche",
-      "position": "before",
-      "referenceTaskTitle": "sacar basura"
-    },
-    "confidence": 0.85,
-    "explanation": "Reordenar tarea 'comprar leche' antes de 'sacar basura'"
-  }]
-}
-
-19. "poner la tarea reunión cliente al final de la lista"
-{
-  "actions": [{
-    "type": "reorder",
-    "entity": "task",
-    "data": {
-      "taskTitle": "reunión cliente",
-      "position": "end"
-    },
-    "confidence": 0.88,
-    "explanation": "Mover tarea 'reunión cliente' al final de la lista"
-  }]
-}
-
-20. "reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"
-{
-  "actions": [{
-    "type": "reorder",
-    "entity": "task",
-    "data": {
-      "tasks": [
-        {"taskTitle": "comprar pan", "orden": 0},
-        {"taskTitle": "sacar basura", "orden": 1},
-        {"taskTitle": "lavar ropa", "orden": 2}
-      ]
-    },
-    "confidence": 0.82,
-    "explanation": "Reorganizar múltiples tareas en orden específico"
-  }]
-}
-
-Colores disponibles:
-- rojo: #ef4444
-- naranja: #f59e0b
-- amarillo: #eab308
-- verde: #10b981
-- azul: #3b82f6
-- indigo: #6366f1
-- morado: #8b5cf6
-- rosa: #ec4899
-- gris: #6b7280
-
-IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON debe ser válido y parseable.`;
-
   try {
-    const { text, providerUsed } = await generateWithFallback(prompt, preferred, providerOverride, userKeys);
-    const actions = parseActionsFromText(text);
+    // Generar respuesta usando el system prompt mejorado
+    const { text, providerUsed } = await generateWithFallback(
+      input, 
+      preferred, 
+      providerOverride, 
+      userKeys,
+      context,
+      { includeExamples: true }
+    );
+    
+    // Parsear acciones con metadata de confianza
+    const parseResult: ExtendedParseResult = parseActionsWithMetadata(text);
+    const actions = parseResult.actions;
+    
+    // Registrar telemetría de parsing
+    if (actions.length > 0) {
+      telemetry.recordSuccessfulParsing(actions.length, parseResult.parsingConfidence.toString());
+      
+      // Registrar confidence promedio
+      const avgConfidence = actions.reduce((sum, a) => sum + a.confidence, 0) / actions.length;
+      telemetry.recordConfidence(avgConfidence);
+    } else {
+      telemetry.recordParsingFailure(parseResult.error || 'No actions extracted', text);
+    }
 
+    // Si no hay acciones, lanzar error para usar fallback
     if (!actions.length) {
+      telemetry.logAIWarning('No se extrajeron acciones del texto de respuesta');
       throw new Error('La respuesta de la IA no contenía acciones válidas');
+    }
+    
+    // Evaluar intención con Intent Shield
+    const intentAssessment: IntentAssessment = assessIntent(
+      input,
+      actions as any, // Cast necesario debido a diferencias de tipos
+      parseResult.parsingConfidence
+    );
+    
+    // Registrar telemetría basada en la decisión
+    if (intentAssessment.decision === 'clarify') {
+      telemetry.recordClarificationRequest(
+        intentAssessment.reason,
+        intentAssessment.averageConfidence
+      );
+    } else if (intentAssessment.decision === 'suggest') {
+      telemetry.recordSuggestion(actions.length, intentAssessment.averageConfidence);
+    } else if (intentAssessment.decision === 'execute') {
+      telemetry.recordAutoExecution(actions.length, intentAssessment.averageConfidence);
     }
 
     return {
@@ -869,8 +632,11 @@ IMPORTANTE: Devuelve SOLO el JSON, sin texto adicional antes o después. El JSON
       providerUsed,
       raw: text,
       fallback: providerUsed !== preferred,
+      intentAssessment,
+      parseResult: parseResult as ParseResult
     };
   } catch (error: any) {
+    telemetry.logAIError(error, { input, provider: preferred });
     console.error('Error en processNaturalLanguage:', error);
     const fallbackProvider = preferred;
     return {
