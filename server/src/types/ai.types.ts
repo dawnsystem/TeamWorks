@@ -12,9 +12,21 @@ export interface AIAction {
   entity: string;
   /**
    * Data contiene información específica de la acción
-   * TODO (TSK-005): Refactorizar para usar tipos específicos por action.type
-   * Por ejemplo: CreateTaskData, UpdateTaskData, QueryTaskData, etc.
-   * Actualmente usa `any` para mantener compatibilidad con código existente.
+   * 
+   * TODO (TSK-005 - Q1 2026): Refactorizar para usar tipos discriminados específicos por action.type
+   * Implementar interfaces específicas:
+   * - CreateTaskData: { titulo: string; descripcion?: string; projectId?: string; ... }
+   * - UpdateTaskData: { search?: string; titulo?: string; ... }
+   * - QueryTaskData: { filter?: {...}; completada?: boolean; ... }
+   * 
+   * Criterios para refactorización:
+   * 1. Crear tipos específicos para los 10+ action types principales
+   * 2. Actualizar actionExecutor.ts para usar tipos discriminados
+   * 3. Añadir validación en tiempo de ejecución con Zod o similar
+   * 4. Mantener compatibilidad con código existente mediante type guards
+   * 
+   * Actualmente usa `any` para mantener compatibilidad con actionExecutor.ts
+   * que requiere refactorización extensa (~30 accesos a validar).
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any;

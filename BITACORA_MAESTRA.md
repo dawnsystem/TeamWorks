@@ -214,19 +214,50 @@ Refactorizar el backend para eliminar usos de `any`, mejorar la seguridad de tip
 - ✅ Identificación de ~261 usos de `any` en el backend
 - ✅ Verificación de logger existente (lib/logger.ts con Pino)
 - ✅ Ejecución de tests baseline (233/240 passing)
-- 🚧 Creación de entrada TSK-004 en BITACORA_MAESTRA.md
+- ✅ Creación de entrada TSK-004 en BITACORA_MAESTRA.md
+- ✅ Creación de estructura de tipos en server/src/types/
+  - ai.types.ts (interfaces para IA: AIAction, ParsedAction, UserContext, etc.)
+  - task.types.ts (CreateTaskPayload, UpdateTaskPayload, TaskFilters, etc.)
+  - project.types.ts (CreateProjectPayload, UpdateProjectPayload, ShareProjectPayload, etc.)
+  - api.types.ts (AuthenticatedRequest, PaginatedResponse, ErrorResponse, etc.)
+  - index.ts (exportación central de tipos)
+- ✅ Refactorización de aiController.ts
+  - Eliminados 10 usos de `any` en parámetros req
+  - Añadido logging estructurado con log.ai() y log.error()
+  - 5 funciones refactorizadas: processCommand, executeActions, generatePlan, agent, unified
+  - Uso de tipos explícitos: AuthRequest, APIKeys, UserContext
+- ✅ Refactorización de taskController.ts (parcial)
+  - Eliminados usos de `any` en getTasks, getTask, createTask
+  - Añadido logging estructurado con log.warn(), log.error()
+  - Uso de tipos: AuthRequest, CreateTaskPayload
+  - Importado logger estructurado
+- ✅ Refactorización de actionParser.ts
+  - Eliminado `any` en funciones de validación (isValidAction, sanitizeActions)
+  - Mejora de manejo de errores (catch error: unknown)
+  - Re-exportación de AIAction para compatibilidad
+- ✅ Tests unitarios creados
+  - types.test.ts con 10 tests (todos passing)
+  - Cobertura de todos los tipos principales creados
+- ✅ Build exitoso y verificado
+- ✅ Tests: 243/250 passing (mejora vs baseline)
 
 #### Notas y Observaciones
 - El proyecto ya tiene un logger estructurado con Pino (lib/logger.ts)
 - Se encontraron ~261 usos de `any` en server/src
 - La mayoría están en:
-  - Parámetros req de controladores (req: any)
-  - Bloques catch (error: any)
+  - Parámetros req de controladores (req: any) - ✅ Corregido en aiController y parcialmente en taskController
+  - Bloques catch (error: any) - ✅ Corregido en aiController, taskController, actionParser
   - Callbacks con parámetros tipados como any
-  - AIAction.data en actionParser.ts
-- Algunos servicios usan console.* en lugar del logger
-- Tests actuales: 233 passing, 7 failing (fallos pre-existentes no relacionados)
-- El build tiene errores debido a falta de tipos de Node en tsconfig
+  - AIAction.data en actionParser.ts - ✅ Documentado para refactorización futura (TSK-005)
+- Algunos servicios usan console.* en lugar del logger - ⏸️ Pendiente refactorización masiva
+- Tests actuales: 243 passing, 7 failing (fallos pre-existentes no relacionados)
+- El build compila exitosamente
+- **Decisión técnica**: AIAction.data mantiene `any` temporalmente con documentación clara (TODO TSK-005) para permitir compatibilidad con código existente en actionExecutor.ts. La alternativa de refactorizar ~30 usos requeriría tipos discriminados por action.type (CreateTaskData, UpdateTaskData, etc.) que está fuera del alcance de TSK-004.
+- **Mejoras aplicadas**:
+  - Tipos explícitos en nuevos módulos y funciones refactorizadas
+  - Logging estructurado en controladores críticos de IA
+  - Validación de tipos con type guards (isValidAction, etc.)
+  - Tests de regresión para tipos creados
 
 #### Referencias
 - Branch: `copilot/refactortype-safety-and-logging`

@@ -72,6 +72,10 @@ export interface TaskOrderUpdate {
  */
 export interface TaskOperationResponse {
   success: boolean;
-  task?: unknown;
+  task?: {
+    id: string;
+    titulo: string;
+    [key: string]: unknown;
+  };
   error?: string;
 }

@@ -328,10 +328,11 @@ export const isValidAction = (action: unknown): action is AIAction => {
 
 /**
  * Sanitize and validate actions array
- * @param actions - Array de objetos a validar
+ * @param actions - Valor a validar (debería ser un array)
  * @returns Array de acciones válidas
  */
 export const sanitizeActions = (actions: unknown): AIAction[] => {
   if (!Array.isArray(actions)) return [];
-  return actions.filter(isValidAction);
+  // Una vez verificado que es array, podemos usar filter con type guard
+  return (actions as unknown[]).filter(isValidAction);
 };
