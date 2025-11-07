@@ -160,6 +160,81 @@ Mejorar la robustez, precisión y experiencia de usuario del motor de IA mediant
 
 ---
 
+## Sesiones de Trabajo (Continuación)
+
+### TSK-004: Auditoría integral — Mejora de tipos y logging
+**Fecha**: 2025-11-07  
+**Agente**: GitHub Copilot Coding Agent  
+**Estado**: 🚧 En Progreso  
+**Inicio**: 2025-11-07 13:20 UTC
+
+#### Directiva del Director
+"Auditoría integral — Mejora de tipos y logging"
+
+Refactorizar el backend para eliminar usos de `any`, mejorar la seguridad de tipos y reforzar el logging estructurado en controladores y servicios.
+
+#### Objetivos de la Sesión
+- [ ] Actualizar BITACORA_MAESTRA.md con entrada TSK-004
+- [ ] Analizar código del backend (server/src) para localizar usos de `any`
+- [ ] Crear directorio server/src/types/ con interfaces TypeScript explícitas
+- [ ] Crear tipos: CreateTaskPayload, UpdateTaskPayload, AIActionPayload, ParsedAction, etc.
+- [ ] Refactorizar parseActionsFromText eliminando `any` types
+- [ ] Refactorizar controladores para usar tipos explícitos en lugar de `any`
+- [ ] Mejorar logging: reemplazar console.* con logger estructurado
+- [ ] Añadir JSDoc en español para funciones refactorizadas
+- [ ] Crear tests unitarios para funciones refactorizadas
+- [ ] Ejecutar build y tests para verificar no hay regresiones
+- [ ] Code review y security scan
+
+#### Cambios Técnicos Planificados
+**Archivos a Crear**:
+- `server/src/types/index.ts` - Exportación central de tipos
+- `server/src/types/task.types.ts` - Tipos para tareas
+- `server/src/types/project.types.ts` - Tipos para proyectos
+- `server/src/types/ai.types.ts` - Tipos para acciones de IA
+- `server/src/types/api.types.ts` - Tipos para request/response de API
+- Tests unitarios adicionales según sea necesario
+
+**Archivos a Modificar**:
+- Todos los controladores en `server/src/controllers/` - Reemplazar `any` con tipos explícitos, mejorar logging
+- Servicios en `server/src/services/` - Reemplazar console.* con logger estructurado
+- `server/src/services/ai/actionParser.ts` - Eliminar `any` en interfaces
+- Otros archivos con uso de `any` según análisis
+
+#### Decisiones de Diseño
+1. **Organización de tipos**: Crear carpeta types/ con archivos separados por dominio (task, project, ai, api)
+2. **Logging estructurado**: Usar el logger existente (server/src/lib/logger.ts) en lugar de console.*
+3. **Tipos de Request**: Extender AuthRequest para tipado seguro de req en controladores
+4. **Excepciones justificadas**: Documentar cualquier `any` que no pueda eliminarse (ej: catch error puede seguir siendo `any` si se valida con instanceof Error)
+5. **Tests**: Enfoque en funciones críticas refactorizadas (parseActionsFromText, controladores principales)
+
+#### Progreso
+- ✅ Exploración inicial del repositorio
+- ✅ Análisis de estructura de código existente
+- ✅ Identificación de ~261 usos de `any` en el backend
+- ✅ Verificación de logger existente (lib/logger.ts con Pino)
+- ✅ Ejecución de tests baseline (233/240 passing)
+- 🚧 Creación de entrada TSK-004 en BITACORA_MAESTRA.md
+
+#### Notas y Observaciones
+- El proyecto ya tiene un logger estructurado con Pino (lib/logger.ts)
+- Se encontraron ~261 usos de `any` en server/src
+- La mayoría están en:
+  - Parámetros req de controladores (req: any)
+  - Bloques catch (error: any)
+  - Callbacks con parámetros tipados como any
+  - AIAction.data en actionParser.ts
+- Algunos servicios usan console.* en lugar del logger
+- Tests actuales: 233 passing, 7 failing (fallos pre-existentes no relacionados)
+- El build tiene errores debido a falta de tipos de Node en tsconfig
+
+#### Referencias
+- Branch: `copilot/refactortype-safety-and-logging`
+- PR: Por crear contra `dev`
+- Documento relacionado: ROADMAP.md
+
+---
+
 ## Plantilla para Nuevas Sesiones
 
 ### TSK-XXX: [Título de la sesión]

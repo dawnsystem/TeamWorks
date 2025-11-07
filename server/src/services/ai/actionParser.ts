@@ -3,24 +3,16 @@
  * Parses AI-generated actions from natural language responses
  */
 
-export interface AIAction {
-  type: string;
-  entity: string;
-  data?: any;
-  query?: string;
-  confidence: number;
-  explanation: string;
-}
+import { AIAction, ParsedAction } from '../../types';
+
+// Re-export AIAction for backward compatibility
+export type { AIAction };
 
 /**
- * Resultado del parsing con metadata adicional
+ * @deprecated - Use ParsedAction from types instead
+ * Mantenido temporalmente para compatibilidad con código existente
  */
-export interface ParseResult {
-  actions: AIAction[];
-  parsingConfidence: number;
-  method: string;
-  error?: string;
-}
+export type ParseResult = ParsedAction;
 
 /**
  * Parse actions from AI-generated text with robust fallback strategies
@@ -281,12 +273,13 @@ const tryParseJSON = (jsonString: string, method: string, confidence: number): P
         method
       };
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const errorMessage = e instanceof Error ? e.message : 'Error desconocido al parsear JSON';
     return {
       actions: [],
       parsingConfidence: 0,
       method,
-      error: e.message
+      error: errorMessage
     };
   }
   
@@ -316,22 +309,29 @@ export const stripCodeFences = (text: string): string => {
 
 /**
  * Validate action structure
+ * @param action - Objeto a validar
+ * @returns true si el objeto cumple con la estructura de AIAction
  */
-export const isValidAction = (action: any): action is AIAction => {
+export const isValidAction = (action: unknown): action is AIAction => {
+  if (!action || typeof action !== 'object') {
+    return false;
+  }
+  
+  const obj = action as Record<string, unknown>;
   return (
-    action &&
-    typeof action === 'object' &&
-    typeof action.type === 'string' &&
-    typeof action.entity === 'string' &&
-    typeof action.confidence === 'number' &&
-    typeof action.explanation === 'string'
+    typeof obj.type === 'string' &&
+    typeof obj.entity === 'string' &&
+    typeof obj.confidence === 'number' &&
+    typeof obj.explanation === 'string'
   );
 };
 
 /**
  * Sanitize and validate actions array
+ * @param actions - Array de objetos a validar
+ * @returns Array de acciones válidas
  */
-export const sanitizeActions = (actions: any[]): AIAction[] => {
+export const sanitizeActions = (actions: unknown): AIAction[] => {
   if (!Array.isArray(actions)) return [];
   return actions.filter(isValidAction);
 };
