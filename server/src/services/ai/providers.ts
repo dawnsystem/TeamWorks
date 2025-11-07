@@ -5,56 +5,55 @@
 
 import Groq from 'groq-sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AIProviderKeys, SupportedAIProvider, getApiKey } from './types';
 
-export type SupportedAIProvider = 'groq' | 'gemini';
+// Re-export types for external use
+export type { SupportedAIProvider, AIProviderKeys };
 
 /**
  * Check if an AI provider is configured with required credentials
  */
-export const isProviderConfigured = (provider: SupportedAIProvider): boolean => {
-  if (provider === 'groq') {
-    return Boolean(process.env.GROQ_API_KEY);
-  }
-  if (provider === 'gemini') {
-    return Boolean(process.env.GEMINI_API_KEY);
-  }
-  return false;
+export const isProviderConfigured = (provider: SupportedAIProvider, userKeys?: AIProviderKeys): boolean => {
+  const apiKey = getApiKey(provider, userKeys);
+  return Boolean(apiKey);
 };
 
 /**
  * Get list of all configured providers
  */
-export const getConfiguredProviders = (): SupportedAIProvider[] =>
-  (['groq', 'gemini'] as SupportedAIProvider[]).filter(isProviderConfigured);
+export const getConfiguredProviders = (userKeys?: AIProviderKeys): SupportedAIProvider[] =>
+  (['groq', 'gemini'] as SupportedAIProvider[]).filter(p => isProviderConfigured(p, userKeys));
 
 /**
  * Get initialized Groq client
  */
-export const getGroqClient = (): Groq | null => {
-  if (!process.env.GROQ_API_KEY) {
+export const getGroqClient = (userKeys?: AIProviderKeys): Groq | null => {
+  const apiKey = getApiKey('groq', userKeys);
+  if (!apiKey) {
     return null;
   }
   return new Groq({
-    apiKey: process.env.GROQ_API_KEY,
+    apiKey,
   });
 };
 
 /**
  * Get initialized Gemini model
  */
-export const getGeminiModel = () => {
-  if (!process.env.GEMINI_API_KEY) {
+export const getGeminiModel = (userKeys?: AIProviderKeys) => {
+  const apiKey = getApiKey('gemini', userKeys);
+  if (!apiKey) {
     return null;
   }
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 };
 
 /**
  * Resolve which provider to use based on configuration
  */
-export const resolveProvider = (provider?: string): SupportedAIProvider => {
-  const configured = getConfiguredProviders();
+export const resolveProvider = (provider?: string, userKeys?: AIProviderKeys): SupportedAIProvider => {
+  const configured = getConfiguredProviders(userKeys);
   if (configured.length === 0) throw new Error('No AI providers configured');
   if (provider && configured.includes(provider as SupportedAIProvider)) {
     return provider as SupportedAIProvider;
@@ -68,8 +67,9 @@ export const resolveProvider = (provider?: string): SupportedAIProvider => {
 export const getProviderOrder = (
   preferred: SupportedAIProvider,
   override?: string,
+  userKeys?: AIProviderKeys,
 ): SupportedAIProvider[] => {
-  const providers = getConfiguredProviders();
+  const providers = getConfiguredProviders(userKeys);
   if (override && providers.includes(override as SupportedAIProvider)) {
     return [override as SupportedAIProvider];
   }
@@ -85,9 +85,10 @@ export const getProviderOrder = (
 export const generateWithProvider = async (
   prompt: string,
   provider: SupportedAIProvider,
+  userKeys?: AIProviderKeys,
 ): Promise<string> => {
   if (provider === 'groq') {
-    const client = getGroqClient();
+    const client = getGroqClient(userKeys);
     if (!client) throw new Error('Groq not configured');
     
     const completion = await client.chat.completions.create({
@@ -101,7 +102,7 @@ export const generateWithProvider = async (
   }
   
   if (provider === 'gemini') {
-    const model = getGeminiModel();
+    const model = getGeminiModel(userKeys);
     if (!model) throw new Error('Gemini not configured');
     
     const result = await model.generateContent(prompt);
