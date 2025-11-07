@@ -182,7 +182,9 @@ CAMPOS OPCIONALES:
    - alta/high/urgente → prioridad: 1
    - media/medium → prioridad: 2
    - baja/low → prioridad: 3
-   - muy baja → prioridad: 4`;
+   - muy baja → prioridad: 4
+
+6. USA NOMBRES, NUNCA pidas IDs: Siempre usa nombres de proyectos y secciones (projectName, sectionName) en lugar de IDs. Ejemplo: {"projectName": "Trabajo"} NO {"projectId": "123"}`;
 
   // Añadir ejemplos si se solicita
   if (includeExamples) {
@@ -195,7 +197,10 @@ Entrada: "añadir reunión con equipo en proyecto Trabajo para el lunes con prio
 Salida: [{"type":"create","entity":"task","data":{"titulo":"reunión con equipo","projectName":"Trabajo","fechaVencimiento":"lunes","prioridad":1},"confidence":0.9,"explanation":"Crear tarea en proyecto con prioridad alta"}]
 
 Entrada: "eliminar las tareas completadas"
-Salida: [{"type":"delete_bulk","entity":"task","query":"completadas","confidence":0.85,"explanation":"Eliminar todas las tareas marcadas como completadas"}]
+Salida: [{"type":"delete_bulk","entity":"task","data":{"filter":{"completada":true}},"confidence":0.85,"explanation":"Eliminar todas las tareas marcadas como completadas"}]
+
+Entrada: "mover todas las tareas del proyecto Personal a Inbox"
+Salida: [{"type":"move_bulk","entity":"task","data":{"filter":{"projectName":"Personal"},"targetProjectName":"Inbox"},"confidence":0.9,"explanation":"Mover tareas de Personal a Inbox"}]
 
 Entrada: "hacer algo"
 Salida: [{"type":"query","entity":"task","query":"hacer algo","confidence":0.3,"explanation":"Comando muy vago, necesito más detalles sobre qué deseas hacer"}]`;

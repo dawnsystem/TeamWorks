@@ -47,7 +47,12 @@ describe('Enhanced AI Actions', () => {
 
   describe('create_with_subtasks - Recursive Subtask Creation', () => {
     it('should create a task with nested subtasks', async () => {
-      const mockProject = { id: 'proj1', nombre: 'Inbox' };
+      const mockProject = { 
+        id: 'proj1', 
+        nombre: 'Inbox',
+        userId: mockUserId,
+        shares: []
+      };
       
       (mockPrisma.projects.findFirst as jest.Mock).mockResolvedValue(mockProject);
       (mockPrisma.tasks.create as jest.Mock)
@@ -86,7 +91,12 @@ describe('Enhanced AI Actions', () => {
     });
 
     it('should handle subtasks with labels', async () => {
-      const mockProject = { id: 'proj1', nombre: 'Inbox' };
+      const mockProject = { 
+        id: 'proj1', 
+        nombre: 'Inbox',
+        userId: mockUserId,
+        shares: []
+      };
       const mockLabel = { id: 'label1', nombre: 'urgent' };
       
       (mockPrisma.projects.findFirst as jest.Mock).mockResolvedValue(mockProject);
@@ -211,7 +221,12 @@ describe('Enhanced AI Actions', () => {
         explanation: 'Move high priority tasks to Urgent project',
       };
 
-      const mockTargetProject = { id: 'proj2', nombre: 'Urgent' };
+      const mockTargetProject = { 
+        id: 'proj2', 
+        nombre: 'Urgent',
+        userId: mockUserId,
+        shares: []
+      };
       (mockPrisma.projects.findFirst as jest.Mock).mockResolvedValue(mockTargetProject);
       (mockPrisma.tasks.updateMany as jest.Mock).mockResolvedValue({ count: 8 });
 
@@ -239,9 +254,16 @@ describe('Enhanced AI Actions', () => {
         explanation: 'Move review tasks to QA Testing section',
       };
 
-      const mockTargetProject = { id: 'proj3', nombre: 'QA' };
+      const mockTargetProject = { 
+        id: 'proj3', 
+        nombre: 'QA',
+        userId: mockUserId,
+        shares: []
+      };
       const mockSection = { id: 'sec1', nombre: 'Testing' };
+      const mockLabel = { id: 'label1', nombre: 'review' };
       
+      (mockPrisma.labels.findFirst as jest.Mock).mockResolvedValue(mockLabel);
       (mockPrisma.projects.findFirst as jest.Mock).mockResolvedValue(mockTargetProject);
       (mockPrisma.sections.findFirst as jest.Mock).mockResolvedValue(mockSection);
       (mockPrisma.tasks.updateMany as jest.Mock).mockResolvedValue({ count: 4 });
@@ -268,7 +290,12 @@ describe('Enhanced AI Actions', () => {
         explanation: 'Move completed tasks to Archive',
       };
 
-      const mockArchiveProject = { id: 'proj4', nombre: 'Archive' };
+      const mockArchiveProject = { 
+        id: 'proj4', 
+        nombre: 'Archive',
+        userId: mockUserId,
+        shares: []
+      };
       (mockPrisma.projects.findFirst as jest.Mock).mockResolvedValue(mockArchiveProject);
       (mockPrisma.tasks.updateMany as jest.Mock).mockResolvedValue({ count: 15 });
 
@@ -352,12 +379,14 @@ describe('Enhanced AI Actions', () => {
         explanation: 'Move Buy milk before Take out trash',
       };
 
-      const mockTask = { id: 'task1', titulo: 'Buy milk' };
-      const mockReferenceTask = { id: 'task2', titulo: 'Take out trash', orden: 3 };
+      const mockTask = { id: 'task1', titulo: 'Buy milk', projectId: 'proj1', sectionId: null };
+      const mockReferenceTask = { id: 'task2', titulo: 'Take out trash', orden: 3, projectId: 'proj1', sectionId: null };
+      const mockTaskBefore = { id: 'task0', orden: 2, projectId: 'proj1', sectionId: null };
       
       (mockPrisma.tasks.findFirst as jest.Mock)
         .mockResolvedValueOnce(mockTask)
-        .mockResolvedValueOnce(mockReferenceTask);
+        .mockResolvedValueOnce(mockReferenceTask)
+        .mockResolvedValueOnce(mockTaskBefore);
       (mockPrisma.tasks.update as jest.Mock).mockResolvedValue({ ...mockTask, orden: 2.5 });
 
       const results = await executeAIActions([action], mockUserId, mockPrisma);
