@@ -1,5 +1,7 @@
 # TeamWorks - Gestión de Tareas con IA
 
+> ⭐ **ACTUALIZACIÓN v2.3.0**: ¡Motor de IA mejorado con Intent Shield! Sistema robusto de parsing, análisis de intención y decisión automática. Mejor comprensión, menos errores, experiencia más fluida. [Ver cambios en el motor de IA →](./server/README.md#sistema-de-ia-mejorado)
+
 > ⭐ **ACTUALIZACIÓN v2.2.0**: ¡Nueva interfaz responsive optimizada para móviles y tablets! Diseño adaptativo que detecta automáticamente tu dispositivo y ajusta la UI para la mejor experiencia. [Ver documentación completa →](./DOCUMENTATION.md)
 
 Aplicación web de gestión de tareas inspirada en Todoist, con un potente asistente de IA integrado que permite crear, modificar y gestionar tareas usando lenguaje natural. **Ahora completamente optimizada para dispositivos móviles, tablets y escritorio.**
@@ -19,7 +21,14 @@ Aplicación web de gestión de tareas inspirada en Todoist, con un potente asist
 
 ### Asistente de IA Avanzado ✨
 
-#### 🎯 Tres Modos de Interacción ⭐ NUEVO
+#### 🛡️ Intent Shield - Inteligencia Adaptativa ⭐ NUEVO
+- **Ejecución automática** - Comandos claros (confidence >= 85%) se ejecutan inmediatamente
+- **Confirmación inteligente** - Comandos medianamente claros (60-85%) solicitan confirmación
+- **Clarificación proactiva** - Comandos ambiguos (<60%) piden más detalles
+- **Parsing robusto** - Maneja múltiples formatos de respuesta (JSON, texto mixto, bloques código)
+- **Telemetría integrada** - Métricas de calidad y rendimiento del motor de IA
+
+#### 🎯 Tres Modos de Interacción
 - **ASK (Preguntar)** - Resuelve dudas y obtén consejos sin ejecutar acciones
   - Ejemplo: *"¿Cómo organizo mejor mis tareas?"*
 - **PLAN (Planificar)** - Crea planes estructurados para proyectos complejos
