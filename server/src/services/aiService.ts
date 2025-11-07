@@ -182,7 +182,9 @@ CAMPOS OPCIONALES:
    - alta/high/urgente → prioridad: 1
    - media/medium → prioridad: 2
    - baja/low → prioridad: 3
-   - muy baja → prioridad: 4`;
+   - muy baja → prioridad: 4
+
+6. USA NOMBRES, NUNCA pidas IDs: Siempre usa nombres de proyectos y secciones (projectName, sectionName) en lugar de IDs. Ejemplo: {"projectName": "Trabajo"} NO {"projectId": "123"}`;
 
   // Añadir ejemplos si se solicita
   if (includeExamples) {
@@ -195,7 +197,10 @@ Entrada: "añadir reunión con equipo en proyecto Trabajo para el lunes con prio
 Salida: [{"type":"create","entity":"task","data":{"titulo":"reunión con equipo","projectName":"Trabajo","fechaVencimiento":"lunes","prioridad":1},"confidence":0.9,"explanation":"Crear tarea en proyecto con prioridad alta"}]
 
 Entrada: "eliminar las tareas completadas"
-Salida: [{"type":"delete_bulk","entity":"task","query":"completadas","confidence":0.85,"explanation":"Eliminar todas las tareas marcadas como completadas"}]
+Salida: [{"type":"delete_bulk","entity":"task","data":{"filter":{"completada":true}},"confidence":0.85,"explanation":"Eliminar todas las tareas marcadas como completadas"}]
+
+Entrada: "mover todas las tareas del proyecto Personal a Inbox"
+Salida: [{"type":"move_bulk","entity":"task","data":{"filter":{"projectName":"Personal"},"targetProjectName":"Inbox"},"confidence":0.9,"explanation":"Mover tareas de Personal a Inbox"}]
 
 Entrada: "hacer algo"
 Salida: [{"type":"query","entity":"task","query":"hacer algo","confidence":0.3,"explanation":"Comando muy vago, necesito más detalles sobre qué deseas hacer"}]`;
@@ -1724,6 +1729,8 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
               });
 
               if (task) {
+                let newOrden: number;
+
                 // Mover al final
                 if (action.data.position === 'end') {
                   const maxOrdenTask = await prisma.tasks.findFirst({
@@ -1731,21 +1738,24 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                       projectId: task.projectId,
                       sectionId: task.sectionId,
                       parentTaskId: task.parentTaskId,
+                      id: { not: task.id },
                     },
                     orderBy: { orden: 'desc' },
                   });
-                  const newOrden = (maxOrdenTask?.orden || 0) + 1;
-                  result = await prisma.tasks.update({
-                    where: { id: task.id },
-                    data: { orden: newOrden },
-                  });
+                  newOrden = (maxOrdenTask?.orden || 0) + 1;
                 }
                 // Mover al principio
                 else if (action.data.position === 'start') {
-                  result = await prisma.tasks.update({
-                    where: { id: task.id },
-                    data: { orden: -1 },
+                  const minOrdenTask = await prisma.tasks.findFirst({
+                    where: {
+                      projectId: task.projectId,
+                      sectionId: task.sectionId,
+                      parentTaskId: task.parentTaskId,
+                      id: { not: task.id },
+                    },
+                    orderBy: { orden: 'asc' },
                   });
+                  newOrden = minOrdenTask ? minOrdenTask.orden - 1 : -1;
                 }
                 // Mover antes/después de otra tarea
                 else if (action.data.referenceTaskTitle) {
@@ -1759,18 +1769,72 @@ export const executeAIActions = async (actions: AIAction[], userId: string, pris
                   });
 
                   if (referenceTask) {
-                    // Use larger gaps to avoid precision issues with floating point
-                    // This allows for ~1000 reorders between tasks before precision degrades
-                    const newOrden =
-                      action.data.position === 'before'
-                        ? referenceTask.orden - 1000
-                        : referenceTask.orden + 1000;
-                    result = await prisma.tasks.update({
-                      where: { id: task.id },
-                      data: { orden: newOrden },
+                    if (action.data.position === 'before') {
+                      // Get task before reference
+                      const taskBefore = await prisma.tasks.findFirst({
+                        where: {
+                          projectId: referenceTask.projectId,
+                          sectionId: referenceTask.sectionId,
+                          orden: { lt: referenceTask.orden },
+                          id: { not: task.id },
+                        },
+                        orderBy: { orden: 'desc' },
+                      });
+
+                      if (taskBefore) {
+                        newOrden = (taskBefore.orden + referenceTask.orden) / 2;
+                      } else {
+                        newOrden = referenceTask.orden - 1;
+                      }
+                    } else {
+                      // position === 'after'
+                      const taskAfter = await prisma.tasks.findFirst({
+                        where: {
+                          projectId: referenceTask.projectId,
+                          sectionId: referenceTask.sectionId,
+                          orden: { gt: referenceTask.orden },
+                          id: { not: task.id },
+                        },
+                        orderBy: { orden: 'asc' },
+                      });
+
+                      if (taskAfter) {
+                        newOrden = (referenceTask.orden + taskAfter.orden) / 2;
+                      } else {
+                        newOrden = referenceTask.orden + 1;
+                      }
+                    }
+                  } else {
+                    // If reference task not found, just move to end
+                    const maxOrdenTask = await prisma.tasks.findFirst({
+                      where: {
+                        projectId: task.projectId,
+                        sectionId: task.sectionId,
+                        parentTaskId: task.parentTaskId,
+                        id: { not: task.id },
+                      },
+                      orderBy: { orden: 'desc' },
                     });
+                    newOrden = (maxOrdenTask?.orden || 0) + 1;
                   }
+                } else {
+                  // No position specified, default to end
+                  const maxOrdenTask = await prisma.tasks.findFirst({
+                    where: {
+                      projectId: task.projectId,
+                      sectionId: task.sectionId,
+                      parentTaskId: task.parentTaskId,
+                      id: { not: task.id },
+                    },
+                    orderBy: { orden: 'desc' },
+                  });
+                  newOrden = (maxOrdenTask?.orden || 0) + 1;
                 }
+
+                result = await prisma.tasks.update({
+                  where: { id: task.id },
+                  data: { orden: newOrden },
+                });
               }
             }
           }
