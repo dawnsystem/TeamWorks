@@ -47,6 +47,17 @@ export const configureSecurityMiddleware = (app: Express) => {
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
 
+  // Rate limiting para refresh tokens (prevenir abuso)
+  const refreshLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minuto
+    max: 10, // Máximo 10 renovaciones por minuto
+    message: 'Demasiadas solicitudes de renovación de token, por favor espera un momento.',
+  });
+
+  app.use('/api/auth/refresh', refreshLimiter);
+  app.use('/api/auth/logout', refreshLimiter);
+  app.use('/api/auth/logout-all', refreshLimiter);
+
   // Rate limiting para endpoints de IA (más costosos)
   const aiLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minuto
