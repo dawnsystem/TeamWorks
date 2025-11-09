@@ -22,7 +22,7 @@ export default function Register() {
 
     try {
       const response = await authAPI.register({ email, password, nombre });
-      setAuth(response.data.user, response.data.accessToken, response.data.refreshToken);
+      setAuth(response.data.user, response.data.token);
       toast.success('¡Cuenta creada exitosamente!');
       navigate('/');
     } catch (error: any) {

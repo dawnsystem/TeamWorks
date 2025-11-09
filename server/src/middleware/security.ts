@@ -13,11 +13,7 @@ export const configureSecurityMiddleware = (app: Express) => {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        // En producción, CSP más restrictivo sin 'unsafe-inline' ni 'unsafe-eval'
-        // En desarrollo, permite 'unsafe-inline' y 'unsafe-eval' para HMR y React DevTools
-        scriptSrc: process.env.NODE_ENV === 'production' 
-          ? ["'self'"]
-          : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Necesario para React en desarrollo
         imgSrc: ["'self'", 'data:', 'https:'],
         connectSrc: ["'self'", process.env.FRONTEND_URL || 'http://localhost:5173'],
       },
@@ -46,17 +42,6 @@ export const configureSecurityMiddleware = (app: Express) => {
 
   app.use('/api/auth/login', authLimiter);
   app.use('/api/auth/register', authLimiter);
-
-  // Rate limiting para refresh tokens (prevenir abuso)
-  const refreshLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minuto
-    max: 10, // Máximo 10 renovaciones por minuto
-    message: 'Demasiadas solicitudes de renovación de token, por favor espera un momento.',
-  });
-
-  app.use('/api/auth/refresh', refreshLimiter);
-  app.use('/api/auth/logout', refreshLimiter);
-  app.use('/api/auth/logout-all', refreshLimiter);
 
   // Rate limiting para endpoints de IA (más costosos)
   const aiLimiter = rateLimit({

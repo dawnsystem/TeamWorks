@@ -24,7 +24,9 @@ export interface ProjectShare {
 export interface Project {
   id: string;
   nombre: string;
+  descripcion?: string;
   color: string;
+  icono?: string;
   orden: number;
   userId: string;
   createdAt: string;
@@ -64,6 +66,7 @@ export interface Task {
   labels?: TaskLabel[];
   subTasks?: Task[];
   parentTask?: Task;
+  project?: Project;
   comments?: Comment[];
   reminders?: Reminder[];
   automationNotes?: string[];

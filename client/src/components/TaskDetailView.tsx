@@ -70,7 +70,11 @@ export default function TaskDetailView() {
       />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto animate-slide-in-right">
+      <div 
+        role="dialog"
+        aria-modal="true"
+        className="fixed right-0 top-0 h-full w-full max-w-2xl bg-white dark:bg-gray-900 shadow-2xl z-50 overflow-y-auto animate-slide-in-right"
+      >
         {isLoading || !task ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />

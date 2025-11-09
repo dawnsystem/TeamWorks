@@ -112,139 +112,36 @@ export const updateApiUrl = (url: string) => {
   api.defaults.baseURL = url;
 };
 
-// Interceptor para agregar token y API keys a todas las peticiones
+// Interceptor para agregar token a todas las peticiones
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  
-  // Add AI API keys from settings if available
-  const settingsStorage = localStorage.getItem('settings-storage');
-  if (settingsStorage) {
-    try {
-      const settings = JSON.parse(settingsStorage);
-      if (settings.state?.groqApiKey) {
-        config.headers['X-Groq-Api-Key'] = settings.state.groqApiKey;
-      }
-      if (settings.state?.geminiApiKey) {
-        config.headers['X-Gemini-Api-Key'] = settings.state.geminiApiKey;
-      }
-    } catch (e) {
-      // Log generic error without exposing sensitive details
-      console.warn('Failed to parse settings storage for API keys');
-    }
-  }
-  
   return config;
 });
 
-// Variable para prevenir múltiples intentos de refresh simultáneos
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: any) => void;
-  reject: (reason?: any) => void;
-}> = [];
-
-const processQueue = (error: any = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve();
-    }
-  });
-  
-  failedQueue = [];
-};
-
-// Interceptor para manejar errores de autenticación y renovación de tokens
+// Interceptor para manejar errores de autenticación
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    
-    // Si es un error 401 y no hemos intentado refrescar aún
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      // Evitar refresh en peticiones de login/register/refresh
-      const isAuthRequest = originalRequest.url?.includes('/auth/login') || 
-                           originalRequest.url?.includes('/auth/register') ||
-                           originalRequest.url?.includes('/auth/refresh');
+  (error) => {
+    if (error.response?.status === 401) {
+      // Solo limpiar si no es una petición de login/register (para evitar bucles)
+      const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                           error.config?.url?.includes('/auth/register');
       
-      if (isAuthRequest) {
-        return Promise.reject(error);
-      }
-      
-      // Si ya estamos refrescando, agregar a la cola
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        })
-          .then(() => {
-            originalRequest.headers.Authorization = `Bearer ${localStorage.getItem('token')}`;
-            return api(originalRequest);
-          })
-          .catch((err) => Promise.reject(err));
-      }
-      
-      originalRequest._retry = true;
-      isRefreshing = true;
-      
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (!refreshToken) {
-        // No hay refresh token, hacer logout
-        isRefreshing = false;
+      if (!isAuthRequest) {
+        // Limpiar el estado de auth usando el store
         useAuthStore.getState().logout();
+        
+        // Solo redirigir si no estamos ya en una página pública
         const currentPath = window.location.pathname;
         if (currentPath !== '/login' && currentPath !== '/register') {
+          // Usar replace para evitar agregar al historial y evitar bucles
           window.location.replace('/login');
         }
-        return Promise.reject(error);
-      }
-      
-      try {
-        // Intentar renovar el token
-        const response = await api.post('/auth/refresh', { refreshToken });
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        
-        // Guardar los nuevos tokens en localStorage
-        localStorage.setItem('token', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
-        
-        // Actualizar el estado del auth store para mantener consistencia
-        const currentUser = useAuthStore.getState().user;
-        if (currentUser) {
-          useAuthStore.setState({ 
-            token: accessToken, 
-            refreshToken: newRefreshToken 
-          });
-        }
-        
-        // Actualizar el header de la petición original
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        
-        // Procesar la cola de peticiones que esperaban
-        processQueue(null);
-        isRefreshing = false;
-        
-        // Reintentar la petición original
-        return api(originalRequest);
-      } catch (refreshError) {
-        // Si falla el refresh, hacer logout
-        processQueue(refreshError);
-        isRefreshing = false;
-        
-        useAuthStore.getState().logout();
-        const currentPath = window.location.pathname;
-        if (currentPath !== '/login' && currentPath !== '/register') {
-          window.location.replace('/login');
-        }
-        
-        return Promise.reject(refreshError);
       }
     }
-    
     return Promise.reject(error);
   }
 );
@@ -252,16 +149,10 @@ api.interceptors.response.use(
 // Auth
 export const authAPI = {
   register: (data: { email: string; password: string; nombre: string }) =>
-    api.post<{ accessToken: string; refreshToken: string; user: User }>('/auth/register', data),
+    api.post<{ token: string; user: User }>('/auth/register', data),
   
   login: (data: { email: string; password: string }) =>
-    api.post<{ accessToken: string; refreshToken: string; user: User }>('/auth/login', data),
-  
-  refresh: (refreshToken: string) =>
-    api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh', { refreshToken }),
-  
-  logout: (refreshToken: string) =>
-    api.post('/auth/logout', { refreshToken }),
+    api.post<{ token: string; user: User }>('/auth/login', data),
   
   getMe: () => api.get<User>('/auth/me'),
 };
@@ -404,26 +295,6 @@ export const aiAPI = {
   
   planner: (payload: { goal: string; mode: 'auto' | 'interactive'; answers?: string[]; provider?: string; context?: any; }) =>
     api.post('/ai/planner', payload),
-  
-  unified: (payload: {
-    message: string;
-    mode: 'ASK' | 'PLAN' | 'AGENT';
-    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
-    conversationId?: string;
-    autoExecute?: boolean;
-    provider?: string;
-    context?: any;
-  }) =>
-    api.post('/ai/unified', payload),
-  
-  agent: (payload: {
-    message: string;
-    conversationId?: string;
-    conversationHistory?: Array<{ role: 'user' | 'agent'; content: string }>;
-    provider?: string;
-    context?: any;
-  }) =>
-    api.post('/ai/agent', payload),
 };
 
 export default api;

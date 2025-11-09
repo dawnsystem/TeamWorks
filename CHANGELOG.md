@@ -2,80 +2,67 @@
 
 Registro de cambios importantes del proyecto TeamWorks.
 
-## [1.3.0] - 6 de Noviembre de 2025
+## [Unreleased] - 7 de Noviembre de 2025
 
-### ✨ Nuevas Funcionalidades Mayores
+### 🔄 Integración y Sincronización
 
-#### 🌳 Subtareas Anidadas Ilimitadas
-- **Creación recursiva de subtareas**: Crea tareas con subtareas que a su vez tienen subtareas, sin límite de profundidad
-  - Ejemplo: `"crear tarea proyecto web con subtareas: diseñar mockups (con subtarea: investigar tendencias), desarrollar backend"`
-  - Soporta propiedades completas en cada nivel (prioridad, fechas, etiquetas)
-  - Nueva acción `create_with_subtasks` para gestionar jerarquías complejas
+#### Merge con rama main
+- **Sincronización completa con main**: Integración de todos los cambios desarrollados en las PRs #53, #54 y #55
+- **Resolución de historias no relacionadas**: Se resolvió el conflicto de historias divergentes entre la rama de desarrollo y main
 
-#### 📦 Operaciones en Bulk Avanzadas
-- **Mover en Bulk (`move_bulk`)**: Mueve múltiples tareas entre proyectos y secciones
-  - Ejemplo: `"mover todas las tareas de alta prioridad al proyecto Urgente"`
-  - Soporta filtros por: prioridad, etiquetas, estado, proyecto, sección
-  - Valida permisos antes de mover tareas a proyectos compartidos
+#### Cambios integrados desde main:
 
-- **Eliminar en Bulk Mejorado (`delete_bulk`)**: Eliminación con filtros sofisticados
-  - Ejemplo: `"eliminar todas las tareas completadas del proyecto Personal de la semana pasada"`
-  - Nuevos filtros de rango de fechas:
-    - `lastWeek`: Semana pasada
-    - `lastMonth`: Mes pasado  
-    - `older: X days`: Más antiguas que X días
-  - Filtros combinables: proyecto + estado + fecha + etiquetas
+##### ✅ Cobertura de Tests (PR #53, #54, #55)
+- **100% de cobertura en tests**: Se alcanzó cobertura completa con 114 tests de cliente y 172 tests de servidor pasando
+- **Tests de componentes**: 
+  - LabelBadge y ProjectCard con tests completos
+  - TaskItem, TaskList y TaskDetailView mejorados
+  - Mock de useAuthStore añadido para tests
+- **Infraestructura de testing frontend**: Setup completo de testing con utilidades y mocks
+- **Tests del backend**: 
+  - Tests de autenticación y autorización (49 tests)
+  - Tests de controladores (task, project, label)
+  - Tests de middleware de validación
+  - Tests del servicio de IA (60 tests)
+  - Tests de parseo de acciones
 
-#### ↕️ Reorganización Completa de Tareas
-- **Reordenar tareas (`reorder`)**: Control total sobre el orden de tareas
-  - Mover antes/después de otra tarea: `"mover la tarea comprar leche arriba de sacar basura"`
-  - Mover al inicio/final: `"poner la tarea reunión cliente al final de la lista"`
-  - Reorganización múltiple: `"reorganizar tareas: primero comprar pan, luego sacar basura, después lavar ropa"`
-  - Usa el campo `orden` para mantener posiciones precisas
+##### 🔧 Mejoras de TypeScript y Linting
+- **Corrección de errores de linting**: Todos los errores de ESLint resueltos
+- **Build de TypeScript**: Problemas de compilación corregidos para CI/CD
+- **Consistencia del sistema de tipos**: Verificación completa y correcciones aplicadas
 
-### 📝 Mejoras del Sistema de IA
+##### 📦 Actualizaciones de Dependencias
+- **yarn.lock actualizado**: Nuevos paquetes de esbuild y rollup para varias arquitecturas y plataformas
+- **Compatibilidad mejorada**: Soporte de build mejorado para diferentes entornos
 
-- **Prompt actualizado**: Ejemplos de todas las nuevas capacidades incluidos
-- **Mejor comprensión**: La IA ahora entiende comandos más complejos y naturales
-- **Validaciones mejoradas**: Más verificaciones de permisos y consistencia de datos
-- **Manejo de errores**: Mejores mensajes cuando las operaciones no pueden completarse
+##### 🏗️ Infraestructura y DevOps
+- **Docker**: Configuración completa de contenedorización con docker-compose
+- **Logging estructurado**: Integración de Pino para logging profesional
+- **CI/CD**: Mejoras en los workflows de GitHub Actions
 
-### 📚 Documentación
+##### 📚 Documentación Añadida
+- **Nuevos archivos de documentación**:
+  - `RESUMEN_TESTS.md`: Resumen en español de los resultados de tests
+  - `TEST_RESULTS_REPORT.md`: Reporte detallado de resultados de tests
+  - Reportes de fases de auditoría y refactorización
+  - Guías de configuración de Docker
+  - Documentación de capacidades de IA
 
-- Nuevo archivo `docs/AI_CAPABILITIES.md`: Guía completa de todas las capacidades de IA
-  - Casos de uso reales
-  - Ejemplos exhaustivos
-  - Mejores prácticas
-  - Límites y consideraciones
-- README.md actualizado con nuevas capacidades destacadas
-- Ejemplos de uso ampliados en la sección de IA
+##### 🎨 Componentes Nuevos
+- **LabelBadge**: Componente para mostrar etiquetas con estilo
+- **ProjectCard**: Componente de tarjeta de proyecto
 
-### 🐛 Correcciones
+#### Cambios Técnicos del Merge
+- **Estrategia de merge**: Se utilizó `--allow-unrelated-histories` con `--strategy-option=theirs` para resolver conflictos
+- **313 commits integrados**: Todo el historial de main ha sido incorporado
+- **Archivos modificados**: 48 archivos cambiados, +1789 inserciones, -3951 eliminaciones
+- **Simplificación del código**: Reducción de complejidad en varios módulos, especialmente en el servicio de IA
 
-- **Bug fix**: Corregido campo `fecha` → `fechaHora` en modelo reminders
-  - Los recordatorios ahora se crean correctamente
-
-### ⚙️ Cambios Técnicos
-
-- Actualizada interface `AIAction` con nuevos tipos:
-  - `create_with_subtasks`: Creación recursiva
-  - `delete_bulk`: Eliminación con filtros avanzados
-  - `move_bulk`: Movimiento masivo
-  - `reorder`: Reorganización de tareas
-- Implementadas funciones helper recursivas para subtareas anidadas
-- Sistema de filtros unificado para operaciones bulk
-- Mejor manejo de permisos en operaciones que afectan proyectos compartidos
-
-### 🎯 Capacidades Completas de la IA
-
-La IA ahora tiene capacidad total para realizar todas las operaciones que un usuario puede hacer:
-- ✅ Crear tareas con subtareas anidadas ilimitadas
-- ✅ Operaciones en bulk (crear, actualizar, mover, eliminar)
-- ✅ Reorganizar tareas (cambiar orden, posición)
-- ✅ Gestión completa de proyectos, secciones y etiquetas
-- ✅ Comentarios y recordatorios
-- ✅ Consultas y búsquedas avanzadas
-- ✅ Actualización de propiedades (prioridad, fecha, proyecto, etc.)
+### 📊 Estadísticas del Merge
+- **Tests**: De 87/115 a 114/114 (cliente) + 172/172 (servidor)
+- **Cobertura**: 100% en ambos client y server
+- **Líneas de código**: Optimización significativa (-2162 líneas netas)
+- **Componentes**: +2 nuevos componentes con tests completos
 
 ## [1.2.0] - 17 de Octubre de 2025
 

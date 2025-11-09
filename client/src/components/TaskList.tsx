@@ -55,7 +55,7 @@ export default function TaskList({ tasks, loading, emptyMessage = 'No hay tareas
   }
 
   return (
-    <div className="space-y-3 w-full">
+    <div className="space-y-3 w-full" role="list">
       {tasks.map((task) => (
         <TaskItem key={task.id} task={task} role={projectRole ?? undefined} />
       ))}
